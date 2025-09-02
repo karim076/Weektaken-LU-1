@@ -11,8 +11,8 @@ Een Node.js + Express applicatie die verbinding maakt met de [Sakila MySQL datab
 - [Routes](#-routes)
 - [Functionaliteiten](#-functionaliteiten)
 - [Screenshots](#-preview)
-- [Randvoorwaarden](#-randvoorwaarden(requirements))
-- [Non-Functional Requirements](#-non-functionalrequirements)
+- [Randvoorwaarden](#-randvoorwaarden (requirements))
+- [Non-Functional Requirements](#-Non-FunctionalRequirements)
 
 ---
 
