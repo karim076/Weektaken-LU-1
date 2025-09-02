@@ -11,6 +11,8 @@ Een Node.js + Express applicatie die verbinding maakt met de [Sakila MySQL datab
 - [Routes](#-routes)
 - [Functionaliteiten](#-functionaliteiten)
 - [Screenshots](#-preview)
+- [Randvoorwaarden](#-randvoorwaarden(requirements))
+- [Non-Functional Requirements](#-non-functionalrequirements)
 
 ---
 
@@ -103,3 +105,43 @@ sakila-app/
 ![alt text](https://github.com/karim076/Weektaak-1/blob/main/Images/homepage.png?raw=true)
 ### Klanten pagina
 ![alt text](https://github.com/karim076/Weektaak-1/blob/main/Images/Klanten.png?raw=true)
+
+## 🛡️ Randvoorwaarden (Requirements)
+
+- **RV-01: JavaScript en MySQL gebruiken**  
+  Beschrijving: Geen TypeScript, geen SqlServer  
+  Status: Voldaan
+
+- **RV-02: Server-side rendering**  
+  Beschrijving: De webapplicatie rendert de pages server-side, geen clientside frontend  
+  Status: Voldaan
+
+- **RV-03: Bewezen CSS framework gebruiken**  
+  Beschrijving: Bootstrap of vergelijkbaar voor layout en styling  
+  Status: Voldaan
+
+- **RV-04: Open source technologieën**  
+  Beschrijving: Waar mogelijk open source gebruiken  
+  Status: Voldaan
+
+- **RV-05: Geen Object Relational Mapper**  
+  Beschrijving: SQL queries worden uitgeschreven en uitgevoerd via een npm package  
+  Status: Voldaan
+
+- **RV-06: Alleen callbackfuncties gebruiken**  
+  Beschrijving: Geen async/await of Promises; volledig callback-based  
+  Status: Voldaan
+
+## ⚙️ Non-Functional Requirements
+
+- **NF-01: Modulariteit**  
+  Beschrijving: Gelaagde architectuur; routes communiceren alleen via db.js, views bevatten geen database-logica  
+  Status: Voldaan
+
+- **NF-02: Onderhoudbaarheid**  
+  Beschrijving: DRY-principe; geen duplicatie van code, herbruikbare logica in aparte modules/functies  
+  Status: Voldaan
+
+- **NF-03: Gebruiksvriendelijkheid**  
+  Beschrijving: Logische toegang tot functionaliteit; navbar aanwezig, overzichtelijke tabellen, duidelijke startpagina  
+  Status: Voldaan
