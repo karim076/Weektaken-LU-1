@@ -55,7 +55,7 @@ De user stories zijn afgeleid van de requirements en geprioriteerd op must/shoul
 
 3. **Configureer databaseverbinding**
 Pas in db.js je MySQL inloggegevens aan:
-```
+```bash
 const pool = mysql.createPool({
   host: 'localhost',
   user: 'root',
@@ -65,9 +65,13 @@ const pool = mysql.createPool({
 ```
 4. **Start de applicatie**
 Voor development (met automatische reload):
-```npm run dev```
+```bash
+npm run dev
+```
 Voor normaal gebruik:
-```npm start```
+```bash
+npm start
+```
 Open in de browser
 👉 http://localhost:3000
 
