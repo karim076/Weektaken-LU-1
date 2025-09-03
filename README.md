@@ -2,7 +2,7 @@
 
 Een Node.js + Express applicatie die verbinding maakt met de [Sakila MySQL database](https://dev.mysql.com/doc/sakila/en/) en gegevens overzichtelijk weergeeft in de browser met behulp van **Bootstrap** en **EJS**.
 
-## 📌 Inhoud
+## Inhoud
 - [Overzicht](#-overzicht)
 - [UserStories](#-userstories)
 - [Benodigdheden](#-benodigdheden)
