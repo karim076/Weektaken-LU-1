@@ -206,14 +206,14 @@ Als medewerker wil ik een lopende huur kunnen beëindigen, zodat de film terug b
 ## 🎬 Huurder (Klant)
 
 ### Epic 1: Films ontdekken
-**User Story 1 (Must)**  
+** US1E1 - User Story 1 (Must)**  
 Als huurder wil ik een overzicht van beschikbare films kunnen bekijken, zodat ik weet welke films ik kan huren.  
 **Acceptatiecriteria:**  
 - Films worden getoond in een lijst of tabel met titel, genre en speelduur.  
 - Alleen beschikbare films worden getoond.  
 - Data wordt direct uit de database geladen.  
 
-**User Story 2 (Should)**  
+** US2E1 - User Story 2 (Should)**  
 Als huurder wil ik films kunnen zoeken of filteren, zodat ik sneller de juiste film vind.  
 **Acceptatiecriteria:**  
 - Er is een zoekveld (minimaal op titel).  
@@ -223,14 +223,14 @@ Als huurder wil ik films kunnen zoeken of filteren, zodat ik sneller de juiste f
 ---
 
 ### Epic 2: Mijn verhuurgeschiedenis
-**User Story 1 (Must)**  
+** US1E2 - User Story 1 (Must)**  
 Als huurder wil ik mijn huurgeschiedenis kunnen inzien, zodat ik overzicht heb van de films die ik eerder heb gehuurd.  
 **Acceptatiecriteria:**  
 - Er is een overzicht van mijn persoonlijke gehuurde films.  
 - Per film staat huur- en retourdatum vermeld.  
 - Alleen mijn eigen transacties worden getoond.  
 
-**User Story 2 (Could)**  
+** US2E2 - User Story 2 (Could)**  
 Als huurder wil ik favoriete films kunnen opslaan, zodat ik ze later eenvoudig kan terugvinden.  
 **Acceptatiecriteria:**  
 - Er is een "favoriet"-knop bij films.  
@@ -241,22 +241,22 @@ Als huurder wil ik favoriete films kunnen opslaan, zodat ik ze later eenvoudig k
 
 ## 🏢 Eigenaar (Admin)
 
-### Epic 1: Medewerkersbeheer
-**User Story 1 (Must)**  
+### Epic 3: Medewerkersbeheer
+** US1E3 - User Story 1 (Must)**  
 Als eigenaar wil ik nieuwe medewerkers kunnen toevoegen, zodat zij klanten kunnen helpen en films kunnen verhuren.  
 **Acceptatiecriteria:**  
 - Er is een formulier voor medewerkergegevens (naam, gebruikersnaam, filiaal).  
 - Alle verplichte velden zijn gevalideerd.  
 - De medewerker verschijnt na opslaan in het overzicht.  
 
-**User Story 2 (Must)**  
+** US2E3 - User Story 2 (Must)**  
 Als eigenaar wil ik een overzicht van alle medewerkers kunnen bekijken, zodat ik inzicht heb in wie er werkzaam zijn.  
 **Acceptatiecriteria:**  
 - Er is een tabel met alle medewerkers.  
 - Per medewerker zijn naam, filiaal en status zichtbaar.  
 - De data komt uit de database.  
 
-**User Story 3 (Should)**  
+** US3E3 - User Story 3 (Should)**  
 Als eigenaar wil ik medewerkers kunnen verwijderen, zodat ik alleen actuele medewerkers in het systeem houd.  
 **Acceptatiecriteria:**  
 - Bij elke medewerker staat een delete-knop.  
@@ -265,22 +265,22 @@ Als eigenaar wil ik medewerkers kunnen verwijderen, zodat ik alleen actuele mede
 
 ---
 
-### Epic 2: Filmbeheer
-**User Story 1 (Must)**  
+### Epic 4: Filmbeheer
+** US1E4 - User Story 1 (Must)**  
 Als eigenaar wil ik nieuwe films kunnen toevoegen, zodat de collectie up-to-date blijft.  
-**Acceptatiecriteria:**  
+** US1E4 - Acceptatiecriteria:**  
 - Er is een formulier voor titel, genre, speelduur en taal.  
 - Verplichte velden worden gecontroleerd.  
 - De film verschijnt na opslaan in het overzicht.  
 
-**User Story 2 (Should)**  
+** US2E4 - User Story 2 (Should)**  
 Als eigenaar wil ik bestaande films kunnen bewerken, zodat ik foutieve gegevens kan corrigeren.  
 **Acceptatiecriteria:**  
 - Bij elke film staat een edit-knop.  
 - Wijzigingen worden gecontroleerd en opgeslagen.  
 - Het overzicht toont direct de bijgewerkte gegevens.  
 
-**User Story 3 (Could)**  
+** US3E4 - User Story 3 (Could)**  
 Als eigenaar wil ik films kunnen verwijderen, zodat oude of irrelevante titels uit de database verdwijnen.  
 **Acceptatiecriteria:**  
 - Er is een delete-knop per film.  
