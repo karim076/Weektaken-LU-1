@@ -156,7 +156,7 @@ De applicatie ondersteunt drie perspectieven (viewpoints): **Staff**, **Huurder 
 ## 👩‍💼 Staff (Medewerker)
 
 ### Epic 1: Klantenbeheer
-** US1E1 - User Story 1 (Must)**  
+**US1E1 - User Story 1 (Must)**  
 Als medewerker wil ik een nieuwe klant kunnen registreren, zodat ik hem of haar kan toevoegen aan het systeem en films kan verhuren.  
 **Acceptatiecriteria:**  
 - Er is een formulier met verplichte velden: naam, adres, e-mail, telefoonnummer.  
