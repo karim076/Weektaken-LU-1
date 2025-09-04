@@ -2,7 +2,7 @@
 
 Een Node.js + Express applicatie die verbinding maakt met de [Sakila MySQL database](https://dev.mysql.com/doc/sakila/en/) en gegevens overzichtelijk weergeeft in de browser met behulp van **Bootstrap** en **EJS**.
 
-## 📌 Inhoud
+## Inhoud
 - [Overzicht](#-overzicht)
 - [UserStories](#-userstories)
 - [Benodigdheden](#-benodigdheden)
@@ -145,3 +145,146 @@ sakila-app/
 - **NF-03: Gebruiksvriendelijkheid**  
   Beschrijving: Logische toegang tot functionaliteit; navbar aanwezig, overzichtelijke tabellen, duidelijke startpagina  
   Status: Voldaan
+
+# 📽️ Sakila Applicatie – Epics & User Stories
+
+Dit document bevat de epics, user stories en acceptatiecriteria voor de Node.js/Express applicatie gebaseerd op de **Sakila-database**.  
+De applicatie ondersteunt drie perspectieven (viewpoints): **Staff**, **Huurder (klant)** en **Eigenaar (admin)**.  
+
+---
+
+## 👩‍💼 Staff (Medewerker)
+
+### Epic 1: Klantenbeheer
+**US1E1 - User Story 1 (Must)**  
+Als medewerker wil ik een nieuwe klant kunnen registreren, zodat ik hem of haar kan toevoegen aan het systeem en films kan verhuren.  
+**Acceptatiecriteria:**  
+- Er is een formulier met verplichte velden: naam, adres, e-mail, telefoonnummer.  
+- Wanneer verplichte velden ontbreken, verschijnt een foutmelding.  
+- Na succesvolle invoer verschijnt de klant in het klantenoverzicht.  
+
+**US2E1 - User Story 2 (Must)**  
+Als medewerker wil ik klantgegevens kunnen inzien, zodat ik snel toegang heb tot relevante informatie bij vragen of transacties.  
+**Acceptatiecriteria:**  
+- Er is een klantenoverzicht met basisgegevens (naam, e-mail, status).  
+- Ik kan op een klant klikken om details te zien.  
+- De data komt rechtstreeks uit de database.  
+
+**US3E1 - User Story 3 (Should)**  
+Als medewerker wil ik klantgegevens kunnen bewerken, zodat ik fouten kan corrigeren of updates kan verwerken.  
+**Acceptatiecriteria:**  
+- Er is een bewerk-knop bij elke klant.  
+- Wijzigingen worden gecontroleerd op geldige invoer.  
+- De wijziging is direct zichtbaar in het overzicht.  
+
+**US4E1 - User Story 4 (Could)**  
+Als medewerker wil ik een klant kunnen verwijderen, zodat oude of inactieve klanten niet in de database blijven staan.  
+**Acceptatiecriteria:**  
+- Er is een delete-knop.  
+- Er verschijnt een bevestigingspopup.  
+- Na verwijderen wordt de klant niet meer in het overzicht getoond.  
+
+---
+
+### Epic 2: Verhuurbeheer
+**US1E2 - User Story 1 (Must)**  
+Als medewerker wil ik een film aan een klant kunnen verhuren, zodat de transactie geregistreerd wordt in het systeem.  
+**Acceptatiecriteria:**  
+- Ik kan een klant selecteren.  
+- Ik kan een beschikbare film selecteren.  
+- De verhuur wordt opgeslagen met datum en medewerker.  
+
+**US2E2 - User Story 2 (Should)**  
+Als medewerker wil ik een lopende huur kunnen beëindigen, zodat de film terug beschikbaar is voor verhuur.  
+**Acceptatiecriteria:**  
+- Bij elke lopende huur is een "retourneer"-knop beschikbaar.  
+- Na klikken wordt de huurstatus aangepast naar "afgesloten".  
+- De film verschijnt opnieuw in de lijst met beschikbare films.  
+
+---
+
+## 🎬 Huurder (Klant)
+
+### Epic 3: Films ontdekken
+**US1E3 - User Story 1 (Must)**  
+Als huurder wil ik een overzicht van beschikbare films kunnen bekijken, zodat ik weet welke films ik kan huren.  
+**Acceptatiecriteria:**  
+- Films worden getoond in een lijst of tabel met titel, genre en speelduur.  
+- Alleen beschikbare films worden getoond.  
+- Data wordt direct uit de database geladen.  
+
+**US2E3 - User Story 2 (Should)**  
+Als huurder wil ik films kunnen zoeken of filteren, zodat ik sneller de juiste film vind.  
+**Acceptatiecriteria:**  
+- Er is een zoekveld (minimaal op titel).  
+- Resultaten worden gefilterd zodra ik zoek.  
+- Filters zoals genre of jaar zijn optioneel beschikbaar.  
+
+---
+
+### Epic 4: Mijn verhuurgeschiedenis
+**US1E4 - User Story 1 (Must)**  
+Als huurder wil ik mijn huurgeschiedenis kunnen inzien, zodat ik overzicht heb van de films die ik eerder heb gehuurd.  
+**Acceptatiecriteria:**  
+- Er is een overzicht van mijn persoonlijke gehuurde films.  
+- Per film staat huur- en retourdatum vermeld.  
+- Alleen mijn eigen transacties worden getoond.  
+
+**US2E4 - User Story 2 (Could)**  
+Als huurder wil ik favoriete films kunnen opslaan, zodat ik ze later eenvoudig kan terugvinden.  
+**Acceptatiecriteria:**  
+- Er is een "favoriet"-knop bij films.  
+- Favorieten worden opgeslagen in mijn profiel.  
+- Ik kan mijn favorietenlijst apart bekijken.  
+
+---
+
+## 🏢 Eigenaar (Admin)
+
+### Epic 5: Medewerkersbeheer
+**US1E5 - User Story 1 (Must)**  
+Als eigenaar wil ik nieuwe medewerkers kunnen toevoegen, zodat zij klanten kunnen helpen en films kunnen verhuren.  
+**Acceptatiecriteria:**  
+- Er is een formulier voor medewerkergegevens (naam, gebruikersnaam, filiaal).  
+- Alle verplichte velden zijn gevalideerd.  
+- De medewerker verschijnt na opslaan in het overzicht.  
+
+**US2E5 - User Story 2 (Must)**  
+Als eigenaar wil ik een overzicht van alle medewerkers kunnen bekijken, zodat ik inzicht heb in wie er werkzaam zijn.  
+**Acceptatiecriteria:**  
+- Er is een tabel met alle medewerkers.  
+- Per medewerker zijn naam, filiaal en status zichtbaar.  
+- De data komt uit de database.  
+
+**US3E4 - User Story 3 (Should)**  
+Als eigenaar wil ik medewerkers kunnen verwijderen, zodat ik alleen actuele medewerkers in het systeem houd.  
+**Acceptatiecriteria:**  
+- Bij elke medewerker staat een delete-knop.  
+- Er verschijnt een bevestigingspopup.  
+- Na verwijderen verdwijnt de medewerker uit het overzicht.  
+
+---
+
+### Epic 6: Filmbeheer
+**US1E6 - User Story 1 (Must)**  
+Als eigenaar wil ik nieuwe films kunnen toevoegen, zodat de collectie up-to-date blijft.  
+**Acceptatiecriteria:**  
+- Er is een formulier voor titel, genre, speelduur en taal.  
+- Verplichte velden worden gecontroleerd.  
+- De film verschijnt na opslaan in het overzicht.  
+
+**US2E6 - User Story 2 (Should)**  
+Als eigenaar wil ik bestaande films kunnen bewerken, zodat ik foutieve gegevens kan corrigeren.  
+**Acceptatiecriteria:**  
+- Bij elke film staat een edit-knop.  
+- Wijzigingen worden gecontroleerd en opgeslagen.  
+- Het overzicht toont direct de bijgewerkte gegevens.  
+
+**US3E6 - User Story 3 (Could)**  
+Als eigenaar wil ik films kunnen verwijderen, zodat oude of irrelevante titels uit de database verdwijnen.  
+**Acceptatiecriteria:**  
+- Er is een delete-knop per film.  
+- Ik krijg een bevestiging voordat de film verdwijnt.  
+- De film verdwijnt definitief uit het overzicht.  
+
+---
