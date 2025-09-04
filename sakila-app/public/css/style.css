@@ -1,0 +1,25 @@
+/* Custom styles for Sakila App */
+.navbar-brand {
+    font-weight: bold;
+}
+
+.card {
+    border: none;
+    border-radius: 10px;
+}
+
+.btn {
+    border-radius: 8px;
+}
+
+.hero-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.feature-card {
+    transition: transform 0.2s;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+}
