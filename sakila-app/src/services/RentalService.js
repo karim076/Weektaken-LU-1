@@ -103,17 +103,33 @@ class RentalService extends BaseDAO {
       const stats = await this.query(`
         SELECT 
           status,
-          COUNT(*) as count
+          COUNT(*) as count,
+          SUM(amount) as total_amount
         FROM rental
         WHERE customer_id = ?
         GROUP BY status
+      `, [customerId]);
+
+      // Get overall totals
+      const overallStats = await this.query(`
+        SELECT 
+          COUNT(*) as total_rentals,
+          SUM(amount) as total_spent,
+          SUM(CASE WHEN status IN ('paid', 'rented') THEN amount ELSE 0 END) as paid_amount,
+          SUM(CASE WHEN status = 'returned' THEN amount ELSE 0 END) as completed_amount
+        FROM rental
+        WHERE customer_id = ?
       `, [customerId]);
 
       const rentalStats = {
         pending: 0,
         paid: 0,
         rented: 0,
-        returned: 0
+        returned: 0,
+        total_spent: parseFloat(overallStats[0]?.total_spent || 0),
+        total_rentals: overallStats[0]?.total_rentals || 0,
+        paid_amount: parseFloat(overallStats[0]?.paid_amount || 0),
+        completed_amount: parseFloat(overallStats[0]?.completed_amount || 0)
       };
 
       stats.forEach(stat => {

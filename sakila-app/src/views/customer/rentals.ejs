@@ -82,6 +82,48 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Financial Stats -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-4">
+                <div class="card text-center h-100 border-success">
+                    <div class="card-body">
+                        <i class="bi bi-currency-euro fs-1 text-success mb-2"></i>
+                        <h3 class="text-success">€<%= (stats.total_spent || 0).toFixed(2) %></h3>
+                        <small class="text-muted">Totaal Uitgegeven</small>
+                        <div class="mt-2">
+                            <small class="badge bg-light text-muted">
+                                <%= stats.total_rentals || 0 %> verhuur(en)
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center h-100 border-primary">
+                    <div class="card-body">
+                        <i class="bi bi-wallet2 fs-1 text-primary mb-2"></i>
+                        <h4 class="text-primary">€<%= (stats.paid_amount || 0).toFixed(2) %></h4>
+                        <small class="text-muted">Actieve Betalingen</small>
+                        <div class="mt-2">
+                            <small class="text-muted">Films nog in bezit</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center h-100 border-info">
+                    <div class="card-body">
+                        <i class="bi bi-check-circle-fill fs-1 text-info mb-2"></i>
+                        <h4 class="text-info">€<%= (stats.completed_amount || 0).toFixed(2) %></h4>
+                        <small class="text-muted">Voltooide Verhuur</small>
+                        <div class="mt-2">
+                            <small class="text-muted">Reeds teruggebracht</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <% } %>
 
         <!-- Rentals List -->

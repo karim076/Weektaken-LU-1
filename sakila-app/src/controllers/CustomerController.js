@@ -395,7 +395,11 @@ class CustomerController {
       const customerId = req.user.user_id;
       const page = parseInt(req.query.page) || 1;
       
+      console.log('Getting rentals for customer:', customerId);
       const result = await this.rentalService.getCustomerRentals(customerId, page, 10);
+      
+      console.log('First rental result:', result.rentals?.[0]);
+      console.log('Stats result:', result.stats);
       
       if (!result.success) {
         return res.status(500).render('error', {
