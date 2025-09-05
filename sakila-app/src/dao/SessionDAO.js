@@ -9,36 +9,26 @@ class SessionDAO extends BaseDAO {
   }
 
   /**
-   * Create a new session
+   * Create new session
    */
   async createSession(sessionId, userId, userType, expiresAt) {
     const sql = `
-      INSERT INTO user_sessions (session_id, user_id, user_type, expires_at)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO user_sessions (session_id, user_id, user_type, expires_at, created_at)
+      VALUES (?, ?, ?, ?, NOW())
     `;
-    
+
     return await this.query(sql, [sessionId, userId, userType, expiresAt]);
   }
 
   /**
-   * Get session with user details
+   * Get session by ID
    */
-  async getSessionWithUser(sessionId) {
+  async getSession(sessionId) {
     const sql = `
-      SELECT 
-        s.session_id,
-        s.user_id,
-        s.user_type,
-        s.expires_at,
-        u.username,
-        u.email,
-        u.full_name,
-        u.store_id
-      FROM user_sessions s
-      JOIN user_auth u ON s.user_id = u.user_id AND s.user_type = u.user_type
-      WHERE s.session_id = ? AND s.expires_at > NOW()
+      SELECT * FROM user_sessions 
+      WHERE session_id = ? AND expires_at > NOW()
     `;
-    
+
     const results = await this.query(sql, [sessionId]);
     return results.length > 0 ? results[0] : null;
   }
@@ -46,13 +36,13 @@ class SessionDAO extends BaseDAO {
   /**
    * Update session last accessed time
    */
-  async updateLastAccessed(sessionId) {
+  async updateSessionAccess(sessionId) {
     const sql = `
       UPDATE user_sessions 
-      SET last_accessed = NOW() 
+      SET last_accessed = NOW()
       WHERE session_id = ?
     `;
-    
+
     return await this.query(sql, [sessionId]);
   }
 
@@ -60,38 +50,96 @@ class SessionDAO extends BaseDAO {
    * Delete session (logout)
    */
   async deleteSession(sessionId) {
-    const sql = 'DELETE FROM user_sessions WHERE session_id = ?';
-    return await this.query(sql, [sessionId]);
-  }
+    const sql = `
+      DELETE FROM user_sessions 
+      WHERE session_id = ?
+    `;
 
-  /**
-   * Clean expired sessions
-   */
-  async cleanExpiredSessions() {
-    const sql = 'DELETE FROM user_sessions WHERE expires_at < NOW()';
-    return await this.query(sql);
+    return await this.query(sql, [sessionId]);
   }
 
   /**
    * Delete all sessions for a user (logout from all devices)
    */
   async deleteUserSessions(userId, userType) {
-    const sql = 'DELETE FROM user_sessions WHERE user_id = ? AND user_type = ?';
+    const sql = `
+      DELETE FROM user_sessions 
+      WHERE user_id = ? AND user_type = ?
+    `;
+
     return await this.query(sql, [userId, userType]);
   }
 
   /**
-   * Get active sessions count for a user
+   * Clean up expired sessions
    */
-  async getActiveSessionsCount(userId, userType) {
+  async cleanupExpiredSessions() {
     const sql = `
-      SELECT COUNT(*) as count 
+      DELETE FROM user_sessions 
+      WHERE expires_at <= NOW()
+    `;
+
+    return await this.query(sql);
+  }
+
+  /**
+   * Get active sessions for a user
+   */
+  async getUserActiveSessions(userId, userType) {
+    const sql = `
+      SELECT session_id, created_at, last_accessed, expires_at
       FROM user_sessions 
       WHERE user_id = ? AND user_type = ? AND expires_at > NOW()
+      ORDER BY last_accessed DESC
     `;
-    
-    const result = await this.query(sql, [userId, userType]);
-    return result[0].count;
+
+    return await this.query(sql, [userId, userType]);
+  }
+
+  /**
+   * Count active sessions
+   */
+  async countActiveSessions() {
+    const sql = `
+      SELECT 
+        user_type,
+        COUNT(*) as active_sessions
+      FROM user_sessions 
+      WHERE expires_at > NOW()
+      GROUP BY user_type
+    `;
+
+    return await this.query(sql);
+  }
+
+  /**
+   * Get session statistics
+   */
+  async getSessionStats() {
+    const sql = `
+      SELECT 
+        COUNT(*) as total_sessions,
+        COUNT(CASE WHEN expires_at > NOW() THEN 1 END) as active_sessions,
+        COUNT(CASE WHEN expires_at <= NOW() THEN 1 END) as expired_sessions,
+        COUNT(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) THEN 1 END) as sessions_24h
+      FROM user_sessions
+    `;
+
+    const results = await this.query(sql);
+    return results[0];
+  }
+
+  /**
+   * Extend session expiry
+   */
+  async extendSession(sessionId, newExpiresAt) {
+    const sql = `
+      UPDATE user_sessions 
+      SET expires_at = ?, last_accessed = NOW()
+      WHERE session_id = ?
+    `;
+
+    return await this.query(sql, [newExpiresAt, sessionId]);
   }
 }
 

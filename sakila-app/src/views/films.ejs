@@ -1,0 +1,302 @@
+
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Films - Sakila App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <%- include('partials/navbar') %>
+    
+    <div class="container mt-4">
+        <!-- Page Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="h2 mb-3">
+                    <i class="bi bi-collection-play"></i>
+                    Filmcollectie
+                </h1>
+                <p class="text-muted">Ontdek onze uitgebreide collectie films</p>
+            </div>
+        </div>
+
+        <!-- Search and Filter Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <form method="GET" action="/films" class="row g-3">
+                            <div class="col-md-6">
+                                <label for="search" class="form-label">Zoeken</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-search"></i>
+                                    </span>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="search" 
+                                           name="search" 
+                                           placeholder="Zoek films op titel of beschrijving..."
+                                           value="<%= typeof search !== 'undefined' ? search : '' %>">
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="category" class="form-label">Categorie</label>
+                                <select class="form-select" id="category" name="category">
+                                    <option value="">Alle categorieën</option>
+                                    <% if (typeof categories !== 'undefined' && categories) { %>
+                                        <% categories.forEach(function(category) { %>
+                                            <option value="<%= category.category_id %>" 
+                                                    <%= typeof selectedCategory !== 'undefined' && selectedCategory == category.category_id ? 'selected' : '' %>>
+                                                <%= category.name %>
+                                            </option>
+                                        <% }); %>
+                                    <% } %>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-funnel"></i> Filter
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Info -->
+        <% if (typeof pagination !== 'undefined' && pagination) { %>
+            <div class="row mb-3">
+                <div class="col-12">
+                    <p class="text-muted">
+                        <%= pagination.total %> film(s) gevonden
+                        <% if (typeof search !== 'undefined' && search) { %>
+                            voor "<%= search %>"
+                        <% } %>
+                    </p>
+                </div>
+            </div>
+        <% } %>
+
+        <!-- Films Grid -->
+        <% if (typeof films !== 'undefined' && films && films.length > 0) { %>
+            <div class="row g-4 mb-5">
+                <% films.forEach(function(film) { %>
+                    <div class="col-md-6 col-lg-4 col-xl-3">
+                        <div class="card h-100 shadow-sm feature-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h5 class="card-title mb-0" title="<%= film.title %>">
+                                        <%= film.title.length > 20 ? film.title.substring(0, 20) + '...' : film.title %>
+                                    </h5>
+                                    <span class="badge bg-primary"><%= film.rating || 'N/A' %></span>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <small class="text-muted">
+                                        <i class="bi bi-tag"></i> <%= film.category_name || 'Algemeen' %> | 
+                                        <i class="bi bi-calendar"></i> <%= film.release_year || 'N/A' %>
+                                    </small>
+                                </div>
+                                
+                                <p class="card-text text-muted small">
+                                    <%= (film.description || '').substring(0, 100) %><%= (film.description || '').length > 100 ? '...' : '' %>
+                                </p>
+                                
+                                <div class="row text-center mb-3">
+                                    <div class="col-6">
+                                        <small class="text-muted">Duur</small>
+                                        <div><strong><%= film.length || 'N/A' %> min</strong></div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Huurprijs</small>
+                                        <div class="text-primary"><strong>€<%= film.rental_rate || '0.00' %></strong></div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <% if (film.available_copies > 0) { %>
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> 
+                                            <%= film.available_copies %> beschikbaar
+                                        </span>
+                                    <% } else { %>
+                                        <span class="badge bg-danger">
+                                            <i class="bi bi-x-circle"></i> 
+                                            Uitverhuurd
+                                        </span>
+                                    <% } %>
+                                    
+                                    <small class="text-muted d-block mt-1">
+                                        <%= film.total_copies || 0 %> totaal beschikbaar
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="card-footer bg-transparent">
+                                <div class="d-grid gap-2">
+                                    <a href="/films/<%= film.film_id %>" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-eye"></i> Details
+                                    </a>
+                                    <% if (film.available_copies > 0) { %>
+                                        <% if (typeof user !== 'undefined' && user) { %>
+                                            <button class="btn btn-primary btn-sm" 
+                                                    data-film-id="<%= film.film_id %>"
+                                                    onclick="rentFilm('<%= film.film_id %>', '<%= film.title %>')">
+                                                <i class="bi bi-cart-plus"></i> Huren
+                                            </button>
+                                        <% } else { %>
+                                            <a href="/login?redirect=/films/<%= film.film_id %>" class="btn btn-primary btn-sm">
+                                                <i class="bi bi-box-arrow-in-right"></i> Login om te huren
+                                            </a>
+                                        <% } %>
+                                    <% } else { %>
+                                        <button class="btn btn-secondary btn-sm" disabled>
+                                            <i class="bi bi-clock"></i> Niet beschikbaar
+                                        </button>
+                                    <% } %>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        <% } else { %>
+            <div class="row">
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <i class="bi bi-info-circle"></i>
+                        <h4>Geen films gevonden</h4>
+                        <p class="mb-0">
+                            <% if (typeof search !== 'undefined' && search) { %>
+                                Geen films gevonden voor "<%= search %>". Probeer een andere zoekterm.
+                            <% } else { %>
+                                Er zijn momenteel geen films beschikbaar.
+                            <% } %>
+                        </p>
+                        <a href="/films" class="btn btn-outline-primary mt-2">
+                            <i class="bi bi-arrow-left"></i> Alle films bekijken
+                        </a>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+
+        <!-- Pagination -->
+        <% if (typeof pagination !== 'undefined' && pagination && pagination.totalPages > 1) { %>
+            <div class="row mt-4">
+                <div class="col-12">
+                    <nav aria-label="Films paginering">
+                        <ul class="pagination justify-content-center">
+                            <!-- Previous Button -->
+                            <li class="page-item <%= pagination.page <= 1 ? 'disabled' : '' %>">
+                                <a class="page-link" href="?page=<%= pagination.page - 1 %><%= typeof search !== 'undefined' && search ? '&search=' + search : '' %><%= typeof categoryId !== 'undefined' && categoryId ? '&categoryId=' + categoryId : '' %>">
+                                    <i class="bi bi-chevron-left"></i> Vorige
+                                </a>
+                            </li>
+                            
+                            <!-- Page Numbers -->
+                            <% 
+                            const startPage = Math.max(1, pagination.page - 2);
+                            const endPage = Math.min(pagination.totalPages, pagination.page + 2);
+                            %>
+                            
+                            <% if (startPage > 1) { %>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1<%= typeof search !== 'undefined' && search ? '&search=' + search : '' %><%= typeof categoryId !== 'undefined' && categoryId ? '&categoryId=' + categoryId : '' %>">1</a>
+                                </li>
+                                <% if (startPage > 2) { %>
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                <% } %>
+                            <% } %>
+                            
+                            <% for (let i = startPage; i <= endPage; i++) { %>
+                                <li class="page-item <%= i === pagination.page ? 'active' : '' %>">
+                                    <a class="page-link" href="?page=<%= i %><%= typeof search !== 'undefined' && search ? '&search=' + search : '' %><%= typeof categoryId !== 'undefined' && categoryId ? '&categoryId=' + categoryId : '' %>">
+                                        <%= i %>
+                                    </a>
+                                </li>
+                            <% } %>
+                            
+                            <% if (endPage < pagination.totalPages) { %>
+                                <% if (endPage < pagination.totalPages - 1) { %>
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                <% } %>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=<%= pagination.totalPages %><%= typeof search !== 'undefined' && search ? '&search=' + search : '' %><%= typeof categoryId !== 'undefined' && categoryId ? '&categoryId=' + categoryId : '' %>">
+                                        <%= pagination.totalPages %>
+                                    </a>
+                                </li>
+                            <% } %>
+                            
+                            <!-- Next Button -->
+                            <li class="page-item <%= pagination.page >= pagination.totalPages ? 'disabled' : '' %>">
+                                <a class="page-link" href="?page=<%= pagination.page + 1 %><%= typeof search !== 'undefined' && search ? '&search=' + search : '' %><%= typeof categoryId !== 'undefined' && categoryId ? '&categoryId=' + categoryId : '' %>">
+                                    Volgende <i class="bi bi-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        <% } %>
+    </div>
+    
+    <%- include('partials/footer') %>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Auto-submit form on category change -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const categorySelect = document.getElementById('category');
+            if (categorySelect) {
+                categorySelect.addEventListener('change', function() {
+                    // Auto-submit the form when category changes
+                    this.form.submit();
+                });
+            }
+        });
+    </script>
+    
+    <!-- Film rental handling -->
+    <script>
+        function rentFilm(filmId, filmTitle) {
+            if (confirm(`Weet je zeker dat je "${filmTitle}" wilt huren?`)) {
+                // In een echte applicatie zou dit een AJAX call zijn naar de server
+                fetch(`/films/${filmId}/rent`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ filmId: filmId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`"${filmTitle}" is succesvol gehuurd!`);
+                        location.reload(); // Refresh om beschikbaarheid bij te werken
+                    } else {
+                        alert(`Fout bij het huren: ${data.message}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('Fout:', error);
+                    alert('Er is een fout opgetreden bij het huren van de film.');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

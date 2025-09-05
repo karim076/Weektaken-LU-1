@@ -1,4 +1,5 @@
 const CustomerService = require('../services/CustomerService');
+const RentalService = require('../services/RentalService');
 
 /**
  * Controller for customer operations using service layer
@@ -6,6 +7,7 @@ const CustomerService = require('../services/CustomerService');
 class CustomerController {
   constructor() {
     this.customerService = new CustomerService();
+    this.rentalService = new RentalService();
   }
 
   /**
@@ -297,6 +299,227 @@ class CustomerController {
       res.status(500).json({
         success: false,
         message: 'Er is een fout opgetreden bij het zoeken'
+      });
+    }
+  };
+
+  /**
+   * Show customer profile page
+   */
+  showProfile = async (req, res) => {
+    try {
+      // Get customer ID from user session (try different possible field names)
+      const customerId = req.user.user_id || req.user.customer_id || req.user.id;
+      
+      console.log('Profile debug info:');
+      console.log('  User object:', req.user);
+      console.log('  Customer ID:', customerId);
+      
+      if (!customerId) {
+        return res.status(400).render('error', {
+          title: 'Invalid User',
+          status: 400,
+          message: 'Unable to identify customer from session'
+        });
+      }
+      
+      console.log('  Calling customerService.getCustomerById with ID:', customerId);
+      const customer = await this.customerService.getCustomerById(customerId);
+      console.log('  Customer service returned:', customer);
+      
+      if (!customer) {
+        console.log('  No customer found with ID:', customerId);
+        return res.status(404).render('error', {
+          title: 'Customer Not Found',
+          status: 404,
+          message: `Customer data could not be loaded for ID: ${customerId}`
+        });
+      }
+
+      console.log('  Rendering profile page with customer:', customer.first_name, customer.last_name);
+      console.log('  About to call res.render with template: profile-simple');
+      
+      res.render('profile-simple', {
+        title: 'My Profile - Sakila',
+        user: req.user,
+        customer,
+        success: req.query.success,
+        error: req.query.error
+      });
+      
+      console.log('  res.render called successfully');
+    } catch (error) {
+      console.error('Show profile error:', error);
+      res.status(500).render('error', {
+        title: 'Server Error',
+        status: 500,
+        message: 'An error occurred while loading your profile: ' + error.message
+      });
+    }
+  };
+
+  /**
+   * Update customer profile
+   */
+  updateProfile = async (req, res) => {
+    try {
+      const customerId = req.user.user_id || req.user.customer_id || req.user.id;
+      const { first_name, last_name, email } = req.body;
+
+      if (!first_name || !last_name || !email) {
+        return res.redirect('/customer/profile?error=All fields are required');
+      }
+
+      const result = await this.customerService.updateCustomer(customerId, {
+        first_name,
+        last_name,
+        email
+      });
+
+      if (result.success) {
+        res.redirect('/profile?success=Profile updated successfully');
+      } else {
+        res.redirect('/profile?error=' + encodeURIComponent(result.message));
+      }
+    } catch (error) {
+      console.error('Update profile error:', error);
+      res.redirect('/profile?error=An error occurred');
+    }
+  };
+
+  /**
+   * Get customer rentals
+   */
+  getRentals = async (req, res) => {
+    try {
+      const customerId = req.user.user_id;
+      const page = parseInt(req.query.page) || 1;
+      
+      const result = await this.rentalService.getCustomerRentals(customerId, page, 10);
+      
+      if (!result.success) {
+        return res.status(500).render('error', {
+          title: 'Server Fout',
+          status: 500,
+          message: result.message
+        });
+      }
+      
+      res.render('customer/rentals', {
+        title: 'Mijn Verhuur - Sakila',
+        user: req.user,
+        rentals: result.rentals,
+        activeRentals: result.activeRentals,
+        stats: result.stats,
+        pagination: result.pagination,
+        success: req.query.success,
+        error: req.query.error
+      });
+    } catch (error) {
+      console.error('Get rentals error:', error);
+      res.status(500).render('error', {
+        title: 'Server Fout',
+        status: 500,
+        message: 'Er is een fout opgetreden bij het laden van uw verhuur'
+      });
+    }
+  };
+
+  /**
+   * Get rental details
+   */
+  getRentalDetails = async (req, res) => {
+    try {
+      const customerId = req.user.user_id;
+      const rentalId = req.params.id;
+      
+      const result = await this.rentalService.getRentalDetails(rentalId);
+      
+      if (!result.success) {
+        return res.status(404).render('error', {
+          title: 'Verhuur Niet Gevonden',
+          status: 404,
+          message: result.message
+        });
+      }
+
+      // Verify this rental belongs to the logged-in customer
+      if (result.rental.customer_id !== customerId) {
+        return res.status(403).render('error', {
+          title: 'Toegang Geweigerd',
+          status: 403,
+          message: 'U mag alleen uw eigen verhuur bekijken'
+        });
+      }
+      
+      res.render('customer/rental-details', {
+        title: 'Verhuur Details - Sakila',
+        user: req.user,
+        rental: result.rental
+      });
+    } catch (error) {
+      console.error('Get rental details error:', error);
+      res.status(500).render('error', {
+        title: 'Server Fout',
+        status: 500,
+        message: 'Er is een fout opgetreden'
+      });
+    }
+  };
+
+  /**
+   * Create new rental (rent a film)
+   */
+  createRental = async (req, res) => {
+    try {
+      const customerId = req.user.user_id;
+      const { inventory_id } = req.body;
+
+      if (!inventory_id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Inventory ID is required'
+        });
+      }
+
+      const result = await this.rentalService.createRental(customerId, inventory_id);
+      
+      if (!result.success) {
+        return res.status(400).json(result);
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error('Create rental error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Er is een fout opgetreden bij het huren van de film'
+      });
+    }
+  };
+
+  /**
+   * Get customer payments
+   */
+  getPayments = async (req, res) => {
+    try {
+      const customerId = req.user.user_id;
+      const page = parseInt(req.query.page) || 1;
+      
+      const result = await this.customerService.getPaymentHistory(customerId, page, 10);
+      
+      res.render('customer/payments', {
+        title: 'Mijn Betalingen - Sakila',
+        user: req.user,
+        payments: result.payments,
+        pagination: result.pagination
+      });
+    } catch (error) {
+      console.error('Get payments error:', error);
+      res.status(500).render('error', {
+        title: 'Server Fout',
+        status: 500,
+        message: 'Er is een fout opgetreden bij het laden van uw betalingen'
       });
     }
   };

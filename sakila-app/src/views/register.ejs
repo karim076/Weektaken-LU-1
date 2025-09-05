@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registreren - Sakila App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <%- include('partials/navbar') %>
+    
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card shadow mt-5">
+                    <div class="card-header bg-success text-white text-center">
+                        <h3 class="mb-0">
+                            <i class="bi bi-person-plus"></i>
+                            Nieuw Account Aanmaken
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <% if (typeof error !== 'undefined' && error) { %>
+                            <div class="alert alert-danger" role="alert">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <%= error %>
+                            </div>
+                        <% } %>
+                        
+                        <% if (typeof success !== 'undefined' && success) { %>
+                            <div class="alert alert-success" role="alert">
+                                <i class="bi bi-check-circle"></i>
+                                <%= success %>
+                            </div>
+                        <% } %>
+                        
+                        <form action="/register" method="POST" id="registerForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="first_name" class="form-label">
+                                            <i class="bi bi-person"></i>
+                                            Voornaam *
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            class="form-control" 
+                                            id="first_name" 
+                                            name="first_name" 
+                                            required
+                                            placeholder="Je voornaam"
+                                            value="<%= typeof formData !== 'undefined' && formData.first_name ? formData.first_name : '' %>"
+                                        >
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="last_name" class="form-label">
+                                            <i class="bi bi-person"></i>
+                                            Achternaam *
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            class="form-control" 
+                                            id="last_name" 
+                                            name="last_name" 
+                                            required
+                                            placeholder="Je achternaam"
+                                            value="<%= typeof formData !== 'undefined' && formData.last_name ? formData.last_name : '' %>"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="email" class="form-label">
+                                    <i class="bi bi-envelope"></i>
+                                    Email *
+                                </label>
+                                <input 
+                                    type="email" 
+                                    class="form-control" 
+                                    id="email" 
+                                    name="email" 
+                                    required
+                                    placeholder="je@email.com"
+                                    value="<%= typeof formData !== 'undefined' && formData.email ? formData.email : '' %>"
+                                >
+                                <div class="form-text">We delen je email nooit met anderen.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="password" class="form-label">
+                                    <i class="bi bi-lock"></i>
+                                    Wachtwoord *
+                                </label>
+                                <div class="input-group">
+                                    <input 
+                                        type="password" 
+                                        class="form-control" 
+                                        id="password" 
+                                        name="password" 
+                                        required
+                                        minlength="6"
+                                        placeholder="Minimaal 6 karakters"
+                                    >
+                                    <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="form-text">Minimaal 6 karakters lang.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="confirm_password" class="form-label">
+                                    <i class="bi bi-lock-fill"></i>
+                                    Bevestig Wachtwoord *
+                                </label>
+                                <div class="input-group">
+                                    <input 
+                                        type="password" 
+                                        class="form-control" 
+                                        id="confirm_password" 
+                                        name="confirm_password" 
+                                        required
+                                        placeholder="Herhaal je wachtwoord"
+                                    >
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                <div id="passwordMatch" class="form-text"></div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="address" class="form-label">
+                                    <i class="bi bi-house"></i>
+                                    Adres
+                                </label>
+                                <textarea 
+                                    class="form-control" 
+                                    id="address" 
+                                    name="address" 
+                                    rows="2"
+                                    placeholder="Je adres (optioneel)"
+                                ><%= typeof formData !== 'undefined' && formData.address ? formData.address : '' %></textarea>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label for="city" class="form-label">
+                                            <i class="bi bi-geo-alt"></i>
+                                            Stad
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            class="form-control" 
+                                            id="city" 
+                                            name="city" 
+                                            placeholder="Je stad"
+                                            value="<%= typeof formData !== 'undefined' && formData.city ? formData.city : '' %>"
+                                        >
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="postal_code" class="form-label">
+                                            <i class="bi bi-mailbox"></i>
+                                            Postcode
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            class="form-control" 
+                                            id="postal_code" 
+                                            name="postal_code" 
+                                            placeholder="1234AB"
+                                            value="<%= typeof formData !== 'undefined' && formData.postal_code ? formData.postal_code : '' %>"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="terms" name="terms" required>
+                                <label class="form-check-label" for="terms">
+                                    Ik ga akkoord met de <a href="/terms" target="_blank">algemene voorwaarden</a> *
+                                </label>
+                            </div>
+                            
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="newsletter" name="newsletter">
+                                <label class="form-check-label" for="newsletter">
+                                    Ik wil graag updates over nieuwe films ontvangen
+                                </label>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-success" id="submitBtn">
+                                    <i class="bi bi-person-plus"></i>
+                                    Account Aanmaken
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <hr>
+                        
+                        <div class="text-center">
+                            <p class="mb-2">Al een account?</p>
+                            <a href="/login" class="btn btn-outline-primary">
+                                <i class="bi bi-box-arrow-in-right"></i>
+                                Inloggen
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <%- include('partials/footer') %>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Toggle password visibility
+        document.getElementById('togglePassword').addEventListener('click', function() {
+            const passwordField = document.getElementById('password');
+            const icon = this.querySelector('i');
+            
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                icon.className = 'bi bi-eye-slash';
+            } else {
+                passwordField.type = 'password';
+                icon.className = 'bi bi-eye';
+            }
+        });
+        
+        document.getElementById('toggleConfirmPassword').addEventListener('click', function() {
+            const passwordField = document.getElementById('confirm_password');
+            const icon = this.querySelector('i');
+            
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                icon.className = 'bi bi-eye-slash';
+            } else {
+                passwordField.type = 'password';
+                icon.className = 'bi bi-eye';
+            }
+        });
+        
+        // Password matching validation
+        function checkPasswordMatch() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+            const matchDiv = document.getElementById('passwordMatch');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            if (confirmPassword === '') {
+                matchDiv.textContent = '';
+                submitBtn.disabled = false;
+                return;
+            }
+            
+            if (password === confirmPassword) {
+                matchDiv.textContent = '✓ Wachtwoorden komen overeen';
+                matchDiv.className = 'form-text text-success';
+                submitBtn.disabled = false;
+            } else {
+                matchDiv.textContent = '✗ Wachtwoorden komen niet overeen';
+                matchDiv.className = 'form-text text-danger';
+                submitBtn.disabled = true;
+            }
+        }
+        
+        document.getElementById('password').addEventListener('input', checkPasswordMatch);
+        document.getElementById('confirm_password').addEventListener('input', checkPasswordMatch);
+        
+        // Form validation
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
+            const terms = document.getElementById('terms').checked;
+            
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                alert('Wachtwoorden komen niet overeen!');
+                return;
+            }
+            
+            if (!terms) {
+                e.preventDefault();
+                alert('Je moet akkoord gaan met de algemene voorwaarden!');
+                return;
+            }
+        });
+    </script>
+</body>
+</html>

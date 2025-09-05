@@ -1,219 +1,202 @@
-const AuthService = require('../services/AuthService');
+/**
+ * Authentication middleware for Sakila App
+ * Provides session-based authentication and authorization
+ */
 
 /**
- * Authentication middleware using the new service layer
+ * Require user to be authenticated
  */
-class AuthMiddleware {
-  constructor() {
-    this.authService = new AuthService();
+function requireAuth(req, res, next) {
+  console.log('   Auth middleware - requireAuth');
+  console.log('   Session ID:', req.session?.id);
+  console.log('   Is Authenticated:', req.session?.isAuthenticated);
+  console.log('   User:', req.session?.user?.username);
+  
+  if (!req.session || !req.session.user || !req.session.isAuthenticated) {
+    console.log('Auth failed, redirecting to login');
+    return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
   }
 
-  /**
-   * Require authentication
-   */
-  requireAuth = async (req, res, next) => {
-    try {
-      const sessionId = req.session?.sessionId;
-      
-      if (!sessionId) {
-        return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
-      }
-
-      const user = await this.authService.getSession(sessionId);
-      
-      if (!user) {
-        req.session.destroy();
-        return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
-      }
-
-      req.user = user;
-      res.locals.user = user;
-      next();
-    } catch (error) {
-      console.error('Auth middleware error:', error);
-      res.redirect('/login');
-    }
-  };
-
-  /**
-   * Require staff access
-   */
-  requireStaff = async (req, res, next) => {
-    try {
-      const sessionId = req.session?.sessionId;
-      
-      if (!sessionId) {
-        return res.status(403).render('error', {
-          title: 'Toegang Geweigerd',
-          status: 403,
-          message: 'U moet ingelogd zijn als staff om deze pagina te bekijken'
-        });
-      }
-
-      const user = await this.authService.getSession(sessionId);
-      
-      if (!user || user.type !== 'staff') {
-        return res.status(403).render('error', {
-          title: 'Toegang Geweigerd',
-          status: 403,
-          message: 'U heeft geen staff toegang tot deze pagina'
-        });
-      }
-
-      req.user = user;
-      res.locals.user = user;
-      next();
-    } catch (error) {
-      console.error('Staff auth middleware error:', error);
-      res.status(500).render('error', {
-        title: 'Server Fout',
-        status: 500,
-        message: 'Er is een fout opgetreden bij de autorisatie'
-      });
-    }
-  };
-
-  /**
-   * Require owner access
-   */
-  requireOwner = async (req, res, next) => {
-    try {
-      const sessionId = req.session?.sessionId;
-      
-      if (!sessionId) {
-        return res.status(403).render('error', {
-          title: 'Toegang Geweigerd',
-          status: 403,
-          message: 'U moet ingelogd zijn als eigenaar om deze pagina te bekijken'
-        });
-      }
-
-      const user = await this.authService.getSession(sessionId);
-      
-      if (!user || user.type !== 'owner') {
-        return res.status(403).render('error', {
-          title: 'Toegang Geweigerd',
-          status: 403,
-          message: 'U heeft geen eigenaar toegang tot deze pagina'
-        });
-      }
-
-      req.user = user;
-      res.locals.user = user;
-      next();
-    } catch (error) {
-      console.error('Owner auth middleware error:', error);
-      res.status(500).render('error', {
-        title: 'Server Fout',
-        status: 500,
-        message: 'Er is een fout opgetreden bij de autorisatie'
-      });
-    }
-  };
-
-  /**
-   * Optional authentication
-   */
-  optionalAuth = async (req, res, next) => {
-    try {
-      const sessionId = req.session?.sessionId;
-      
-      if (sessionId) {
-        const user = await this.authService.getSession(sessionId);
-        if (user) {
-          req.user = user;
-          res.locals.user = user;
-        }
-      }
-      
-      next();
-    } catch (error) {
-      console.error('Optional auth middleware error:', error);
-      next();
-    }
-  };
-
-  /**
-   * Require customer access
-   */
-  requireCustomer = async (req, res, next) => {
-    try {
-      const sessionId = req.session?.sessionId;
-      
-      if (!sessionId) {
-        return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
-      }
-
-      const user = await this.authService.getSession(sessionId);
-      
-      if (!user || user.type !== 'customer') {
-        return res.status(403).render('error', {
-          title: 'Toegang Geweigerd',
-          status: 403,
-          message: 'U moet ingelogd zijn als klant om films te kunnen huren'
-        });
-      }
-
-      req.user = user;
-      res.locals.user = user;
-      next();
-    } catch (error) {
-      console.error('Customer auth middleware error:', error);
-      res.status(500).render('error', {
-        title: 'Server Fout',
-        status: 500,
-        message: 'Er is een fout opgetreden bij de autorisatie'
-      });
-    }
-  };
-
-  /**
-   * Require admin access (staff or owner)
-   */
-  requireAdmin = async (req, res, next) => {
-    try {
-      const sessionId = req.session?.sessionId;
-      
-      if (!sessionId) {
-        return res.status(403).render('error', {
-          title: 'Toegang Geweigerd',
-          status: 403,
-          message: 'U moet ingelogd zijn als beheerder om deze pagina te bekijken'
-        });
-      }
-
-      const user = await this.authService.getSession(sessionId);
-      
-      if (!user || (user.type !== 'staff' && user.type !== 'owner')) {
-        return res.status(403).render('error', {
-          title: 'Toegang Geweigerd',
-          status: 403,
-          message: 'U heeft geen beheerder toegang tot deze pagina'
-        });
-      }
-
-      req.user = user;
-      res.locals.user = user;
-      next();
-    } catch (error) {
-      console.error('Admin auth middleware error:', error);
-      res.status(500).render('error', {
-        title: 'Server Fout',
-        status: 500,
-        message: 'Er is een fout opgetreden bij de autorisatie'
-      });
-    }
-  };
+  // Set user data for views
+  req.user = req.session.user;
+  res.locals.user = req.session.user;
+  console.log('Auth success, continuing');
+  next();
 }
 
-// Create instance and export the methods
-const authMiddleware = new AuthMiddleware();
+/**
+ * Require user to be staff
+ */
+function requireStaff(req, res, next) {
+  console.log('   Auth middleware - requireStaff');
+  console.log('   User:', req.session?.user?.username);
+  console.log('   User Type:', req.session?.user?.user_type);
+  console.log('   User Role:', req.session?.user?.role);
+  
+  if (!req.session || !req.session.user || !req.session.isAuthenticated) {
+    console.log('No session or not authenticated');
+    return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
+  }
+
+  const user = req.session.user;
+  
+  // Fix missing role
+  if (!user.role) {
+    if (user.user_type === 'staff' && user.username === 'Mike') {
+      user.role = 'admin';
+      req.session.user.role = 'admin';
+      console.log('Fixed Mike role to admin');
+    } else if (user.user_type === 'staff') {
+      user.role = 'staff';
+      req.session.user.role = 'staff';
+      console.log('Fixed staff role');
+    }
+  }
+  
+  if (user.role !== 'staff') {
+    console.log('User role is not staff:', user.role);
+    return res.status(403).render('error', {
+      title: 'Toegang Geweigerd',
+      status: 403,
+      message: 'U heeft geen staff toegang tot deze pagina'
+    });
+  }
+
+  req.user = user;
+  res.locals.user = user;
+  console.log('Staff auth success');
+  next();
+}
+
+/**
+ * Require user to be admin (owner)
+ */
+function requireAdmin(req, res, next) {
+  console.log('   Auth middleware - requireAdmin');
+  console.log('   Session ID:', req.session?.id);
+  console.log('   Is Authenticated:', req.session?.isAuthenticated);
+  console.log('   User:', req.session?.user?.username);
+  console.log('   User Type:', req.session?.user?.user_type);
+  console.log('   User Role:', req.session?.user?.role);
+  
+  if (!req.session || !req.session.user || !req.session.isAuthenticated) {
+    console.log('No session or not authenticated');
+    return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
+  }
+
+  const user = req.session.user;
+  
+  // Fix missing role - assign based on user_type and username
+  if (!user.role) {
+    if (user.user_type === 'staff' && user.username === 'Mike') {
+      user.role = 'admin';
+      req.session.user.role = 'admin'; // Update session
+      console.log('Fixed Mike role to admin');
+    } else if (user.user_type === 'staff') {
+      user.role = 'staff';
+      req.session.user.role = 'staff';
+      console.log('Fixed staff role');
+    } else if (user.user_type === 'customer') {
+      user.role = 'customer';
+      req.session.user.role = 'customer';
+      console.log('Fixed customer role');
+    }
+  }
+  
+  if (user.role !== 'admin') {
+    console.log('User role is not admin:', user.role);
+    return res.status(403).render('error', {
+      title: 'Toegang Geweigerd',
+      status: 403,
+      message: 'U heeft geen beheerder toegang tot deze pagina'
+    });
+  }
+
+  req.user = user;
+  res.locals.user = user;
+  console.log('Admin auth success');
+  next();
+}
+
+/**
+ * Require user to be customer
+ */
+function requireCustomer(req, res, next) {
+  console.log('Auth middleware - requireCustomer');
+  console.log('User:', req.session?.user?.username);
+  console.log('User Type:', req.session?.user?.user_type);
+  console.log('User Role:', req.session?.user?.role);
+  
+  if (!req.session || !req.session.user || !req.session.isAuthenticated) {
+    console.log('No session or not authenticated');
+    return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
+  }
+
+  const user = req.session.user;
+  
+  // Fix missing role
+  if (!user.role && user.user_type === 'customer') {
+    user.role = 'customer';
+    req.session.user.role = 'customer';
+    console.log('Fixed customer role');
+  }
+  
+  if (user.role !== 'customer') {
+    console.log('User role is not customer:', user.role);
+    return res.status(403).render('error', {
+      title: 'Toegang Geweigerd',
+      status: 403,
+      message: 'U moet ingelogd zijn als klant om films te kunnen huren'
+    });
+  }
+
+  req.user = user;
+  res.locals.user = user;
+  console.log('Customer auth success');
+  next();
+}
+
+/**
+ * Optional authentication - add user info if available but don't require login
+ */
+function optionalAuth(req, res, next) {
+  if (req.session && req.session.user && req.session.isAuthenticated) {
+    req.user = req.session.user;
+    res.locals.user = req.session.user;
+  } else {
+    req.user = null;
+    res.locals.user = null;
+  }
+  next();
+}
+
+/**
+ * Require admin or staff access
+ */
+function requireAdminOrStaff(req, res, next) {
+  if (!req.session || !req.session.user || !req.session.isAuthenticated) {
+    return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
+  }
+
+  const user = req.session.user;
+  if (user.role !== 'admin' && user.role !== 'staff') {
+    return res.status(403).render('error', {
+      title: 'Toegang Geweigerd',
+      status: 403,
+      message: 'U heeft geen beheerder toegang tot deze pagina'
+    });
+  }
+
+  req.user = user;
+  res.locals.user = user;
+  next();
+}
 
 module.exports = {
-  requireAuth: authMiddleware.requireAuth,
-  requireStaff: authMiddleware.requireStaff,
-  requireOwner: authMiddleware.requireOwner,
-  optionalAuth: authMiddleware.optionalAuth,
-  requireCustomer: authMiddleware.requireCustomer,
-  requireAdmin: authMiddleware.requireAdmin
+  requireAuth,
+  requireStaff,
+  requireAdmin, 
+  requireCustomer,
+  requireAdminOrStaff,
+  optionalAuth
 };

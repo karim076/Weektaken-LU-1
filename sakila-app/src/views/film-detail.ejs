@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= film.title %> - Sakila Video</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+
+<%- include('partials/navbar') %>
+
+<main class="film-detail-page">
+    <!-- Film hero section with title and description -->
+    <section class="film-hero">
+        <div class="container">
+            <div class="film-hero-content">
+                <div class="mb-3">
+                    <a href="/films" class="btn btn-outline-light btn-sm">
+                        Terug naar Films
+                    </a>
+                </div>
+                
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h1 class="film-title"><%= film.title %></h1>
+                        <p class="film-description"><%= film.description || 'Geen beschrijving beschikbaar.' %></p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <div class="rental-price">
+                            <span class="price">€<%= film.rental_rate %></span>
+                            <span class="price-label">per dag</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="film-meta">
+                    <span class="rating-badge">
+                        <%= film.rating || 'Niet geclassificeerd' %>
+                    </span>
+                    <% if (film.category_name) { %>
+                        <span class="category-badge">
+                            <%= film.category_name %>
+                        </span>
+                    <% } %>
+                    <span class="duration-badge">
+                        <%= film.length %> min
+                    </span>
+                    <span class="year-badge">
+                        <%= film.release_year || 'Onbekend jaar' %>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Film Details -->
+    <section class="film-details">
+        <div class="container">
+            <div class="row">
+                <!-- Main Content -->
+                <div class="col-lg-8">
+                    <!-- Film Information -->
+                    <div class="film-info-section">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-card">
+                                    <h3><i class="bi bi-info-circle"></i> Details</h3>
+                                    <div class="info-list">
+                                        <div class="info-item">
+                                            <span>Taal:</span>
+                                            <span><%= film.language_name || 'English' %></span>
+                                        </div>
+                                        <div class="info-item">
+                                            <span>Verhuurduur:</span>
+                                            <span><%= film.rental_duration || 3 %> dagen</span>
+                                        </div>
+                                        <div class="info-item">
+                                            <span>Vervangingskosten:</span>
+                                            <span>€<%= film.replacement_cost %></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-card">
+                                    <h3><i class="bi bi-pie-chart"></i> Beschikbaarheid</h3>
+                                    <div class="availability-summary">
+                                        <div class="availability-stats">
+                                            <div class="stat-item">
+                                                <span class="stat-number available"><%= film.available_copies || 0 %></span>
+                                                <span class="stat-label">Beschikbaar</span>
+                                            </div>
+                                            <div class="stat-item">
+                                                <span class="stat-number total"><%= film.total_copies || 0 %></span>
+                                                <span class="stat-label">Totaal</span>
+                                            </div>
+                                        </div>
+                                        <div class="availability-bar">
+                                            <div class="availability-progress" data-percentage="<%= Math.round(((film.available_copies || 0) / (film.total_copies || 1)) * 100) %>"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Store Availability -->
+                    <div class="stores-section">
+                        <h2><i class="bi bi-shop"></i> Beschikbaar in Winkels</h2>
+                        
+                        <div class="stores-list">
+                            <% if (film.stores && film.stores.length > 0) { %>
+                                <% film.stores.forEach((store) => { %>
+                                    <div class="store-item">
+                                        <div class="store-info">
+                                            <div class="store-header">
+                                                <h4>Winkel #<%= store.store_id %></h4>
+                                            </div>
+                                            
+                                            <div class="store-details">
+                                                <div class="address">
+                                                    <i class="bi bi-geo-alt"></i>
+                                                    <%= store.address %>, <%= store.city %>
+                                                </div>
+                                                
+                                                <div class="inventory">
+                                                    <span>Voorraad: <%= store.available_copies %>/<%= store.total_copies %></span>
+                                                    <div class="inventory-bar">
+                                                        <div class="inventory-fill" data-percentage="<%= store.total_copies > 0 ? Math.round((store.available_copies / store.total_copies) * 100) : 0 %>"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="store-actions">
+                                            <span class="availability-badge <%= store.available_copies > 0 ? 'available' : 'unavailable' %>">
+                                                <i class="bi bi-<%= store.available_copies > 0 ? 'check-circle' : 'x-circle' %>"></i>
+                                                <%= store.available_copies > 0 ? 'Beschikbaar' : 'Uitverhuurd' %>
+                                            </span>
+                                            
+                                            <% if (user && user.role === 'customer' && store.available_copies > 0) { %>
+                                                <form method="POST" action="/films/<%= film.film_id %>/rent">
+                                                    <input type="hidden" name="store_id" value="<%= store.store_id %>">
+                                                    <button type="submit" class="rent-btn">
+                                                        <i class="bi bi-play-circle"></i> Huur
+                                                    </button>
+                                                </form>
+                                            <% } else if (!user) { %>
+                                                <a href="/login?redirect=/films/<%= film.film_id %>" class="login-btn">
+                                                    <i class="bi bi-box-arrow-in-right"></i> Login
+                                                </a>
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                <% }); %>
+                            <% } else { %>
+                                <div class="no-stores">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                    <p>Deze film is momenteel niet beschikbaar in onze winkels.</p>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="col-lg-4">
+                    <div class="sidebar">
+                        <% if (!user) { %>
+                            <div class="login-card">
+                                <h4><i class="bi bi-person-plus"></i> Log in om te huren</h4>
+                                <p>Log in om deze film te kunnen huren.</p>
+                                <div class="login-actions">
+                                    <a href="/login?redirect=/films/<%= film.film_id %>" class="btn-primary">
+                                        <i class="bi bi-box-arrow-in-right"></i> Inloggen
+                                    </a>
+                                    <a href="/register" class="btn-secondary">
+                                        <i class="bi bi-person-plus"></i> Registreren
+                                    </a>
+                                </div>
+                            </div>
+                        <% } %>
+
+                        <% if (similarFilms && similarFilms.length > 0) { %>
+                            <div class="similar-films">
+                                <h4><i class="bi bi-collection-play"></i> Soortgelijke Films</h4>
+                                <div class="similar-list">
+                                    <% similarFilms.slice(0, 3).forEach((similarFilm) => { %>
+                                        <a href="/films/<%= similarFilm.film_id %>" class="similar-item">
+                                            <div class="similar-info">
+                                                <div class="similar-title">
+                                                    <%= similarFilm.title %>
+                                                </div>
+                                                <div class="similar-meta">
+                                                    <span><i class="bi bi-star-fill"></i> <%= similarFilm.rating %></span>
+                                                    <span><i class="bi bi-clock"></i> <%= similarFilm.length %> min</span>
+                                                </div>
+                                                <div class="similar-footer">
+                                                    <span class="price">€<%= similarFilm.rental_rate %></span>
+                                                    <span class="availability <%= similarFilm.available_copies > 0 ? 'available' : 'unavailable' %>">
+                                                        <i class="bi bi-<%= similarFilm.available_copies > 0 ? 'check' : 'x' %>-circle"></i>
+                                                        <%= similarFilm.available_copies > 0 ? 'Beschikbaar' : 'Uitverhuurd' %>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    <% }); %>
+                                </div>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<%- include('partials/footer') %>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Initialize progress bars
+    document.addEventListener('DOMContentLoaded', function() {
+        // Availability progress bars
+        const availabilityBars = document.querySelectorAll('.availability-progress[data-percentage]');
+        availabilityBars.forEach(bar => {
+            const percentage = bar.getAttribute('data-percentage');
+            setTimeout(() => {
+                bar.style.width = percentage + '%';
+            }, 100);
+        });
+
+        // Inventory fill bars
+        const inventoryBars = document.querySelectorAll('.inventory-fill[data-percentage]');
+        inventoryBars.forEach(bar => {
+            const percentage = bar.getAttribute('data-percentage');
+            setTimeout(() => {
+                bar.style.width = percentage + '%';
+            }, 150);
+        });
+    });
+</script>
+</body>
+</html>

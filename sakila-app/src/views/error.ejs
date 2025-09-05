@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fout <%= status || '500' %> - Sakila App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <%- include('partials/navbar') %>
+    
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card shadow">
+                    <div class="card-body text-center">
+                        <% if ((status || 500) == 404) { %>
+                            <i class="bi bi-exclamation-triangle display-1 text-warning mb-4"></i>
+                            <h1 class="h2 mb-3">Pagina niet gevonden</h1>
+                            <p class="lead text-muted mb-4">
+                                De pagina die je zoekt bestaat niet of is verplaatst.
+                            </p>
+                        <% } else if ((status || 500) == 403) { %>
+                            <i class="bi bi-shield-exclamation display-1 text-danger mb-4"></i>
+                            <h1 class="h2 mb-3">Toegang geweigerd</h1>
+                            <p class="lead text-muted mb-4">
+                                Je hebt geen toestemming om deze pagina te bekijken.
+                            </p>
+                        <% } else { %>
+                            <i class="bi bi-exclamation-circle display-1 text-danger mb-4"></i>
+                            <h1 class="h2 mb-3">Er is een fout opgetreden</h1>
+                            <p class="lead text-muted mb-4">
+                                Er is iets misgegaan op de server.
+                            </p>
+                        <% } %>
+                        
+                        <% if (typeof message !== 'undefined' && message) { %>
+                            <div class="alert alert-info">
+                                <strong>Details:</strong> <%= message %>
+                            </div>
+                        <% } %>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                            <a href="/" class="btn btn-primary me-md-2">
+                                <i class="bi bi-house"></i> Naar Home
+                            </a>
+                            <button onclick="history.back()" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Ga Terug
+                            </button>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <p class="text-muted small">
+                            <strong>Status Code:</strong> <%= status || '500' %><br>
+                            Als dit probleem aanhoudt, neem dan contact op met de beheerder.
+                        </p>
+                        
+                        <% if (typeof stack !== 'undefined' && stack && process.env.NODE_ENV === 'development') { %>
+                            <details class="mt-4 text-start">
+                                <summary class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-code"></i> Stack Trace (Development)
+                                </summary>
+                                <pre class="bg-light p-3 mt-2 text-start" style="font-size: 0.8rem; overflow-x: auto;"><%= stack %></pre>
+                            </details>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <%- include('partials/footer') %>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

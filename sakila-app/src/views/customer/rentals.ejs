@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <%- include('../partials/navbar') %>
+    
+    <div class="container mt-4">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+                <li class="breadcrumb-item active">Mijn Verhuur</li>
+            </ol>
+        </nav>
+        <!-- Page Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card bg-primary text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h1 class="h3 mb-0">
+                                    <i class="bi bi-film"></i>
+                                    Mijn Verhuur
+                                </h1>
+                                <p class="mb-0">Bekijk je huidige en eerdere verhuur</p>
+                            </div>
+                            <a href="/films" class="btn btn-light">
+                                <i class="bi bi-plus-circle"></i>
+                                Nieuwe Film Huren
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <% if (stats) { %>
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <i class="bi bi-clock-history fs-1 text-warning mb-2"></i>
+                        <h4 class="text-warning"><%= stats.pending || 0 %></h4>
+                        <small class="text-muted">In Behandeling</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <i class="bi bi-credit-card fs-1 text-success mb-2"></i>
+                        <h4 class="text-success"><%= stats.paid || 0 %></h4>
+                        <small class="text-muted">Betaald</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <i class="bi bi-film fs-1 text-primary mb-2"></i>
+                        <h4 class="text-primary"><%= stats.rented || 0 %></h4>
+                        <small class="text-muted">Gehuurd</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center h-100">
+                    <div class="card-body">
+                        <i class="bi bi-check-circle fs-1 text-info mb-2"></i>
+                        <h4 class="text-info"><%= stats.returned || 0 %></h4>
+                        <small class="text-muted">Teruggebracht</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <% } %>
+
+        <!-- Rentals List -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history text-primary"></i>
+                    Verhuur Geschiedenis
+                </h5>
+            </div>
+            <div class="card-body">
+                <% if (rentals && rentals.length > 0) { %>
+                    <div class="row g-3">
+                        <% rentals.forEach(rental => { %>
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <div class="row align-items-center">
+                                            <!-- Film Icon & Info -->
+                                            <div class="col-auto">
+                                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                                     style="width: 60px; height: 60px;">
+                                                    <i class="bi bi-film fs-4"></i>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Film Details -->
+                                            <div class="col">
+                                                <div class="row">
+                                                    <div class="col-md-4">
+                                                        <h6 class="mb-1">
+                                                            <%= rental.title || rental.film_title %>
+                                                        </h6>
+                                                        <small class="text-muted">
+                                                            <i class="bi bi-tag"></i> 
+                                                            <%= rental.category %>
+                                                        </small>
+                                                    </div>
+                                                    
+                                                    <div class="col-md-3">
+                                                        <small class="text-muted d-block">Gehuurd op</small>
+                                                        <span class="fw-medium">
+                                                            <%= new Date(rental.rental_date).toLocaleDateString('nl-NL') %>
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    <div class="col-md-2">
+                                                        <small class="text-muted d-block">Status</small>
+                                                        <% if (rental.status === 'pending') { %>
+                                                            <span class="badge bg-warning text-dark">
+                                                                <i class="bi bi-clock"></i> In Behandeling
+                                                            </span>
+                                                        <% } else if (rental.status === 'paid') { %>
+                                                            <span class="badge bg-success">
+                                                                <i class="bi bi-check-circle"></i> Betaald
+                                                            </span>
+                                                        <% } else if (rental.status === 'rented') { %>
+                                                            <span class="badge bg-primary">
+                                                                <i class="bi bi-play-circle"></i> Gehuurd
+                                                            </span>
+                                                        <% } else if (rental.status === 'returned') { %>
+                                                            <span class="badge bg-info">
+                                                                <i class="bi bi-check2-circle"></i> Teruggebracht
+                                                            </span>
+                                                        <% } %>
+                                                    </div>
+                                                    
+                                                    <div class="col-md-2">
+                                                        <small class="text-muted d-block">Bedrag</small>
+                                                        <span class="h6 text-success mb-0">
+                                                            €<%= parseFloat(rental.amount || 0).toFixed(2) %>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Actions -->
+                                            <div class="col-auto">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-outline-primary btn-sm dropdown-toggle" 
+                                                            type="button" data-bs-toggle="dropdown">
+                                                        <i class="bi bi-three-dots"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li>
+                                                            <a class="dropdown-item" 
+                                                               href="/customer/rentals/<%= rental.rental_id %>">
+                                                                <i class="bi bi-eye"></i> Details Bekijken
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" 
+                                                               href="/films/<%= rental.film_id %>">
+                                                                <i class="bi bi-info-circle"></i> Film Info
+                                                            </a>
+                                                        </li>
+                                                        <% if (rental.status === 'returned') { %>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <a class="dropdown-item text-success" href="/films">
+                                                                <i class="bi bi-arrow-repeat"></i> Opnieuw Huren
+                                                            </a>
+                                                        </li>
+                                                        <% } %>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Return Date Info -->
+                                        <% if (rental.return_date) { %>
+                                        <div class="row mt-2">
+                                            <div class="col-12">
+                                                <small class="text-muted">
+                                                    <i class="bi bi-calendar-check"></i>
+                                                    Teruggebracht op <%= new Date(rental.return_date).toLocaleDateString('nl-NL') %>
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <% } else if (rental.expected_return_date) { %>
+                                        <div class="row mt-2">
+                                            <div class="col-12">
+                                                <small class="text-warning">
+                                                    <i class="bi bi-calendar-event"></i>
+                                                    Verwacht terug: <%= new Date(rental.expected_return_date).toLocaleDateString('nl-NL') %>
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <% } %>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }) %>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <% if (pagination && pagination.totalPages > 1) { %>
+                        <nav aria-label="Page navigation" class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                <% if (pagination.currentPage > 1) { %>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page=<%= pagination.currentPage - 1 %>">
+                                            <i class="bi bi-chevron-left"></i> Vorige
+                                        </a>
+                                    </li>
+                                <% } %>
+                                
+                                <% for (let i = 1; i <= pagination.totalPages; i++) { %>
+                                    <li class="page-item <%= i === pagination.currentPage ? 'active' : '' %>">
+                                        <a class="page-link" href="?page=<%= i %>"><%= i %></a>
+                                    </li>
+                                <% } %>
+                                
+                                <% if (pagination.currentPage < pagination.totalPages) { %>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page=<%= pagination.currentPage + 1 %>">
+                                            Volgende <i class="bi bi-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                <% } %>
+                            </ul>
+                        </nav>
+                    <% } %>
+                <% } else { %>
+                    <div class="text-center py-5">
+                        <i class="bi bi-film display-1 text-muted mb-3"></i>
+                        <h3 class="text-muted">Geen verhuur gevonden</h3>
+                        <p class="text-muted">Je hebt nog geen films gehuurd.</p>
+                        <a href="/films" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i>
+                            Huur je eerste film
+                        </a>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <%- include('../partials/footer') %>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

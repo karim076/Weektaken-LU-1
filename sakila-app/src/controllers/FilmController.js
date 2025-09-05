@@ -1,4 +1,5 @@
 const FilmService = require('../services/FilmService');
+const RentalService = require('../services/RentalService');
 
 /**
  * Controller for film operations using service layer
@@ -6,6 +7,7 @@ const FilmService = require('../services/FilmService');
 class FilmController {
   constructor() {
     this.filmService = new FilmService();
+    this.rentalService = new RentalService();
   }
 
   /**
@@ -17,6 +19,14 @@ class FilmController {
       const limit = 12;
       const search = req.query.search || '';
       const categoryId = req.query.category ? parseInt(req.query.category) : null;
+
+      console.log('Film index - Query params:', {
+        page,
+        limit,
+        search,
+        categoryId,
+        originalQuery: req.query
+      });
 
       const result = await this.filmService.getFilms(page, limit, search, categoryId);
 
@@ -47,74 +57,105 @@ class FilmController {
   };
 
   /**
-   * Show film details (US1E3)
+   * Show film details page
    */
   show = async (req, res) => {
     try {
-      const filmId = req.params.id;
+      const filmId = parseInt(req.params.id);
+      
+      if (!filmId || isNaN(filmId)) {
+        return res.status(404).render('error', {
+          title: 'Film Niet Gevonden',
+          status: 404,
+          message: 'De opgevraagde film kon niet worden gevonden'
+        });
+      }
 
-      const result = await this.filmService.getFilmDetails(filmId);
-
+      const result = await this.filmService.getFilmById(filmId);
+      
       if (!result.success) {
         return res.status(404).render('error', {
           title: 'Film Niet Gevonden',
           status: 404,
-          message: result.message
+          message: result.message || 'De opgevraagde film kon niet worden gevonden'
         });
       }
 
+      // Get similar films (same category)
+      let similarFilms = [];
+      if (result.data.film.category_id) {
+        const similarResult = await this.filmService.getFilms(1, 5, '', result.data.film.category_id);
+        if (similarResult.success) {
+          similarFilms = similarResult.data.films.filter(f => f.film_id !== filmId);
+        }
+      }
+
       res.render('film-detail', {
-        title: `${result.data.film.title} - Sakila App`,
-        film: result.data.film,
-        actors: result.data.actors,
-        filmText: result.data.filmText,
-        storeInventory: result.data.storeInventory
+        title: `${result.data.film.title} - Sakila Video`,
+        film: {
+          ...result.data.film,
+          stores: result.data.storeInventory || []
+        },
+        similarFilms: similarFilms,
+        user: req.user || null
       });
     } catch (error) {
-      console.error('Film show error:', error);
+      console.error('Film detail error:', error);
       res.status(500).render('error', {
         title: 'Server Fout',
         status: 500,
-        message: 'Er is een fout opgetreden bij het laden van filmgegevens'
+        message: 'Er is een fout opgetreden bij het laden van filmdetails'
       });
     }
   };
 
   /**
-   * Rent a film (US1E2 - Staff perspective)
+   * Rent a film (US1E2 - Customer rents film)
    */
   rent = async (req, res) => {
     try {
-      const filmId = req.params.id;
-      const { customerId, storeId } = req.body;
-
-      if (!customerId) {
-        return res.status(400).json({
-          success: false,
-          message: 'Klant ID is verplicht'
-        });
+      const filmId = parseInt(req.params.id);
+      const storeId = parseInt(req.body.store_id) || 1;
+      
+      if (!req.user || req.user.role !== 'customer') {
+        return res.redirect('/login?redirect=/films/' + filmId);
       }
 
-      const result = await this.filmService.rentFilm(customerId, filmId, storeId);
+      const customerId = req.user.user_id;
 
-      if (!result.success) {
-        return res.status(400).json({
-          success: false,
-          message: result.message
-        });
+      // Get available inventory for this film and store
+      const availability = await this.filmService.checkFilmAvailability(filmId, storeId);
+      if (!availability.success || availability.data.available_copies <= 0) {
+        return res.redirect(`/films/${filmId}?error=${encodeURIComponent('Deze film is niet beschikbaar in de geselecteerde winkel')}`);
       }
 
-      res.json({
-        success: true,
-        message: result.message,
-        data: result.data
-      });
+      // Get an inventory item to rent
+      const inventoryItems = await this.filmService.db.query(`
+        SELECT i.inventory_id 
+        FROM inventory i
+        LEFT JOIN rental r ON i.inventory_id = r.inventory_id 
+          AND r.return_date IS NULL 
+          AND r.status IN ('paid', 'rented')
+        WHERE i.film_id = ? AND i.store_id = ? AND r.rental_id IS NULL
+        LIMIT 1
+      `, [filmId, storeId]);
+
+      if (!inventoryItems.length) {
+        return res.redirect(`/films/${filmId}?error=${encodeURIComponent('Geen beschikbare kopieën in deze winkel')}`);
+      }
+
+      // Create rental using RentalService
+      const rentalResult = await this.rentalService.createRental(customerId, inventoryItems[0].inventory_id);
+      
+      if (!rentalResult.success) {
+        return res.redirect(`/films/${filmId}?error=${encodeURIComponent(rentalResult.message)}`);
+      }
+
+      return res.redirect(`/customer/rentals?success=${encodeURIComponent('Film toegevoegd aan verhuur! Status: In behandeling. Ga naar de winkel om te betalen.')}`);
+      
     } catch (error) {
-      console.error('Film rent error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Er is een fout opgetreden bij het huren van de film'
-      });
+      console.error('Film rental error:', error);
+      return res.redirect(`/films/${req.params.id}?error=${encodeURIComponent('Er is een fout opgetreden bij het huren')}`);
     }
   };
 

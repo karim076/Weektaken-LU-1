@@ -224,6 +224,122 @@ class FilmService {
       };
     }
   }
+
+  /**
+   * Get popular films for homepage
+   */
+  async getPopularFilms(page = 1, limit = 12) {
+    try {
+      // Gebruik de nieuwe getPopularFilms DAO methode
+      const films = await this.filmDAO.getPopularFilms(limit);
+      const totalCount = await this.filmDAO.getFilmsCount('', null);
+
+      const totalPages = Math.ceil(totalCount / limit);
+
+      return {
+        success: true,
+        data: {
+          films,
+          pagination: {
+            page,
+            totalPages,
+            total: totalCount,
+            limit
+          }
+        }
+      };
+    } catch (error) {
+      console.error('Get popular films error:', error);
+      return {
+        success: false,
+        message: 'Er is een fout opgetreden bij het ophalen van populaire films'
+      };
+    }
+  }
+
+  /**
+   * Get total number of films
+   */
+  async getTotalFilms() {
+    try {
+      return await this.filmDAO.getFilmsCount('', null);
+    } catch (error) {
+      console.error('Get total films error:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get single film by ID with all details
+   */
+  async getFilmById(filmId) {
+    try {
+      const film = await this.filmDAO.getFilmWithDetails(filmId);
+      
+      if (!film) {
+        return {
+          success: false,
+          message: 'Film niet gevonden'
+        };
+      }
+
+      // Get store inventory information
+      const storeInventory = await this.filmDAO.getFilmStoreInventory(filmId);
+
+      return {
+        success: true,
+        data: {
+          film: film,
+          storeInventory: storeInventory
+        }
+      };
+    } catch (error) {
+      console.error('Get film by ID error:', error);
+      return {
+        success: false,
+        message: 'Er is een fout opgetreden bij het ophalen van filmdetails'
+      };
+    }
+  }
+
+  /**
+   * Check film availability in specific store
+   */
+  async checkFilmAvailability(filmId, storeId) {
+    try {
+      const availability = await this.filmDAO.checkStoreAvailability(filmId, storeId);
+      return {
+        success: true,
+        data: availability
+      };
+    } catch (error) {
+      console.error('Check availability error:', error);
+      return {
+        success: false,
+        message: 'Kan beschikbaarheid niet controleren'
+      };
+    }
+  }
+
+  /**
+   * Rent a film for a customer
+   */
+  async rentFilm(filmId, customerId, storeId) {
+    try {
+      const result = await this.filmDAO.createRental(filmId, customerId, storeId);
+      return {
+        success: true,
+        data: result,
+        message: 'Film succesvol gehuurd'
+      };
+    } catch (error) {
+      console.error('Rent film error:', error);
+      return {
+        success: false,
+        message: 'Er is een fout opgetreden bij het huren van de film'
+      };
+    }
+  }
 }
 
 module.exports = FilmService;

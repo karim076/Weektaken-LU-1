@@ -1,218 +1,161 @@
 const bcrypt = require('bcrypt');
-const { v4: uuidv4 } = require('uuid');
 const UserDAO = require('../dao/UserDAO');
-const CustomerDAO = require('../dao/CustomerDAO');
-const SessionDAO = require('../dao/SessionDAO');
 
-/**
- * Service for authentication and user management
- */
 class AuthService {
   constructor() {
     this.userDAO = new UserDAO();
-    this.customerDAO = new CustomerDAO();
-    this.sessionDAO = new SessionDAO();
-    this.saltRounds = 10;
-    this.sessionDuration = 24 * 60 * 60 * 1000; // 24 hours
   }
 
-  /**
-   * Hash password
-   */
-  async hashPassword(password) {
-    try {
-      return await bcrypt.hash(password, this.saltRounds);
-    } catch (error) {
-      console.error('Password hashing error:', error);
-      throw new Error('Failed to hash password');
-    }
-  }
-
-  /**
-   * Verify password
-   */
-  async verifyPassword(password, hashedPassword) {
-    try {
-      return await bcrypt.compare(password, hashedPassword);
-    } catch (error) {
-      console.error('Password verification error:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Authenticate user
-   */
   async authenticateUser(usernameOrEmail, password) {
     try {
-      const user = await this.userDAO.findByUsernameOrEmail(usernameOrEmail);
+      console.log('🔍 Attempting login with:', usernameOrEmail);
+      
+      // Try to find user by username first, then by email
+      let user = await this.userDAO.findByUsername(usernameOrEmail);
+      if (!user) {
+        console.log('🔍 Username not found, trying email...');
+        user = await this.userDAO.findByEmail(usernameOrEmail);
+      }
       
       if (!user) {
-        return { success: false, message: 'Gebruiker niet gevonden' };
+        console.log('❌ User not found:', usernameOrEmail);
+        return { success: false, error: 'Ongeldige gebruikersnaam/email of wachtwoord' };
       }
 
-      if (!user.active) {
-        return { success: false, message: 'Account is gedeactiveerd' };
+      console.log('✅ User found:', user.username, 'Type:', user.user_type);
+
+      const isValidPassword = await this.userDAO.verifyPassword(user.username, password);
+      if (!isValidPassword) {
+        console.log('❌ Invalid password for:', user.username);
+        return { success: false, error: 'Ongeldige gebruikersnaam/email of wachtwoord' };
       }
 
-      const isPasswordValid = await this.verifyPassword(password, user.password);
+      console.log('✅ Password verified for:', user.username);
+
+      const { password: _, ...userWithoutPassword } = user;
       
-      if (!isPasswordValid) {
-        return { success: false, message: 'Onjuist wachtwoord' };
-      }
-
-      // Create session
-      const sessionId = uuidv4();
-      const expiresAt = new Date(Date.now() + this.sessionDuration);
+      console.log('🔍 User data from database:', userWithoutPassword);
       
-      await this.sessionDAO.createSession(sessionId, user.user_id, user.user_type, expiresAt);
-
-      return {
-        success: true,
-        user: {
-          id: user.user_id,
-          type: user.user_type,
-          username: user.username,
-          fullName: user.full_name,
-          email: user.email,
-          storeId: user.store_id,
-          sessionId: sessionId
-        }
-      };
-    } catch (error) {
-      console.error('Authentication error:', error);
-      return { success: false, message: 'Er is een fout opgetreden bij het inloggen' };
+      // Map user_type to role for consistency
+      if (userWithoutPassword.user_type === 'staff' && userWithoutPassword.username === 'Mike') {
+        userWithoutPassword.role = 'admin'; // Mike is the admin/owner
+        console.log('👑 Mike mapped to admin role');
+      } else if (userWithoutPassword.user_type === 'staff') {
+        userWithoutPassword.role = 'staff';
+        console.log('👨‍💼 Staff user mapped to staff role');
+      } else if (userWithoutPassword.user_type === 'customer') {
+        userWithoutPassword.role = 'customer';
+        console.log('👤 Customer user mapped to customer role');
+      }
+      
+      console.log('✅ Final user object:', userWithoutPassword);
+      
+      return { success: true, user: userWithoutPassword, message: 'Login successful' };
+    } catch (err) {
+      console.error('authenticateUser error:', err);
+      return { success: false, error: 'Authenticatie mislukt' };
     }
   }
 
-  /**
-   * Get session and user details
-   */
-  async getSession(sessionId) {
+  async registerCustomer(userData) {
     try {
-      if (!sessionId) {
-        return null;
-      }
+      const existingUser = await this.userDAO.findByUsername(userData.username);
+      if (existingUser) return { success: false, message: 'Username already exists' };
 
-      const sessionData = await this.sessionDAO.getSessionWithUser(sessionId);
-      
-      if (!sessionData) {
-        return null;
-      }
+      const existingEmail = await this.userDAO.findByEmail(userData.email);
+      if (existingEmail) return { success: false, message: 'Email already exists' };
 
-      // Update last accessed time
-      await this.sessionDAO.updateLastAccessed(sessionId);
+      const hashedPassword = await bcrypt.hash(userData.password, 10);
+      const result = await this.userDAO.createCustomer({
+        ...userData,
+        password: hashedPassword,
+        active: true
+      });
 
-      return {
-        id: sessionData.user_id,
-        type: sessionData.user_type,
-        username: sessionData.username,
-        fullName: sessionData.full_name,
-        email: sessionData.email,
-        storeId: sessionData.store_id,
-        sessionId: sessionData.session_id
-      };
-    } catch (error) {
-      console.error('Session retrieval error:', error);
-      return null;
+      return result.success
+        ? { success: true, customerId: result.customerId, message: 'Registration successful' }
+        : { success: false, message: 'Registration failed' };
+    } catch (err) {
+      console.error('registerCustomer error:', err);
+      return { success: false, message: 'Registration failed' };
     }
   }
 
-  /**
-   * Destroy session (logout)
-   */
-  async destroySession(sessionId) {
-    try {
-      await this.sessionDAO.deleteSession(sessionId);
-      return true;
-    } catch (error) {
-      console.error('Session destruction error:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Register new customer
-   */
-  async registerCustomer(customerData) {
-    try {
-      const { firstName, lastName, email, username, password, storeId = 1, address } = customerData;
-      
-      // Check if username/email already exists
-      const usernameExists = await this.userDAO.usernameExists(username);
-      const emailExists = await this.userDAO.emailExists(email);
-
-      if (usernameExists) {
-        return { success: false, message: 'Gebruikersnaam bestaat al' };
-      }
-
-      if (emailExists) {
-        return { success: false, message: 'Email adres is al geregistreerd' };
-      }
-
-      const hashedPassword = await this.hashPassword(password);
-      
-      // Create customer with address
-      const result = await this.customerDAO.createCustomerWithAddress(
-        {
-          firstName,
-          lastName,
-          email,
-          username,
-          password: hashedPassword,
-          storeId
-        },
-        {
-          address: address || 'Customer Address',
-          district: 'District',
-          cityId: 1,
-          phone: '000-000-0000'
-        }
-      );
-
-      return { 
-        success: true, 
-        customerId: result.insertId,
-        message: 'Account succesvol aangemaakt' 
-      };
-    } catch (error) {
-      console.error('Customer registration error:', error);
-      return { success: false, message: 'Er is een fout opgetreden bij het aanmaken van het account' };
-    }
-  }
-
-  /**
-   * Clean expired sessions
-   */
-  async cleanExpiredSessions() {
-    try {
-      await this.sessionDAO.cleanExpiredSessions();
-    } catch (error) {
-      console.error('Session cleanup error:', error);
-    }
-  }
-
-  /**
-   * Get user by ID and type
-   */
   async getUserById(userId, userType) {
     try {
-      return await this.userDAO.findByIdAndType(userId, userType);
-    } catch (error) {
-      console.error('Get user by ID error:', error);
+      const user = await this.userDAO.findById(userId, userType);
+      if (!user) return null;
+      const { password, ...userWithoutPassword } = user;
+      return userWithoutPassword;
+    } catch (err) {
+      console.error('getUserById error:', err);
       return null;
     }
   }
 
-  /**
-   * Logout from all devices
-   */
-  async logoutAllDevices(userId, userType) {
+  async changePassword(userId, userType, currentPassword, newPassword) {
     try {
-      await this.sessionDAO.deleteUserSessions(userId, userType);
-      return true;
-    } catch (error) {
-      console.error('Logout all devices error:', error);
+      const user = await this.userDAO.findById(userId, userType);
+      if (!user) return { success: false, message: 'User not found' };
+
+      const valid = await bcrypt.compare(currentPassword, user.password);
+      if (!valid) return { success: false, message: 'Current password incorrect' };
+
+      const hashed = await bcrypt.hash(newPassword, 10);
+      const result = await this.userDAO.updatePassword(userId, userType, hashed);
+
+      return {
+        success: result.affectedRows > 0,
+        message: result.affectedRows > 0 ? 'Password changed' : 'Failed to change password'
+      };
+    } catch (err) {
+      console.error('changePassword error:', err);
+      return { success: false, message: 'Failed to change password' };
+    }
+  }
+
+  async updateProfile(userId, userType, profileData) {
+    try {
+      const result = await this.userDAO.updateProfile(userId, userType, profileData);
+      return {
+        success: result.affectedRows > 0,
+        message: result.affectedRows > 0 ? 'Profile updated' : 'Failed to update profile'
+      };
+    } catch (err) {
+      console.error('updateProfile error:', err);
+      return { success: false, message: 'Failed to update profile' };
+    }
+  }
+
+  async validatePermissions(userId, userType, requiredPermission) {
+    const perms = {
+      customer: ['view_films', 'rent_films', 'view_rentals'],
+      staff: ['view_films', 'rent_films', 'view_rentals', 'manage_customers', 'manage_inventory'],
+      owner: ['view_films', 'rent_films', 'view_rentals', 'manage_customers', 'manage_inventory', 'manage_staff', 'view_analytics']
+    };
+    return (perms[userType] || []).includes(requiredPermission);
+  }
+
+  async logoutUser() {
+    return { success: true, message: 'Logout successful' };
+  }
+
+  async isUserActive(userIdOrUsername, userType = null) {
+    try {
+      let user;
+      if (userType) {
+        // Called with userId and userType
+        user = await this.userDAO.findById(userIdOrUsername, userType);
+      } else {
+        // Called with username only
+        user = await this.userDAO.findByUsername(userIdOrUsername);
+        if (!user) {
+          user = await this.userDAO.findByEmail(userIdOrUsername);
+        }
+      }
+      return user && user.active === 1;
+    } catch (err) {
+      console.error('isUserActive error:', err);
       return false;
     }
   }

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title || 'Welkom' %> - Sakila App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body class="bg-dark text-light">
+    <%- include('partials/navbar') %>
+    
+    <!-- Hero Section -->
+    <div class="hero-section py-5 mb-5">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h1 class="display-4 fw-bold mb-3">
+                        <i class="bi bi-film text-danger"></i> 
+                        <%= message || 'Welkom bij de Sakila App' %>
+                    </h1>
+                    <p class="lead mb-4">
+                        Ontdek onze uitgebreide collectie films en verhuur je favorieten direct online. 
+                        Van blockbusters tot indie films - wij hebben het allemaal!
+                    </p>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <a href="/films" class="btn btn-danger btn-lg">
+                            <i class="bi bi-collection-play"></i> Browse Films
+                        </a>
+                        <% if (typeof user === 'undefined' || !user) { %>
+                            <a href="/login" class="btn btn-outline-light btn-lg">
+                                <i class="bi bi-box-arrow-in-right"></i> Inloggen
+                            </a>
+                            <a href="/register" class="btn btn-outline-secondary btn-lg">
+                                <i class="bi bi-person-plus"></i> Registreren
+                            </a>
+                        <% } else { %>
+                            <a href="/dashboard" class="btn btn-outline-light btn-lg">
+                                <i class="bi bi-speedometer2"></i> Dashboard
+                            </a>
+                        <% } %>
+                    </div>
+                </div>
+                <div class="col-lg-4 text-center">
+                    <div class="hero-image">
+                        <i class="bi bi-camera-reels display-1 text-danger opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Quick Stats -->
+        <% if (typeof user !== 'undefined' && user) { %>
+            <div class="row mb-5">
+                <div class="col-12">
+                    <div class="alert alert-info border-0" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-person-circle fs-2 me-3"></i>
+                            <div>
+                                <h5 class="mb-1">Welkom terug, <%= user.first_name || user.username %>!</h5>
+                                <p class="mb-0">Je hebt toegang tot onze volledige filmcollectie.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+
+        <!-- Top Favorite Movies Section -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="h3 mb-0">
+                        <i class="bi bi-star-fill text-warning me-2"></i>
+                        Top Favoriete Films
+                    </h2>
+                    <a href="/films?sort=popular" class="btn btn-outline-danger">
+                        Alle populaire films <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                
+                <% if (typeof error !== 'undefined' && error) { %>
+                    <div class="alert alert-warning border-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <%= error %>
+                    </div>
+                <% } %>
+            </div>
+        
+        <!-- Films Grid -->
+        <% if (typeof films !== 'undefined' && films && films.length > 0) { %>
+            <div class="row g-4 mb-5">
+                <% films.slice(0, 8).forEach(function(film) { %>
+                    <div class="col-md-6 col-lg-4 col-xl-3">
+                        <div class="card h-100 movie-card border-0">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <h5 class="card-title text-light mb-0 fw-bold"><%= film.title %></h5>
+                                    <span class="badge bg-danger"><%= film.rating || 'PG' %></span>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <small class="text-muted">
+                                        <i class="bi bi-tag-fill text-warning"></i> <%= film.category_name || 'Drama' %> 
+                                        <span class="mx-2">•</span>
+                                        <i class="bi bi-calendar-event"></i> <%= film.release_year || '2023' %>
+                                    </small>
+                                </div>
+                                
+                                <p class="card-text text-muted small mb-3">
+                                    <%= (film.description || 'Een geweldige film die je moet zien!').substring(0, 80) %><%= (film.description || '').length > 80 ? '...' : '' %>
+                                </p>
+                                
+                                <div class="row text-center mb-3">
+                                    <div class="col-6">
+                                        <div class="stat-box">
+                                            <i class="bi bi-clock text-info"></i>
+                                            <div class="text-light"><small><%= film.length || '120' %> min</small></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="stat-box">
+                                            <i class="bi bi-currency-euro text-success"></i>
+                                            <div class="text-light"><small>€<%= film.rental_rate || '2.99' %></small></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <% if ((film.available_copies || 1) > 0) { %>
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-check-circle"></i> 
+                                            <%= film.available_copies || 'Beschikbaar' %>
+                                        </span>
+                                    <% } else { %>
+                                        <span class="badge bg-secondary">
+                                            <i class="bi bi-x-circle"></i> 
+                                            Uitverhuurd
+                                        </span>
+                                    <% } %>
+                                </div>
+                            </div>
+                            
+                            <div class="card-footer bg-dark border-0">
+                                <div class="d-grid gap-2">
+                                    <a href="/films/<%= film.film_id %>" class="btn btn-outline-light btn-sm">
+                                        <i class="bi bi-eye"></i> Details Bekijken
+                                    </a>
+                                    <% if ((film.available_copies || 1) > 0) { %>
+                                        <% if (typeof user !== 'undefined' && user) { %>
+                                            <button class="btn btn-danger btn-sm rent-btn" 
+                                                    data-film-id="<%= film.film_id %>"
+                                                    data-film-title="<%= film.title %>">
+                                                <i class="bi bi-cart-plus"></i> Nu Huren
+                                            </button>
+                                        <% } else { %>
+                                            <a href="/login?redirect=/films/<%= film.film_id %>" class="btn btn-warning btn-sm">
+                                                <i class="bi bi-box-arrow-in-right"></i> Login om te huren
+                                            </a>
+                                        <% } %>
+                                    <% } else { %>
+                                        <button class="btn btn-secondary btn-sm" disabled>
+                                            <i class="bi bi-hourglass-split"></i> Niet beschikbaar
+                                        </button>
+                                    <% } %>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+
+            <!-- Show more films button -->
+            <div class="text-center mb-5">
+                <a href="/films" class="btn btn-outline-danger btn-lg">
+                    <i class="bi bi-collection-play"></i> 
+                    Bekijk alle <%= typeof films !== 'undefined' ? films.length : '' %> films
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        <% } else { %>
+            <div class="row">
+                <div class="col-12">
+                    <div class="alert alert-info text-center">
+                        <i class="bi bi-info-circle"></i>
+                        <h4>Geen films gevonden</h4>
+                        <p class="mb-0">Er zijn momenteel geen films beschikbaar om te tonen.</p>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+
+        <!-- Quick Actions for Users -->
+        <% if (typeof user !== 'undefined' && user) { %>
+            <div class="row mt-5">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-lightning-fill text-warning"></i>
+                                Snelle Acties
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <a href="/films?sort=popular" class="btn btn-outline-primary w-100">
+                                        <i class="bi bi-star-fill"></i> Populaire Films
+                                    </a>
+                                </div>
+                                <div class="col-md-3">
+                                    <a href="/films?sort=new" class="btn btn-outline-success w-100">
+                                        <i class="bi bi-plus-circle"></i> Nieuwe Films
+                                    </a>
+                                </div>
+                                <div class="col-md-3">
+                                    <a href="/rentals/history" class="btn btn-outline-info w-100">
+                                        <i class="bi bi-clock-history"></i> Mijn Verhuur
+                                    </a>
+                                </div>
+                                <div class="col-md-3">
+                                    <a href="/dashboard" class="btn btn-outline-secondary w-100">
+                                        <i class="bi bi-speedometer2"></i> Dashboard
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+    </div>
+    
+    <%- include('partials/footer') %>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Film rental functionality -->
+    <script>
+        // Handle rent button clicks
+        document.addEventListener('DOMContentLoaded', function() {
+            const rentButtons = document.querySelectorAll('.rent-btn');
+            
+            rentButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const filmId = this.getAttribute('data-film-id');
+                    const filmTitle = this.getAttribute('data-film-title');
+                    
+                    if (confirm(`Weet je zeker dat je "${filmTitle}" wilt huren?`)) {
+                        // Show loading state
+                        const originalText = this.innerHTML;
+                        this.innerHTML = '<i class="bi bi-hourglass-split"></i> Bezig...';
+                        this.disabled = true;
+                        
+                        // Simulate rental process (replace with actual API call)
+                        fetch(`/films/${filmId}/rent`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ filmId: filmId })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // Success feedback
+                                this.innerHTML = '<i class="bi bi-check-circle"></i> Gehuurd!';
+                                this.classList.remove('btn-danger');
+                                this.classList.add('btn-success');
+                                
+                                // Show success message
+                                showNotification(`"${filmTitle}" is succesvol gehuurd!`, 'success');
+                                
+                                // Refresh page after delay
+                                setTimeout(() => {
+                                    location.reload();
+                                }, 2000);
+                            } else {
+                                throw new Error(data.message || 'Verhuur mislukt');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Rental error:', error);
+                            this.innerHTML = originalText;
+                            this.disabled = false;
+                            showNotification(`Fout bij het huren: ${error.message}`, 'error');
+                        });
+                    }
+                });
+            });
+        });
+        
+        // Notification system
+        function showNotification(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type === 'error' ? 'danger' : type} position-fixed`;
+            notification.style.cssText = `
+                top: 20px; 
+                right: 20px; 
+                z-index: 9999; 
+                min-width: 300px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                border-radius: 10px;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+            `;
+            
+            notification.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                    <span>${message}</span>
+                    <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => notification.remove(), 300);
+                }
+            }, 5000);
+        }
+        
+        // Add smooth scrolling to anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

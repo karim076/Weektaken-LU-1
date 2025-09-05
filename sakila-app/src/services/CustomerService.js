@@ -9,107 +9,65 @@ class CustomerService {
   }
 
   /**
-   * Create new customer (US1E1)
+   * Get customer by ID with complete information
+   */
+  async getCustomerById(customerId) {
+    try {
+      return await this.customerDAO.getCustomerWithDetails(customerId);
+    } catch (error) {
+      console.error('Get customer error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all customers with pagination and search
+   */
+  async getAllCustomers(page = 1, limit = 10, search = '') {
+    try {
+      const customers = await this.customerDAO.getCustomersWithDetails(page, limit, search);
+      const totalCount = await this.customerDAO.getCustomersCount(search);
+      
+      return {
+        customers,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalCount / limit),
+          totalCount,
+          limit
+        }
+      };
+    } catch (error) {
+      console.error('Get all customers error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create new customer with address
    */
   async createCustomer(customerData) {
     try {
-      const { firstName, lastName, email, phone, address, district, city } = customerData;
-
-      // Generate username from email
-      const username = email.split('@')[0];
-
-      // Default password (should be changed by customer)
-      const defaultPassword = 'customer123';
-
-      const result = await this.customerDAO.createCustomerWithAddress(
-        {
-          firstName,
-          lastName,
-          email,
-          username,
-          password: defaultPassword, // Will be hashed in DAO
-          storeId: 1 // Default store
-        },
-        {
-          address,
-          district,
-          cityId: 1, // Default city
-          phone
-        }
-      );
-
-      return {
-        success: true,
-        data: {
-          customerId: result.insertId
-        },
-        message: 'Klant succesvol toegevoegd'
-      };
+      const result = await this.customerDAO.createCustomerWithAddress(customerData);
+      
+      if (result.success) {
+        return {
+          success: true,
+          customerId: result.customerId,
+          addressId: result.addressId,
+          message: 'Customer created successfully'
+        };
+      } else {
+        return {
+          success: false,
+          message: 'Failed to create customer'
+        };
+      }
     } catch (error) {
       console.error('Create customer error:', error);
       return {
         success: false,
-        message: 'Er is een fout opgetreden bij het toevoegen van de klant'
-      };
-    }
-  }
-
-  /**
-   * Get customers with pagination and search for staff dashboard
-   */
-  async getCustomersForDashboard(search = '', page = 1, limit = 20) {
-    try {
-      const customers = await this.customerDAO.getCustomersWithStats(search, page, limit);
-      const totalCount = await this.customerDAO.getSearchCustomersCount(search);
-      const stats = await this.customerDAO.getCustomerStats();
-
-      const totalPages = Math.ceil(totalCount / limit);
-
-      return {
-        success: true,
-        data: {
-          customers,
-          stats,
-          pagination: {
-            page,
-            totalPages,
-            total: totalCount,
-            limit
-          }
-        }
-      };
-    } catch (error) {
-      console.error('Get customers for dashboard error:', error);
-      return {
-        success: false,
-        message: 'Er is een fout opgetreden bij het ophalen van klantgegevens'
-      };
-    }
-  }
-
-  /**
-   * Get customer details by ID
-   */
-  async getCustomerDetails(customerId) {
-    try {
-      const customer = await this.customerDAO.getCustomerWithAddress(customerId);
-      
-      if (!customer) {
-        return {
-          success: false,
-          message: 'Klant niet gevonden'
-        };
-      }
-
-      return {
-        success: true,
-        data: customer
-      };
-    } catch (error) {
-      console.error('Get customer details error:', error);
-      return {
-        success: false,
-        message: 'Er is een fout opgetreden bij het ophalen van klantgegevens'
+        message: error.message || 'Failed to create customer'
       };
     }
   }
@@ -117,116 +75,240 @@ class CustomerService {
   /**
    * Update customer information
    */
-  async updateCustomer(customerId, updateData) {
+  async updateCustomer(customerId, customerData) {
     try {
-      const result = await this.customerDAO.update(customerId, updateData);
+      const result = await this.customerDAO.updateCustomer(customerId, customerData);
       
-      if (result.affectedRows === 0) {
-        return {
-          success: false,
-          message: 'Klant niet gevonden of geen wijzigingen aangebracht'
-        };
-      }
-
       return {
-        success: true,
-        message: 'Klantgegevens succesvol bijgewerkt'
+        success: result.affectedRows > 0,
+        message: result.affectedRows > 0 ? 'Customer updated successfully' : 'No changes made'
       };
     } catch (error) {
       console.error('Update customer error:', error);
       return {
         success: false,
-        message: 'Er is een fout opgetreden bij het bijwerken van klantgegevens'
+        message: error.message || 'Failed to update customer'
       };
     }
   }
 
   /**
-   * Deactivate customer
+   * Get customer rental history
    */
-  async deactivateCustomer(customerId) {
+  async getCustomerRentals(customerId, page = 1, limit = 10) {
     try {
-      const result = await this.customerDAO.update(customerId, { active: 0 });
+      const rentals = await this.customerDAO.getCustomerRentalHistory(customerId, page, limit);
+      const totalCount = await this.customerDAO.getCustomerRentalCount(customerId);
       
-      if (result.affectedRows === 0) {
-        return {
-          success: false,
-          message: 'Klant niet gevonden'
-        };
-      }
-
       return {
-        success: true,
-        message: 'Klant succesvol gedeactiveerd'
+        rentals,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalCount / limit),
+          totalCount,
+          limit
+        }
       };
     } catch (error) {
-      console.error('Deactivate customer error:', error);
-      return {
-        success: false,
-        message: 'Er is een fout opgetreden bij het deactiveren van de klant'
-      };
-    }
-  }
-
-  /**
-   * Activate customer
-   */
-  async activateCustomer(customerId) {
-    try {
-      const result = await this.customerDAO.update(customerId, { active: 1 });
-      
-      if (result.affectedRows === 0) {
-        return {
-          success: false,
-          message: 'Klant niet gevonden'
-        };
-      }
-
-      return {
-        success: true,
-        message: 'Klant succesvol geactiveerd'
-      };
-    } catch (error) {
-      console.error('Activate customer error:', error);
-      return {
-        success: false,
-        message: 'Er is een fout opgetreden bij het activeren van de klant'
-      };
+      console.error('Get customer rentals error:', error);
+      throw error;
     }
   }
 
   /**
    * Get customer statistics
    */
-  async getCustomerStatistics() {
+  async getCustomerStats(customerId) {
     try {
-      const stats = await this.customerDAO.getCustomerStats();
+      return await this.customerDAO.getCustomerStats(customerId);
+    } catch (error) {
+      console.error('Get customer stats error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get customers with rental statistics
+   */
+  async getCustomersWithStats(limit = 50) {
+    try {
+      return await this.customerDAO.getCustomersWithStats(limit);
+    } catch (error) {
+      console.error('Get customers with stats error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Search customers by name or email
+   */
+  async searchCustomers(searchTerm, page = 1, limit = 10) {
+    try {
+      const customers = await this.customerDAO.searchCustomers(searchTerm, page, limit);
+      const totalCount = await this.customerDAO.getSearchCustomersCount(searchTerm);
       
       return {
-        success: true,
-        data: stats
+        customers,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalCount / limit),
+          totalCount,
+          limit
+        },
+        searchTerm
       };
     } catch (error) {
-      console.error('Get customer statistics error:', error);
+      console.error('Search customers error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Activate/Deactivate customer
+   */
+  async toggleCustomerActive(customerId, active = true) {
+    try {
+      const result = await this.customerDAO.updateCustomerActive(customerId, active);
+      
+      return {
+        success: result.affectedRows > 0,
+        message: result.affectedRows > 0 
+          ? `Customer ${active ? 'activated' : 'deactivated'} successfully`
+          : 'No changes made'
+      };
+    } catch (error) {
+      console.error('Toggle customer active error:', error);
       return {
         success: false,
-        message: 'Er is een fout opgetreden bij het ophalen van statistieken'
+        message: error.message || 'Failed to update customer status'
       };
     }
   }
 
   /**
-   * Search customers
+   * Get active rentals for customer
    */
-  async searchCustomers(searchTerm, page = 1, limit = 20) {
+  async getActiveRentals(customerId) {
     try {
-      return await this.getCustomersForDashboard(searchTerm, page, limit);
+      return await this.customerDAO.getActiveRentals(customerId);
     } catch (error) {
-      console.error('Search customers error:', error);
+      console.error('Get active rentals error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate customer late fees
+   */
+  async calculateLateFees(customerId) {
+    try {
+      return await this.customerDAO.calculateLateFees(customerId);
+    } catch (error) {
+      console.error('Calculate late fees error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get customer payment history
+   */
+  async getPaymentHistory(customerId, page = 1, limit = 10) {
+    try {
+      const payments = await this.customerDAO.getPaymentHistory(customerId, page, limit);
+      const totalCount = await this.customerDAO.getPaymentHistoryCount(customerId);
+      
+      return {
+        payments,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalCount / limit),
+          totalCount,
+          limit
+        }
+      };
+    } catch (error) {
+      console.error('Get payment history error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update customer address
+   */
+  async updateCustomerAddress(customerId, addressData) {
+    try {
+      const result = await this.customerDAO.updateCustomerAddress(customerId, addressData);
+      
+      return {
+        success: result.affectedRows > 0,
+        message: result.affectedRows > 0 ? 'Address updated successfully' : 'No changes made'
+      };
+    } catch (error) {
+      console.error('Update customer address error:', error);
       return {
         success: false,
-        message: 'Er is een fout opgetreden bij het zoeken naar klanten'
+        message: error.message || 'Failed to update address'
       };
+    }
+  }
+
+  /**
+   * Validate customer data
+   */
+  validateCustomerData(customerData) {
+    const errors = [];
+
+    if (!customerData.firstName || customerData.firstName.trim().length < 2) {
+      errors.push('First name must be at least 2 characters long');
+    }
+
+    if (!customerData.lastName || customerData.lastName.trim().length < 2) {
+      errors.push('Last name must be at least 2 characters long');
+    }
+
+    if (!customerData.email || !this.isValidEmail(customerData.email)) {
+      errors.push('Valid email address is required');
+    }
+
+    if (!customerData.address || customerData.address.trim().length < 5) {
+      errors.push('Address must be at least 5 characters long');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  /**
+   * Validate email format
+   */
+  isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+
+  /**
+   * Get top customers by rental count
+   */
+  async getTopCustomers(limit = 10) {
+    try {
+      return await this.customerDAO.getTopCustomers(limit);
+    } catch (error) {
+      console.error('Get top customers error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get total number of customers
+   */
+  async getTotalCustomers() {
+    try {
+      return await this.customerDAO.getCustomersCount('');
+    } catch (error) {
+      console.error('Get total customers error:', error);
+      return 0;
     }
   }
 }

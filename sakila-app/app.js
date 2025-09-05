@@ -1,107 +1,147 @@
 const express = require('express');
-const http = require('node:http');
 const path = require('path');
 const session = require('express-session');
 
-// Initialize database connection
-const databaseConfig = require('./src/config/database');
-
-// Import middleware from src structure
-const { errorHandler, notFound } = require('./src/middleware/error');
-const { optionalAuth } = require('./src/middleware/auth');
-
-// Import routes from src structure
-const customerRoutes = require('./src/routes/customers');
-const filmRoutes = require('./src/routes/films');
-const adminRoutes = require('./src/routes/admin');
-
-// Import controllers from src structure
-const HomeController = require('./src/controllers/HomeController');
-const AuthController = require('./src/controllers/AuthController');
-
 const app = express();
 const port = 3001;
-const hostname = '127.0.0.1';
 
-// Initialize database connection pool
-databaseConfig.createPool().catch(console.error);
-
-// Session configuration
-app.use(session({
-  secret: 'sakila-secret-key-change-in-production',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: false, // Set to true in production with HTTPS
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}));
-
-// Middleware voor parsing van request bodies
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Static files (CSS, JS, images)
-app.use(express.static(path.join(__dirname, 'public')));
+// Session configuration
+app.use(session({
+    secret: 'sakila-app-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { 
+        secure: false, // Set to true in production with HTTPS
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
 
-// View engine instellen (EJS)
+// View engine setup (EJS)
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+app.set('views', path.join(__dirname, 'src', 'views')); // Improved path
 
-// Create controller instances
+// Static files
+app.use(express.static(path.join(__dirname, 'src', 'public'))); // Improved path
+
+// Import middleware
+const authMiddleware = require('./src/middleware/auth');
+const errorMiddleware = require('./src/middleware/error');
+
+// Import controllers
+const HomeController = require('./src/controllers/HomeController');
+const AuthController = require('./src/controllers/AuthController');
+const OwnerController = require('./src/controllers/OwnerController');
+const CustomerService = require('./src/services/CustomerService');
+
+// Instantiate controllers
 const homeController = new HomeController();
 const authController = new AuthController();
+const ownerController = new OwnerController();
 
-// Authentication routes
-app.get('/login', (req, res) => authController.showLogin(req, res));
-app.post('/login', (req, res) => authController.login(req, res));
-app.get('/register', (req, res) => authController.showRegister(req, res));
-app.post('/register', (req, res) => authController.register(req, res));
-app.post('/logout', (req, res) => authController.logout(req, res));
-app.get('/dashboard', (req, res) => authController.showDashboard(req, res));
+// Import routes
+const filmRoutes = require('./src/routes/films');
+const customerRoutes = require('./src/routes/customers');
+const adminRoutes = require('./src/routes/admin');
+const customerDashboardRoutes = require('./src/routes/customer');
 
-// Routes
-// Favicon route to prevent 404
-app.get('/favicon.ico', (req, res) => res.status(204).end());
+// Home routes
+app.get('/', authMiddleware.optionalAuth, homeController.index.bind(homeController));
+app.get('/home', authMiddleware.optionalAuth, homeController.index.bind(homeController));
 
-// Home route via controller with optional auth
-app.get('/', optionalAuth, (req, res) => homeController.index(req, res));
+// Auth routes
+app.get('/login', authController.showLogin.bind(authController));
+app.post('/login', authController.login.bind(authController));
+app.get('/register', authController.showRegister.bind(authController));
+app.post('/register', authController.register.bind(authController));
+app.post('/logout', authController.logout.bind(authController));
+// Dashboard route (general)
+app.get('/dashboard', authMiddleware.requireAuth, homeController.dashboard.bind(homeController));
 
-// Feature routes using src structure
-app.use('/customers', customerRoutes);
+// Profile route (general) - using CustomerController
+const CustomerController = require('./src/controllers/CustomerController');
+const customerController = new CustomerController();
+
+// Simple profile route that should definitely work
+app.get('/profile', authMiddleware.requireCustomer, async (req, res) => {
+  try {
+    console.log('Direct profile route called');
+    const customerId = req.user.user_id || req.user.customer_id || req.user.id;
+    const CustomerService = require('./src/services/CustomerService');
+    const customerService = new CustomerService();
+    const customer = await customerService.getCustomerById(customerId);
+    
+    console.log('Got customer data, rendering simple profile');
+    res.render('profile-simple', {
+      title: 'My Profile - Sakila',
+      user: req.user,
+      customer
+    });
+  } catch (error) {
+    console.error('Profile route error:', error);
+    res.status(500).send(`Profile Error: ${error.message}`);
+  }
+});
+
+app.post('/profile', authMiddleware.requireCustomer, customerController.updateProfile.bind(customerController));
+
+// Simple test profile route
+app.get('/profile-test', authMiddleware.requireCustomer, async (req, res) => {
+  try {
+    console.log('Profile-test: Starting test');
+    const customerId = req.user.user_id || req.user.customer_id || req.user.id;
+    const customerService = new CustomerService();
+    const customer = await customerService.getCustomerById(customerId);
+    
+    console.log('Profile-test: Got customer data, attempting EJS render');
+    
+    res.render('/customer/profile', {
+      title: 'Profile Test - Sakila',
+      user: req.user,
+      customer,
+      success: null,
+      error: null
+    });
+  } catch (error) {
+    console.error('Profile-test EJS error:', error);
+    res.send(`
+      <h1>Profile Test ERROR</h1>
+      <pre>Error: ${error.message}
+      Stack: ${error.stack}</pre>
+    `);
+  }
+});
+
+// API routes
 app.use('/films', filmRoutes);
-app.use('/admin', adminRoutes);
+app.use('/customers', customerRoutes);
+app.use('/admin', authMiddleware.requireAdmin, adminRoutes);
+app.use('/customer', customerDashboardRoutes);
 
-// Error handling middleware (must be last)
-app.use(notFound);
-app.use(errorHandler);
-
-// Create HTTP server
-const server = http.createServer(app);
-
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  await databaseConfig.close();
-  server.close(() => {
-    console.log('HTTP server closed');
-    process.exit(0);
-  });
+// Error handling middleware (should be last)
+app.use(errorMiddleware.notFound);
+app.use(errorMiddleware.errorHandler);
+ 
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully');
+    server.close(() => {
+        console.log('Process terminated');
+    });
 });
 
-process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully');
-  await databaseConfig.close();
-  server.close(() => {
-    console.log('HTTP server closed');
-    process.exit(0);
-  });
+process.on('SIGINT', () => {
+    console.log('SIGINT received, shutting down gracefully');
+    server.close(() => {
+        console.log('Process terminated');
+    });
 });
 
-server.listen(port, hostname, () => {
-  console.log(`Sakila App server draait op http://${hostname}:${port}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log('Architecture: DAO -> Services -> Controllers -> Views added to the project structure');
+const server = app.listen(port, () => {
+    console.log(`Sakila App server is running on http://localhost:${port}`);
+    console.log(`Views directory: ${path.join(__dirname, '/src/views')}`);
+    console.log(`Static files: ${path.join(__dirname, '/src/public')}`);
 });
-
-module.exports = app;

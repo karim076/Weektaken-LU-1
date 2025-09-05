@@ -11,37 +11,37 @@ class AuthController {
   /**
    * Show login form
    */
-  showLogin = (req, res) => {
+  showLogin(req, res) {
     try {
       const redirect = req.query.redirect || '/dashboard';
       
       res.render('login', {
-        title: 'Inloggen - Sakila App',
+        title: 'Login - Sakila App',
         redirect,
         error: null
       });
     } catch (error) {
       console.error('Show login error:', error);
       res.status(500).render('error', {
-        title: 'Server Fout',
+        title: 'Server Error',
         status: 500,
-        message: 'Er is een fout opgetreden bij het laden van de inlogpagina'
+        message: 'An error occurred while loading the login page'
       });
     }
-  };
+  }
 
   /**
    * Process login
    */
-  login = async (req, res) => {
+  async login(req, res) {
     try {
       const { username, password, redirect = '/dashboard' } = req.body;
 
       if (!username || !password) {
         return res.render('login', {
-          title: 'Inloggen - Sakila App',
+          title: 'Login - Sakila App',
           redirect,
-          error: 'Vul alle velden in'
+          error: 'Please fill in all fields'
         });
       }
 
@@ -49,75 +49,96 @@ class AuthController {
 
       if (!result.success) {
         return res.render('login', {
-          title: 'Inloggen - Sakila App',
+          title: 'Login - Sakila App',
           redirect,
-          error: result.message
+          error: result.error
         });
       }
 
-      // Set session
-      req.session.sessionId = result.user.sessionId;
-      req.session.userId = result.user.id;
-      req.session.userType = result.user.type;
+      // Set session data
+      req.session.user = result.user;
+      req.session.isAuthenticated = true;
 
-      // Redirect based on user type or to requested page
-      let redirectUrl = redirect;
-      if (redirect === '/dashboard' || redirect === '/') {
-        switch (result.user.type) {
-          case 'customer':
-            redirectUrl = '/';
+      console.log('User logged in successfully:');
+      console.log('   Username:', result.user.username);
+      console.log('   User Type:', result.user.user_type);
+      console.log('   Role:', result.user.role);
+      console.log('   Session ID:', req.session.id);
+      console.log('   Session Data:', req.session);
+
+      // Redirect based on role or requested page
+      if (redirect !== '/dashboard') {
+        res.redirect(redirect);
+      } else {
+        // Force role assignment if missing
+        let userRole = result.user.role;
+        if (!userRole) {
+          if (result.user.user_type === 'staff' && result.user.username === 'Mike') {
+            userRole = 'admin';
+          } else if (result.user.user_type === 'staff') {
+            userRole = 'staff';
+          } else if (result.user.user_type === 'customer') {
+            userRole = 'customer';
+          }
+          
+          // Update session with correct role
+          req.session.user.role = userRole;
+          console.log('Fixed role in session:', userRole);
+        }
+        
+        switch(userRole) {
+          case 'admin':
+            res.redirect('/admin/dashboard');
             break;
           case 'staff':
-            redirectUrl = '/customers';
+            res.redirect('/staff/dashboard');
             break;
-          case 'owner':
-            redirectUrl = '/admin';
+          case 'customer':
+            res.redirect('/customer/dashboard');
             break;
           default:
-            redirectUrl = '/';
+            res.redirect('/');
         }
       }
-
-      res.redirect(redirectUrl);
     } catch (error) {
       console.error('Login error:', error);
       res.render('login', {
-        title: 'Inloggen - Sakila App',
+        title: 'Login - Sakila App',
         redirect: req.body.redirect || '/dashboard',
-        error: 'Er is een fout opgetreden bij het inloggen'
+        error: 'An error occurred during login'
       });
     }
-  };
+  }
 
   /**
    * Show registration form
    */
-  showRegister = (req, res) => {
+  showRegister(req, res) {
     try {
       res.render('register', {
-        title: 'Registreren - Sakila App',
+        title: 'Register - Sakila App',
         error: null,
         success: null
       });
     } catch (error) {
       console.error('Show register error:', error);
       res.status(500).render('error', {
-        title: 'Server Fout',
+        title: 'Server Error',
         status: 500,
-        message: 'Er is een fout opgetreden bij het laden van de registratiepagina'
+        message: 'An error occurred while loading the registration page'
       });
     }
-  };
+  }
 
   /**
    * Process registration
    */
-  register = async (req, res) => {
+  async register(req, res) {
     try {
-      const { firstName, lastName, email, username, password, confirmPassword } = req.body;
+      const { first_name, last_name, email, password, confirm_password, user_type = 'customer' } = req.body;
 
-      // Validation
-      if (!firstName || !lastName || !email || !username || !password || !confirmPassword) {
+      // Basic validation
+      if (!first_name || !last_name || !email || !password || !confirm_password) {
         return res.render('register', {
           title: 'Registreren - Sakila App',
           error: 'Vul alle velden in',
@@ -125,7 +146,7 @@ class AuthController {
         });
       }
 
-      if (password !== confirmPassword) {
+      if (password !== confirm_password) {
         return res.render('register', {
           title: 'Registreren - Sakila App',
           error: 'Wachtwoorden komen niet overeen',
@@ -136,55 +157,50 @@ class AuthController {
       if (password.length < 6) {
         return res.render('register', {
           title: 'Registreren - Sakila App',
-          error: 'Wachtwoord moet minimaal 6 karakters bevatten',
+          error: 'Wachtwoord moet minimaal 6 karakters lang zijn',
           success: null
         });
       }
 
-      // Register customer
-      const result = await this.authService.registerCustomer({
-        firstName,
-        lastName,
+      // Attempt registration
+      const result = await this.authService.registerUser({
+        first_name,
+        last_name,
         email,
-        username,
         password,
-        storeId: 1 // Default store
+        user_type
       });
 
       if (!result.success) {
         return res.render('register', {
           title: 'Registreren - Sakila App',
-          error: result.message,
+          error: result.error,
           success: null
         });
       }
 
+      // Registration successful
       res.render('register', {
         title: 'Registreren - Sakila App',
         error: null,
-        success: 'Account succesvol aangemaakt! U kunt nu inloggen.'
+        success: 'Registratie succesvol! Je kunt nu inloggen.'
       });
+
     } catch (error) {
-      console.error('Register error:', error);
+      console.error('Registration error:', error);
       res.render('register', {
         title: 'Registreren - Sakila App',
-        error: 'Er is een fout opgetreden bij het registreren',
+        error: 'Er is een fout opgetreden bij de registratie',
         success: null
       });
     }
-  };
+  }
 
   /**
    * Process logout
    */
-  logout = async (req, res) => {
+  async logout(req, res) {
     try {
-      const sessionId = req.session?.sessionId;
-      
-      if (sessionId) {
-        await this.authService.destroySession(sessionId);
-      }
-
       req.session.destroy((err) => {
         if (err) {
           console.error('Session destroy error:', err);
@@ -195,36 +211,56 @@ class AuthController {
       console.error('Logout error:', error);
       res.redirect('/');
     }
-  };
+  }
 
   /**
-   * Show dashboard (redirect based on user type)
+   * Show dashboard based on user role
    */
-  showDashboard = async (req, res) => {
+  async showDashboard(req, res) {
     try {
-      const sessionId = req.session?.sessionId;
+      console.log('🏠 Dashboard requested');
+      console.log('   Session ID:', req.session?.id);
+      console.log('   Is Authenticated:', req.session?.isAuthenticated);
+      console.log('   User in Session:', req.session?.user?.username);
       
-      if (!sessionId) {
-        return res.redirect('/login');
-      }
-
-      const user = await this.authService.getSession(sessionId);
-      
+      const user = req.session.user;
       if (!user) {
-        req.session.destroy();
+        console.log('❌ No user in session, redirecting to login');
         return res.redirect('/login');
       }
 
-      // Redirect to appropriate dashboard
-      switch (user.type) {
-        case 'customer':
-          res.redirect('/');
+      // Check if user is still active (temporarily disabled for debugging)
+      // const isActive = await this.authService.isUserActive(user.user_id, user.user_type);
+      // if (!isActive) {
+      //   console.log('❌ User account is inactive');
+      //   req.session.destroy();
+      //   return res.redirect('/login?error=account_inactive');
+      // }
+      
+      console.log('⚡ Skipping isUserActive check for debugging');
+
+      // Render dashboard based on role
+      switch(user.role) {
+        case 'admin':
+          res.render('dashboard', {
+            title: 'Admin Dashboard - Sakila App',
+            user,
+            dashboardType: 'admin'
+          });
           break;
         case 'staff':
-          res.redirect('/customers');
+          res.render('dashboard', {
+            title: 'Staff Dashboard - Sakila App',
+            user,
+            dashboardType: 'staff'
+          });
           break;
-        case 'owner':
-          res.redirect('/admin');
+        case 'customer':
+          res.render('dashboard', {
+            title: 'Customer Dashboard - Sakila App',
+            user,
+            dashboardType: 'customer'
+          });
           break;
         default:
           res.redirect('/');
@@ -233,7 +269,7 @@ class AuthController {
       console.error('Show dashboard error:', error);
       res.redirect('/login');
     }
-  };
+  }
 }
 
 module.exports = AuthController;
