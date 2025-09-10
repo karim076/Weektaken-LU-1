@@ -8,47 +8,47 @@ class AuthService {
 
   async authenticateUser(usernameOrEmail, password) {
     try {
-      console.log('🔍 Attempting login with:', usernameOrEmail);
+      console.log('Attempting login with:', usernameOrEmail);
       
       // Try to find user by username first, then by email
       let user = await this.userDAO.findByUsername(usernameOrEmail);
       if (!user) {
-        console.log('🔍 Username not found, trying email...');
+        console.log('Username not found, trying email...');
         user = await this.userDAO.findByEmail(usernameOrEmail);
       }
       
       if (!user) {
-        console.log('❌ User not found:', usernameOrEmail);
+        console.log('User not found:', usernameOrEmail);
         return { success: false, error: 'Ongeldige gebruikersnaam/email of wachtwoord' };
       }
 
-      console.log('✅ User found:', user.username, 'Type:', user.user_type);
+      console.log('User found:', user.username, 'Type:', user.user_type);
 
       const isValidPassword = await this.userDAO.verifyPassword(user.username, password);
       if (!isValidPassword) {
-        console.log('❌ Invalid password for:', user.username);
+        console.log('Invalid password for:', user.username);
         return { success: false, error: 'Ongeldige gebruikersnaam/email of wachtwoord' };
       }
 
-      console.log('✅ Password verified for:', user.username);
+      console.log('Password verified for:', user.username);
 
       const { password: _, ...userWithoutPassword } = user;
       
-      console.log('🔍 User data from database:', userWithoutPassword);
+      console.log('User data from database:', userWithoutPassword);
       
       // Map user_type to role for consistency
       if (userWithoutPassword.user_type === 'staff' && userWithoutPassword.username === 'Mike') {
         userWithoutPassword.role = 'admin'; // Mike is the admin/owner
-        console.log('👑 Mike mapped to admin role');
+        console.log('Mike mapped to admin role');
       } else if (userWithoutPassword.user_type === 'staff') {
         userWithoutPassword.role = 'staff';
-        console.log('👨‍💼 Staff user mapped to staff role');
+        console.log('Staff user mapped to staff role');
       } else if (userWithoutPassword.user_type === 'customer') {
         userWithoutPassword.role = 'customer';
-        console.log('👤 Customer user mapped to customer role');
+        console.log('Customer user mapped to customer role');
       }
       
-      console.log('✅ Final user object:', userWithoutPassword);
+      console.log('Final user object:', userWithoutPassword);
       
       return { success: true, user: userWithoutPassword, message: 'Login successful' };
     } catch (err) {
@@ -78,6 +78,45 @@ class AuthService {
     } catch (err) {
       console.error('registerCustomer error:', err);
       return { success: false, message: 'Registration failed' };
+    }
+  }
+
+  async registerUser(userData) {
+    try {
+      // Generate username from email
+      const username = userData.email.split('@')[0];
+      
+      // Check if username already exists
+      const existingUser = await this.userDAO.findByUsername(username);
+      if (existingUser) return { success: false, error: 'Gebruikersnaam al in gebruik' };
+
+      // Check if email already exists
+      const existingEmail = await this.userDAO.findByEmail(userData.email);
+      if (existingEmail) return { success: false, error: 'Email al in gebruik' };
+
+      // Create customer data with required fields
+      const customerData = {
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        email: userData.email,
+        username: username,
+        password: userData.password, // Will be hashed in createCustomer
+        address: userData.address || 'Default Address',
+        district: userData.district || 'Default District', 
+        city_id: userData.city_id || 1,
+        postal_code: userData.postal_code || '00000',
+        phone: userData.phone || '000-000-0000',
+        store_id: userData.store_id || 1
+      };
+
+      const result = await this.userDAO.createCustomer(customerData);
+
+      return result.success
+        ? { success: true, customerId: result.customerId, message: 'Registration successful' }
+        : { success: false, error: 'Registratie mislukt' };
+    } catch (err) {
+      console.error('registerUser error:', err);
+      return { success: false, error: 'Er is een fout opgetreden bij de registratie' };
     }
   }
 

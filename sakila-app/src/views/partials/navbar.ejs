@@ -1,6 +1,7 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow">
     <div class="container">
         <a class="navbar-brand" href="/">
+            <i class="bi bi-film"></i>
             <strong>Sakila App</strong>
         </a>
         
@@ -12,36 +13,36 @@
             <ul class="navbar-nav me-auto">
                 <li class="nav-item">
                     <a class="nav-link" href="/">
-                        Home
+                        <i class="bi bi-house"></i> Home
                     </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/films">
-                        Films
+                        <i class="bi bi-collection-play"></i> Films
                     </a>
                 </li>
                 <% if (typeof user !== 'undefined' && user) { %>
                     <% if (user.userType === 'staff' || user.userType === 'owner') { %>
                         <li class="nav-item">
                             <a class="nav-link" href="/customers">
-                                Customers
+                                <i class="bi bi-people"></i> Klanten
                             </a>
                         </li>
                     <% } %>
                     <% if (user.userType === 'owner') { %>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                                Management
+                                <i class="bi bi-gear"></i> Beheer
                             </a>
                             <ul class="dropdown-menu">
                                 <li><a class="dropdown-item" href="/admin/staff">
-                                    Staff
+                                    <i class="bi bi-person-badge"></i> Personeel
                                 </a></li>
                                 <li><a class="dropdown-item" href="/admin/reports">
-                                    Reports
+                                    <i class="bi bi-graph-up"></i> Rapporten
                                 </a></li>
                                 <li><a class="dropdown-item" href="/admin/inventory">
-                                    Inventory
+                                    <i class="bi bi-box"></i> Voorraad
                                 </a></li>
                             </ul>
                         </li>
@@ -53,6 +54,7 @@
                 <% if (typeof user !== 'undefined' && user) { %>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i>
                             <%= user.fullName || user.username %>
                             <% if (user.userType) { %>
                                 <span class="badge bg-secondary ms-1"><%= user.userType %></span>
@@ -60,16 +62,16 @@
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="/dashboard">
-                                Dashboard
+                                <i class="bi bi-speedometer2"></i> Dashboard
                             </a></li>
                             <li><a class="dropdown-item" href="/profile">
-                                Profile
+                                <i class="bi bi-person-gear"></i> Profiel
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <form method="POST" action="/logout" class="d-inline">
                                     <button type="submit" class="dropdown-item text-danger">
-                                        Logout
+                                        <i class="bi bi-box-arrow-right"></i> Uitloggen
                                     </button>
                                 </form>
                             </li>
@@ -78,12 +80,12 @@
                 <% } else { %>
                     <li class="nav-item">
                         <a class="nav-link" href="/login">
-                            Login
+                            <i class="bi bi-box-arrow-in-right"></i> Inloggen
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/register">
-                            Register
+                            <i class="bi bi-person-plus"></i> Registreren
                         </a>
                     </li>
                 <% } %>

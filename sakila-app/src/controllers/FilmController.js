@@ -123,29 +123,8 @@ class FilmController {
 
       const customerId = req.user.user_id;
 
-      // Get available inventory for this film and store
-      const availability = await this.filmService.checkFilmAvailability(filmId, storeId);
-      if (!availability.success || availability.data.available_copies <= 0) {
-        return res.redirect(`/films/${filmId}?error=${encodeURIComponent('Deze film is niet beschikbaar in de geselecteerde winkel')}`);
-      }
-
-      // Get an inventory item to rent
-      const inventoryItems = await this.filmService.db.query(`
-        SELECT i.inventory_id 
-        FROM inventory i
-        LEFT JOIN rental r ON i.inventory_id = r.inventory_id 
-          AND r.return_date IS NULL 
-          AND r.status IN ('paid', 'rented')
-        WHERE i.film_id = ? AND i.store_id = ? AND r.rental_id IS NULL
-        LIMIT 1
-      `, [filmId, storeId]);
-
-      if (!inventoryItems.length) {
-        return res.redirect(`/films/${filmId}?error=${encodeURIComponent('Geen beschikbare kopieën in deze winkel')}`);
-      }
-
-      // Create rental using RentalService
-      const rentalResult = await this.rentalService.createRental(customerId, inventoryItems[0].inventory_id);
+      // Use FilmService to rent the film
+      const rentalResult = await this.filmService.rentFilm(customerId, filmId, storeId);
       
       if (!rentalResult.success) {
         return res.redirect(`/films/${filmId}?error=${encodeURIComponent(rentalResult.message)}`);

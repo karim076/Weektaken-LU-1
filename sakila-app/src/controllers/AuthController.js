@@ -36,8 +36,10 @@ class AuthController {
   async login(req, res) {
     try {
       const { username, password, redirect = '/dashboard' } = req.body;
-
+      console.log(`Login attempt: ${username}, ${password ? '******' : 'no password'}`);
       if (!username || !password) {
+        // log username and password
+        
         return res.render('login', {
           title: 'Login - Sakila App',
           redirect,
@@ -174,7 +176,7 @@ class AuthController {
       if (!result.success) {
         return res.render('register', {
           title: 'Registreren - Sakila App',
-          error: result.error,
+          error: result.error || result.message,
           success: null
         });
       }
@@ -218,26 +220,25 @@ class AuthController {
    */
   async showDashboard(req, res) {
     try {
-      console.log('🏠 Dashboard requested');
+      console.log(' - Dashboard requested');
       console.log('   Session ID:', req.session?.id);
       console.log('   Is Authenticated:', req.session?.isAuthenticated);
       console.log('   User in Session:', req.session?.user?.username);
       
       const user = req.session.user;
       if (!user) {
-        console.log('❌ No user in session, redirecting to login');
+        console.log('   No user in session, redirecting to login');
         return res.redirect('/login');
       }
 
       // Check if user is still active (temporarily disabled for debugging)
       // const isActive = await this.authService.isUserActive(user.user_id, user.user_type);
       // if (!isActive) {
-      //   console.log('❌ User account is inactive');
+      //   console.log(' User account is inactive');
       //   req.session.destroy();
       //   return res.redirect('/login?error=account_inactive');
       // }
       
-      console.log('⚡ Skipping isUserActive check for debugging');
 
       // Render dashboard based on role
       switch(user.role) {
