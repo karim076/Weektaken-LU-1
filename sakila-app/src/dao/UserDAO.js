@@ -1,59 +1,58 @@
 // src/dao/UserDAO.js
-const mysql = require('mysql2/promise');
+const BaseDAO = require('./BaseDAO');
 const bcrypt = require('bcrypt');
 
-class UserDAO {
+class UserDAO extends BaseDAO {
   constructor() {
-    this.pool = mysql.createPool({
-      host: process.env.DB_HOST || 'localhost',
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'sakila',
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0
-    });
+    super('user_auth', 'user_id');
   }
 
-  // 🔎 Zoek gebruiker op username
+  //  Zoek gebruiker op username
   async findByUsername(username) {
-    const [rows] = await this.pool.query(
+    const rows = await this.query(
       `SELECT * FROM user_auth WHERE username = ? LIMIT 1`,
       [username]
     );
     return rows.length ? rows[0] : null;
   }
 
-  // 🔎 Zoek gebruiker op email
+  //  Zoek gebruiker op email
   async findByEmail(email) {
-    const [rows] = await this.pool.query(
+    const rows = await this.query(
       `SELECT * FROM user_auth WHERE email = ? LIMIT 1`,
       [email]
     );
     return rows.length ? rows[0] : null;
   }
 
-  // 🔎 Zoek gebruiker op id en type
+  //  Zoek gebruiker op id en type
   async findById(id, type) {
-    const [rows] = await this.pool.query(
+    const rows = await this.query(
       `SELECT * FROM user_auth WHERE user_id = ? AND user_type = ? LIMIT 1`,
       [id, type]
     );
     return rows.length ? rows[0] : null;
   }
 
-  // ✅ Maak nieuwe klant
+  //  Maak nieuwe klant
   async createCustomer(customerData) {
-    const conn = await this.pool.getConnection();
+    const conn = await this.db.getConnection();
     try {
       await conn.beginTransaction();
 
+      // Hash password if not already hashed
+      let hashedPassword = customerData.password;
+      if (!hashedPassword.startsWith('$2b$') && !hashedPassword.startsWith('$2a$')) {
+        hashedPassword = await bcrypt.hash(customerData.password, 10);
+      }
+
       // Insert address als dat in customerData zit
       const [addrResult] = await conn.query(
-        `INSERT INTO address (address, district, city_id, postal_code, phone) 
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO address (address, address2, district, city_id, postal_code, phone, location) 
+         VALUES (?, ?, ?, ?, ?, ?, POINT(0, 0))`,
         [
           customerData.address,
+          customerData.address2,
           customerData.district,
           customerData.city_id,
           customerData.postal_code,
@@ -74,7 +73,7 @@ class UserDAO {
           addressId,
           1,
           customerData.username,
-          customerData.password
+          hashedPassword
         ]
       );
 
@@ -89,7 +88,7 @@ class UserDAO {
     }
   }
 
-  // ✅ Password check
+  //  Password check
   async verifyPassword(username, password) {
     const user = await this.findByUsername(username);
     if (!user) return false;
@@ -100,26 +99,26 @@ class UserDAO {
       return bcrypt.compare(password, user.password);
     } else {
       // It's a plain text password (legacy), do direct comparison
-      console.log('🔓 Using plain text password comparison for:', username);
+      console.log(' Using plain text password comparison for:', username);
       return password === user.password;
     }
   }
 
-  // ✅ Password update
+  //  Password update
   async updatePassword(userId, userType, newPassword) {
-    const [result] = await this.pool.query(
+    const result = await this.query(
       `UPDATE ${userType} SET password = ? WHERE ${userType}_id = ?`,
       [newPassword, userId]
     );
     return result;
   }
 
-  // ✅ Profiel update
+  //  Profiel update
   async updateProfile(userId, userType, profileData) {
     const fields = Object.keys(profileData).map(f => `${f} = ?`).join(', ');
     const values = Object.values(profileData);
 
-    const [result] = await this.pool.query(
+    const result = await this.query(
       `UPDATE ${userType} SET ${fields} WHERE ${userType}_id = ?`,
       [...values, userId]
     );
