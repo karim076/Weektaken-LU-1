@@ -1,21 +1,26 @@
+// Load environment variables
+require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
+const cookieParser = require('cookie-parser');
 
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
-// Session configuration
+// Session configuration (for backward compatibility)
 app.use(session({
-    secret: 'sakila-app-secret-key',
+    secret: process.env.SESSION_SECRET || 'sakila-app-secret-key',
     resave: false,
     saveUninitialized: false,
     cookie: { 
-        secure: false, // Set to true in production with HTTPS
+        secure: process.env.NODE_ENV === 'production', // HTTPS in production
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
@@ -58,15 +63,38 @@ app.post('/login', authController.login.bind(authController));
 app.get('/register', authController.showRegister.bind(authController));
 app.post('/register', authController.register.bind(authController));
 app.post('/logout', authController.logout.bind(authController));
+
+// API routes
+app.get('/api/cities', async (req, res) => {
+  try {
+    const BaseDAO = require('./src/dao/BaseDAO');
+    const baseDAO = new BaseDAO();
+    
+    // Get all cities, ordered alphabetically, no limit
+    const cities = await baseDAO.query('SELECT city_id, city FROM city ORDER BY city');
+    
+    res.json({
+      success: true,
+      cities: cities
+    });
+  } catch (error) {
+    console.error('Error fetching cities:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch cities'
+    });
+  }
+});
+
 // Dashboard route (general)
-app.get('/dashboard', authMiddleware.requireAuth, homeController.dashboard.bind(homeController));
+app.get('/dashboard', authMiddleware.requireAuthWeb, homeController.dashboard.bind(homeController));
 
 // Profile route (general) - using CustomerController
 const CustomerController = require('./src/controllers/CustomerController');
 const customerController = new CustomerController();
 
 // Simple profile route that should definitely work
-app.get('/profile', authMiddleware.requireCustomer, async (req, res) => {
+app.get('/profile', authMiddleware.requireCustomerWeb, async (req, res) => {
   try {
     console.log('Direct profile route called');
     const customerId = req.user.user_id || req.user.customer_id || req.user.id;
@@ -86,10 +114,10 @@ app.get('/profile', authMiddleware.requireCustomer, async (req, res) => {
   }
 });
 
-app.post('/profile', authMiddleware.requireCustomer, customerController.updateProfile.bind(customerController));
+app.post('/profile', authMiddleware.requireCustomerWeb, customerController.updateProfile.bind(customerController));
 
 // Simple test profile route
-app.get('/profile-test', authMiddleware.requireCustomer, async (req, res) => {
+app.get('/profile-test', authMiddleware.requireCustomerWeb, async (req, res) => {
   try {
     console.log('Profile-test: Starting test');
     const customerId = req.user.user_id || req.user.customer_id || req.user.id;
@@ -118,7 +146,7 @@ app.get('/profile-test', authMiddleware.requireCustomer, async (req, res) => {
 // API routes
 app.use('/films', filmRoutes);
 app.use('/customers', customerRoutes);
-app.use('/admin', authMiddleware.requireAdmin, adminRoutes);
+app.use('/admin', authMiddleware.requireAdminWeb, adminRoutes);
 app.use('/customer', customerDashboardRoutes);
 
 // Error handling middleware (should be last)

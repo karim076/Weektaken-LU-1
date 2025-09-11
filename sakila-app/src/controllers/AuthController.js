@@ -38,8 +38,6 @@ class AuthController {
       const { username, password, redirect = '/dashboard' } = req.body;
       console.log(`Login attempt: ${username}, ${password ? '******' : 'no password'}`);
       if (!username || !password) {
-        // log username and password
-        
         return res.render('login', {
           title: 'Login - Sakila App',
           redirect,
@@ -57,7 +55,17 @@ class AuthController {
         });
       }
 
-      // Set session data
+      // Set JWT token in httpOnly cookie
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // HTTPS in production
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      };
+      
+      res.cookie('token', result.token, cookieOptions);
+
+      // Also set session data for backward compatibility
       req.session.user = result.user;
       req.session.isAuthenticated = true;
 
@@ -65,8 +73,7 @@ class AuthController {
       console.log('   Username:', result.user.username);
       console.log('   User Type:', result.user.user_type);
       console.log('   Role:', result.user.role);
-      console.log('   Session ID:', req.session.id);
-      console.log('   Session Data:', req.session);
+      console.log('   Token generated:', !!result.token);
 
       // Redirect based on role or requested page
       if (redirect !== '/dashboard') {
@@ -120,7 +127,8 @@ class AuthController {
       res.render('register', {
         title: 'Register - Sakila App',
         error: null,
-        success: null
+        success: null,
+        formData: {}
       });
     } catch (error) {
       console.error('Show register error:', error);
@@ -137,14 +145,38 @@ class AuthController {
    */
   async register(req, res) {
     try {
-      const { first_name, last_name, email, password, confirm_password, user_type = 'customer' } = req.body;
+      const { 
+        first_name, 
+        last_name, 
+        email, 
+        password, 
+        confirm_password, 
+        address,
+        address2,
+        district,
+        city_id,
+        postal_code,
+        phone,
+        user_type = 'customer' 
+      } = req.body;
 
       // Basic validation
       if (!first_name || !last_name || !email || !password || !confirm_password) {
         return res.render('register', {
           title: 'Registreren - Sakila App',
-          error: 'Vul alle velden in',
-          success: null
+          error: 'Vul alle verplichte velden in',
+          success: null,
+          formData: req.body
+        });
+      }
+
+      // Address validation
+      if (!address || !district || !city_id || !phone) {
+        return res.render('register', {
+          title: 'Registreren - Sakila App',
+          error: 'Vul alle verplichte adresvelden in (adres, district, stad, telefoon)',
+          success: null,
+          formData: req.body
         });
       }
 
@@ -152,7 +184,8 @@ class AuthController {
         return res.render('register', {
           title: 'Registreren - Sakila App',
           error: 'Wachtwoorden komen niet overeen',
-          success: null
+          success: null,
+          formData: req.body
         });
       }
 
@@ -160,7 +193,8 @@ class AuthController {
         return res.render('register', {
           title: 'Registreren - Sakila App',
           error: 'Wachtwoord moet minimaal 6 karakters lang zijn',
-          success: null
+          success: null,
+          formData: req.body
         });
       }
 
@@ -170,6 +204,12 @@ class AuthController {
         last_name,
         email,
         password,
+        address,
+        address2,
+        district,
+        city_id: parseInt(city_id),
+        postal_code,
+        phone,
         user_type
       });
 
@@ -177,7 +217,8 @@ class AuthController {
         return res.render('register', {
           title: 'Registreren - Sakila App',
           error: result.error || result.message,
-          success: null
+          success: null,
+          formData: req.body
         });
       }
 
@@ -185,7 +226,8 @@ class AuthController {
       res.render('register', {
         title: 'Registreren - Sakila App',
         error: null,
-        success: 'Registratie succesvol! Je kunt nu inloggen.'
+        success: 'Registratie succesvol! Je kunt nu inloggen.',
+        formData: {}
       });
 
     } catch (error) {
@@ -193,7 +235,8 @@ class AuthController {
       res.render('register', {
         title: 'Registreren - Sakila App',
         error: 'Er is een fout opgetreden bij de registratie',
-        success: null
+        success: null,
+        formData: req.body
       });
     }
   }
@@ -203,14 +246,24 @@ class AuthController {
    */
   async logout(req, res) {
     try {
+      // Clear JWT token cookie
+      res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+      });
+
+      // Destroy session for backward compatibility
       req.session.destroy((err) => {
         if (err) {
           console.error('Session destroy error:', err);
         }
+        console.log('User logged out successfully');
         res.redirect('/');
       });
     } catch (error) {
       console.error('Logout error:', error);
+      res.clearCookie('token');
       res.redirect('/');
     }
   }

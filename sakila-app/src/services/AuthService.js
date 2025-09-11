@@ -1,9 +1,11 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const UserDAO = require('../dao/UserDAO');
+const JWTService = require('./JWTService');
 
 class AuthService {
   constructor() {
     this.userDAO = new UserDAO();
+    this.jwtService = new JWTService();
   }
 
   async authenticateUser(usernameOrEmail, password) {
@@ -24,7 +26,8 @@ class AuthService {
 
       console.log('User found:', user.username, 'Type:', user.user_type);
 
-      const isValidPassword = await this.userDAO.verifyPassword(user.username, password);
+      // Verify password using bcryptjs
+      const isValidPassword = await this.verifyPassword(password, user.password);
       if (!isValidPassword) {
         console.log('Invalid password for:', user.username);
         return { success: false, error: 'Ongeldige gebruikersnaam/email of wachtwoord' };
@@ -47,13 +50,58 @@ class AuthService {
         userWithoutPassword.role = 'customer';
         console.log('Customer user mapped to customer role');
       }
+
+      // Generate JWT token
+      let token;
+      try {
+        if (userWithoutPassword.user_type === 'customer') {
+          token = this.jwtService.generateCustomerToken(userWithoutPassword);
+        } else if (userWithoutPassword.user_type === 'staff') {
+          token = this.jwtService.generateStaffToken(userWithoutPassword);
+        } else {
+          token = this.jwtService.generateToken(userWithoutPassword);
+        }
+      } catch (tokenError) {
+        console.error('Token generation failed:', tokenError);
+        return { success: false, error: 'Er is een fout opgetreden bij het inloggen' };
+      }
       
       console.log('Final user object:', userWithoutPassword);
       
-      return { success: true, user: userWithoutPassword, message: 'Login successful' };
+      return { 
+        success: true, 
+        user: userWithoutPassword, 
+        token: token,
+        message: 'Login successful' 
+      };
     } catch (err) {
       console.error('authenticateUser error:', err);
       return { success: false, error: 'Authenticatie mislukt' };
+    }
+  }
+
+  /**
+   * Verify password using bcryptjs
+   */
+  async verifyPassword(plainPassword, hashedPassword) {
+    try {
+      return await bcrypt.compare(plainPassword, hashedPassword);
+    } catch (error) {
+      console.error('Password verification error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Hash password using bcryptjs
+   */
+  async hashPassword(password) {
+    try {
+      const saltRounds = 12;
+      return await bcrypt.hash(password, saltRounds);
+    } catch (error) {
+      console.error('Password hashing error:', error);
+      throw new Error('Password hashing failed');
     }
   }
 
@@ -65,7 +113,7 @@ class AuthService {
       const existingEmail = await this.userDAO.findByEmail(userData.email);
       if (existingEmail) return { success: false, message: 'Email already exists' };
 
-      const hashedPassword = await bcrypt.hash(userData.password, 10);
+      const hashedPassword = await this.hashPassword(userData.password);
       const result = await this.userDAO.createCustomer({
         ...userData,
         password: hashedPassword,
@@ -94,18 +142,19 @@ class AuthService {
       const existingEmail = await this.userDAO.findByEmail(userData.email);
       if (existingEmail) return { success: false, error: 'Email al in gebruik' };
 
-      // Create customer data with required fields
+      // Create customer data with provided address fields
       const customerData = {
         first_name: userData.first_name,
         last_name: userData.last_name,
         email: userData.email,
         username: username,
         password: userData.password, // Will be hashed in createCustomer
-        address: userData.address || 'Default Address',
-        district: userData.district || 'Default District', 
-        city_id: userData.city_id || 1,
-        postal_code: userData.postal_code || '00000',
-        phone: userData.phone || '000-000-0000',
+        address: userData.address,
+        address2: userData.address2 || null,
+        district: userData.district,
+        city_id: userData.city_id,
+        postal_code: userData.postal_code || null,
+        phone: userData.phone,
         store_id: userData.store_id || 1
       };
 

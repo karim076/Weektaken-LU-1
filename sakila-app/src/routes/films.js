@@ -21,7 +21,4 @@ router.get('/:id/availability', filmController.checkAvailability.bind(filmContro
 // Customer rental routes (require authentication)
 router.post('/:id/rent', requireCustomer, filmController.rent.bind(filmController));
 
-// Customer-only routes
-router.post('/:id/rent', requireCustomer, filmController.rent.bind(filmController));
-
 module.exports = router;

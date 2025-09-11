@@ -527,6 +527,102 @@ class CustomerController {
       });
     }
   };
+
+  /**
+   * Get customer rentals data for AJAX
+   */
+  getCustomerRentalsData = async (customerId) => {
+    try {
+      // Get all rentals without pagination for stats
+      const result = await this.customerService.getCustomerRentals(customerId, 1, 100);
+      
+      // Extract rentals array from the result
+      let rentals = [];
+      if (result && result.rentals) {
+        rentals = result.rentals;
+      } else if (Array.isArray(result)) {
+        rentals = result;
+      }
+      
+      console.log('Rentals data for customer', customerId, ':', rentals.length, 'rentals found');
+      
+      // Calculate stats
+      const stats = {
+        pending: rentals.filter(r => r.status === 'pending').length,
+        paid: rentals.filter(r => r.status === 'paid').length,
+        rented: rentals.filter(r => r.status === 'rented').length,
+        returned: rentals.filter(r => r.status === 'returned').length,
+        total_rentals: rentals.length,
+        total_spent: rentals.reduce((sum, r) => sum + parseFloat(r.amount || 0), 0)
+      };
+      
+      return {
+        success: true,
+        rentals: rentals,
+        stats: stats
+      };
+    } catch (error) {
+      console.error('Get customer rentals data error:', error);
+      return {
+        success: false,
+        message: 'Er is een fout opgetreden bij het laden van de verhuurgegevens'
+      };
+    }
+  };
+
+  /**
+   * Get customer profile data for AJAX
+   */
+  getCustomerProfileData = async (customerId) => {
+    try {
+      const customer = await this.customerService.getCustomerById(customerId);
+      
+      if (!customer) {
+        return {
+          success: false,
+          message: 'Klant niet gevonden'
+        };
+      }
+      
+      return {
+        success: true,
+        customer: customer
+      };
+    } catch (error) {
+      console.error('Get customer profile data error:', error);
+      return {
+        success: false,
+        message: 'Er is een fout opgetreden bij het laden van de profielgegevens'
+      };
+    }
+  };
+
+  /**
+   * Update customer profile via AJAX
+   */
+  updateCustomerProfile = async (customerId, profileData) => {
+    try {
+      const result = await this.customerService.updateCustomer(customerId, profileData);
+      
+      if (result.success) {
+        return {
+          success: true,
+          message: 'Profiel succesvol bijgewerkt'
+        };
+      } else {
+        return {
+          success: false,
+          message: result.message
+        };
+      }
+    } catch (error) {
+      console.error('Update customer profile error:', error);
+      return {
+        success: false,
+        message: 'Er is een fout opgetreden bij het bijwerken van het profiel'
+      };
+    }
+  };
 }
 
 module.exports = CustomerController;

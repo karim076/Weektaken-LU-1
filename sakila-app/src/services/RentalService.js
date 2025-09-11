@@ -259,6 +259,51 @@ class RentalService extends BaseDAO {
   }
 
   /**
+   * Cancel a pending rental
+   */
+  async cancelRental(rentalId, customerId) {
+    try {
+      // First check if rental exists and is in pending status
+      const rental = await this.query(`
+        SELECT r.*, f.title as film_title 
+        FROM rental r
+        JOIN inventory i ON r.inventory_id = i.inventory_id
+        JOIN film f ON i.film_id = f.film_id
+        WHERE r.rental_id = ? AND r.customer_id = ?
+      `, [rentalId, customerId]);
+
+      if (!rental.length) {
+        throw new Error('Rental not found');
+      }
+
+      const rentalData = rental[0];
+
+      // Only allow cancellation of pending rentals
+      if (rentalData.status !== 'pending') {
+        throw new Error('Only pending rentals can be cancelled');
+      }
+
+      // Delete the rental record (this automatically makes inventory available again)
+      const result = await this.query(`
+        DELETE FROM rental WHERE rental_id = ? AND customer_id = ? AND status = 'pending'
+      `, [rentalId, customerId]);
+
+      if (result.affectedRows === 0) {
+        throw new Error('Failed to cancel rental');
+      }
+
+      return {
+        success: true,
+        message: `Rental voor "${rentalData.film_title}" is geannuleerd. De film is weer beschikbaar.`
+      };
+
+    } catch (error) {
+      console.error('Cancel rental error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get rental details
    */
   async getRentalDetails(rentalId) {

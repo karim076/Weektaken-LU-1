@@ -117,19 +117,30 @@ class FilmController {
       const filmId = parseInt(req.params.id);
       const storeId = parseInt(req.body.store_id) || 1;
       
+      console.log('Film rental attempt:');
+      console.log('- Film ID:', filmId);
+      console.log('- Store ID:', storeId);
+      console.log('- User:', req.user);
+      
       if (!req.user || req.user.role !== 'customer') {
+        console.log('- Authentication failed, redirecting to login');
         return res.redirect('/login?redirect=/films/' + filmId);
       }
 
       const customerId = req.user.user_id;
+      console.log('- Customer ID:', customerId);
 
       // Use FilmService to rent the film
+      console.log('- Calling filmService.rentFilm...');
       const rentalResult = await this.filmService.rentFilm(customerId, filmId, storeId);
+      console.log('- Rental result:', rentalResult);
       
       if (!rentalResult.success) {
+        console.log('- Rental failed:', rentalResult.message);
         return res.redirect(`/films/${filmId}?error=${encodeURIComponent(rentalResult.message)}`);
       }
 
+      console.log('- Rental successful, redirecting to customer rentals');
       return res.redirect(`/customer/rentals?success=${encodeURIComponent('Film toegevoegd aan verhuur! Status: In behandeling. Ga naar de winkel om te betalen.')}`);
       
     } catch (error) {

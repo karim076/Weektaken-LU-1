@@ -137,35 +137,74 @@
                             <div class="mb-3">
                                 <label for="address" class="form-label">
                                     <i class="bi bi-house"></i>
-                                    Adres
+                                    Adres *
                                 </label>
-                                <textarea 
+                                <input 
+                                    type="text" 
                                     class="form-control" 
                                     id="address" 
                                     name="address" 
-                                    rows="2"
-                                    placeholder="Je adres (optioneel)"
-                                ><%= typeof formData !== 'undefined' && formData.address ? formData.address : '' %></textarea>
+                                    required
+                                    placeholder="Straatnaam en huisnummer"
+                                    value="<%= typeof formData !== 'undefined' && formData.address ? formData.address : '' %>"
+                                >
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="address2" class="form-label">
+                                    <i class="bi bi-house-door"></i>
+                                    Adres regel 2
+                                </label>
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="address2" 
+                                    name="address2" 
+                                    placeholder="Appartement, verdieping, etc. (optioneel)"
+                                    value="<%= typeof formData !== 'undefined' && formData.address2 ? formData.address2 : '' %>"
+                                >
                             </div>
                             
                             <div class="row">
-                                <div class="col-md-8">
+                                <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="city" class="form-label">
-                                            <i class="bi bi-geo-alt"></i>
-                                            Stad
+                                        <label for="district" class="form-label">
+                                            <i class="bi bi-geo"></i>
+                                            Wijk/District *
                                         </label>
                                         <input 
                                             type="text" 
                                             class="form-control" 
-                                            id="city" 
-                                            name="city" 
-                                            placeholder="Je stad"
-                                            value="<%= typeof formData !== 'undefined' && formData.city ? formData.city : '' %>"
+                                            id="district" 
+                                            name="district" 
+                                            required
+                                            placeholder="Je wijk of district"
+                                            value="<%= typeof formData !== 'undefined' && formData.district ? formData.district : '' %>"
                                         >
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="city_id" class="form-label">
+                                            <i class="bi bi-geo-alt"></i>
+                                            Stad *
+                                        </label>
+                                        <select 
+                                            class="form-select" 
+                                            id="city_id" 
+                                            name="city_id" 
+                                            required
+                                        >
+                                            <option value="">Selecteer een stad</option>
+                                            <!-- Cities will be loaded via JavaScript -->
+                                        </select>
+                                        <div class="form-text">Als je stad er niet bij staat, kies de dichtstbijzijnde stad.</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
                                     <div class="mb-3">
                                         <label for="postal_code" class="form-label">
                                             <i class="bi bi-mailbox"></i>
@@ -178,6 +217,23 @@
                                             name="postal_code" 
                                             placeholder="1234AB"
                                             value="<%= typeof formData !== 'undefined' && formData.postal_code ? formData.postal_code : '' %>"
+                                        >
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="phone" class="form-label">
+                                            <i class="bi bi-telephone"></i>
+                                            Telefoon *
+                                        </label>
+                                        <input 
+                                            type="tel" 
+                                            class="form-control" 
+                                            id="phone" 
+                                            name="phone" 
+                                            required
+                                            placeholder="+31 6 12345678"
+                                            value="<%= typeof formData !== 'undefined' && formData.phone ? formData.phone : '' %>"
                                         >
                                     </div>
                                 </div>
@@ -278,11 +334,70 @@
         document.getElementById('password').addEventListener('input', checkPasswordMatch);
         document.getElementById('confirm_password').addEventListener('input', checkPasswordMatch);
         
+        // Load cities on page load
+        async function loadCities() {
+            try {
+                console.log('Loading cities from API...');
+                const response = await fetch('/api/cities');
+                const data = await response.json();
+                
+                console.log('API response:', data);
+                
+                if (data.success && data.cities && data.cities.length > 0) {
+                    const citySelect = document.getElementById('city_id');
+                    
+                    // Clear existing options except the first one
+                    citySelect.innerHTML = '<option value="">Selecteer een stad</option>';
+                    
+                    // Add cities to dropdown
+                    data.cities.forEach(city => {
+                        const option = document.createElement('option');
+                        option.value = city.city_id;
+                        option.textContent = city.city;
+                        citySelect.appendChild(option);
+                    });
+                    
+                    console.log(`Loaded ${data.cities.length} cities successfully`);
+                } else {
+                    console.error('Failed to load cities:', data.message);
+                    // Add some fallback cities
+                    const citySelect = document.getElementById('city_id');
+                    citySelect.innerHTML = `
+                        <option value="">Selecteer een stad</option>
+                        <option value="1">Amsterdam</option>
+                        <option value="2">Rotterdam</option>
+                        <option value="3">Den Haag</option>
+                        <option value="4">Utrecht</option>
+                        <option value="5">Eindhoven</option>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading cities:', error);
+                // Add fallback cities
+                const citySelect = document.getElementById('city_id');
+                citySelect.innerHTML = `
+                    <option value="">Selecteer een stad</option>
+                    <option value="1">Amsterdam</option>
+                    <option value="2">Rotterdam</option>
+                    <option value="3">Den Haag</option>
+                    <option value="4">Utrecht</option>
+                    <option value="5">Eindhoven</option>
+                `;
+            }
+        }
+        
+        // Load cities when page loads
+        document.addEventListener('DOMContentLoaded', loadCities);
+        
         // Form validation
         document.getElementById('registerForm').addEventListener('submit', function(e) {
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirm_password').value;
             const terms = document.getElementById('terms').checked;
+            const address = document.getElementById('address').value.trim();
+            const district = document.getElementById('district').value.trim();
+            const cityId = document.getElementById('city_id').value;
+            const phone = document.getElementById('phone').value.trim();
             
             if (password !== confirmPassword) {
                 e.preventDefault();
@@ -293,6 +408,30 @@
             if (!terms) {
                 e.preventDefault();
                 alert('Je moet akkoord gaan met de algemene voorwaarden!');
+                return;
+            }
+            
+            if (!address) {
+                e.preventDefault();
+                alert('Vul je adres in!');
+                return;
+            }
+            
+            if (!district) {
+                e.preventDefault();
+                alert('Vul je wijk/district in!');
+                return;
+            }
+            
+            if (!cityId) {
+                e.preventDefault();
+                alert('Selecteer een stad!');
+                return;
+            }
+            
+            if (!phone) {
+                e.preventDefault();
+                alert('Vul je telefoonnummer in!');
                 return;
             }
         });

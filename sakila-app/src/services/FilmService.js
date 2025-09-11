@@ -85,45 +85,25 @@ class FilmService {
    */
   async rentFilm(customerId, filmId, storeId = null) {
     try {
-      // Find available inventory for the film
-      const inventoryQuery = `
-        SELECT i.inventory_id 
-        FROM inventory i 
-        WHERE i.film_id = ? 
-        ${storeId ? 'AND i.store_id = ?' : ''}
-        AND i.inventory_id NOT IN (
-          SELECT inventory_id FROM rental WHERE return_date IS NULL
-        )
-        LIMIT 1
-      `;
+      console.log(`FilmService.rentFilm called with: customerId=${customerId}, filmId=${filmId}, storeId=${storeId}`);
       
-      const params = storeId ? [filmId, storeId] : [filmId];
-      const inventory = await this.filmDAO.query(inventoryQuery, params);
+      // Use the FilmDAO createRental method instead of custom logic
+      const result = await this.filmDAO.createRental(filmId, customerId, storeId || 1);
       
-      if (inventory.length === 0) {
-        return {
-          success: false,
-          message: 'Film is momenteel niet beschikbaar voor verhuur'
-        };
-      }
-
-      const inventoryId = inventory[0].inventory_id;
-      
-      // Create rental
-      const result = await this.filmDAO.rentFilm(customerId, inventoryId);
+      console.log('FilmDAO.createRental result:', result);
       
       return {
         success: true,
         data: {
-          rentalId: result.rentalId
+          rentalId: result.rentalId || result.insertId
         },
         message: 'Film succesvol gehuurd'
       };
     } catch (error) {
-      console.error('Rent film error:', error);
+      console.error('Rent film error:', error.message);
       return {
         success: false,
-        message: 'Er is een fout opgetreden bij het huren van de film'
+        message: error.message || 'Er is een fout opgetreden bij het huren van de film'
       };
     }
   }
@@ -321,25 +301,6 @@ class FilmService {
     }
   }
 
-  /**
-   * Rent a film for a customer
-   */
-  async rentFilm(filmId, customerId, storeId) {
-    try {
-      const result = await this.filmDAO.createRental(filmId, customerId, storeId);
-      return {
-        success: true,
-        data: result,
-        message: 'Film succesvol gehuurd'
-      };
-    } catch (error) {
-      console.error('Rent film error:', error);
-      return {
-        success: false,
-        message: 'Er is een fout opgetreden bij het huren van de film'
-      };
-    }
-  }
 }
 
 module.exports = FilmService;

@@ -7,110 +7,349 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1c1c1c 0%, #2a2a2a 100%);
+        }
+        .sidebar {
+            min-height: calc(100vh - 160px);
+            background: linear-gradient(135deg, #2a2a2a 0%, #1c1c1c 100%);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid #404040;
+        }
+        .sidebar .nav-link {
+            color: #f8f9fa;
+            border-radius: 12px;
+            margin: 5px 0;
+            padding: 12px 20px;
+            transition: all 0.3s ease;
+            border: none;
+        }
+        .sidebar .nav-link:hover {
+            background: linear-gradient(135deg, #e50914 0%, #b30710 100%);
+            color: white;
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(229, 9, 20, 0.3);
+        }
+        .sidebar .nav-link.active {
+            background: linear-gradient(135deg, #e50914 0%, #b30710 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4);
+        }
+        .main-content {
+            background: #2a2a2a;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            min-height: calc(100vh - 160px);
+            border: 1px solid #404040;
+        }
+        .welcome-card {
+            background: linear-gradient(135deg, #e50914 0%, #b30710 100%);
+            border: none;
+            border-radius: 15px;
+        }
+        .stat-card {
+            background: #343a40;
+            border: 1px solid #495057;
+            border-radius: 12px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-left: 4px solid transparent;
+            color: #f8f9fa;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(229, 9, 20, 0.2);
+            background: #3d4449;
+        }
+        .stat-card.primary { 
+            border-left-color: #e50914; 
+        }
+        .stat-card.primary .btn {
+            background: linear-gradient(135deg, #e50914 0%, #b30710 100%);
+            border: none;
+            color: white;
+        }
+        .stat-card.primary .btn:hover {
+            background: linear-gradient(135deg, #ff1e2d 0%, #e50914 100%);
+            transform: translateY(-2px);
+        }
+        .stat-card.success { 
+            border-left-color: #28a745; 
+        }
+        .stat-card.success .btn {
+            background: #28a745;
+            border: none;
+            color: white;
+        }
+        .stat-card.success .btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+        .stat-card.info { 
+            border-left-color: #17a2b8; 
+        }
+        .stat-card.info .btn {
+            background: #17a2b8;
+            border: none;
+            color: white;
+        }
+        .stat-card.info .btn:hover {
+            background: #138496;
+            transform: translateY(-2px);
+        }
+        .card {
+            background: #343a40;
+            border: 1px solid #495057;
+            color: #f8f9fa;
+        }
+        .card-header {
+            background: #3d4449 !important;
+            border-bottom: 1px solid #495057;
+        }
+        .alert-primary {
+            background: rgba(229, 9, 20, 0.1) !important;
+            border: 1px solid rgba(229, 9, 20, 0.3);
+            color: #f8f9fa;
+        }
+        .text-primary {
+            color: #e50914 !important;
+        }
+        .bg-primary {
+            background: linear-gradient(135deg, #e50914 0%, #b30710 100%) !important;
+        }
+        .btn-outline-light {
+            border-color: #6c757d;
+            color: #f8f9fa;
+        }
+        .btn-outline-light:hover {
+            background: #6c757d;
+            color: white;
+        }
+    </style>
 </head>
 <body class="bg-light">
     <%- include('partials/navbar') %>
     
-    <div class="container mt-4">
+    <div class="container-fluid mt-4">
         <!-- Customer Dashboard -->
         <% if (dashboardType === 'customer') { %>
-            <!-- Welcome Header -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card bg-primary text-white">
-                        <div class="card-body">
-                            <h1 class="h3 mb-0">
-                                <i class="bi bi-person-circle"></i>
-                                Welkom terug, <%= user.full_name || user.first_name || user.username %>!
-                            </h1>
-                            <p class="mb-0">Beheer je account en bekijk je verhuurgeschiedenis</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="row g-4 mb-4">
-                <div class="col-md-6 col-lg-3">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <i class="bi bi-collection-play fs-1 text-primary mb-2"></i>
-                            <h5 class="card-title">Films Bekijken</h5>
-                            <p class="text-muted">Browse onze filmcatalogus</p>
-                            <a href="/films" class="btn btn-primary">
-                                <i class="bi bi-search"></i> Films Bekijken
+            <div class="row g-4">
+                <!-- Sidebar -->
+                <div class="col-lg-3">
+                    <div class="sidebar p-4">
+                            <div class="text-center mb-4">
+                                <div class="bg-dark bg-opacity-50 rounded-circle d-inline-flex align-items-center justify-content-center border border-secondary" style="width: 80px; height: 80px;">
+                                    <i class="bi bi-person-circle text-light" style="font-size: 3rem;"></i>
+                                </div>
+                                <h5 class="text-white mt-3 mb-1"><%= user.full_name || user.first_name || user.username %></h5>
+                                <small class="text-muted">Customer Account</small>
+                            </div>                        <nav class="nav nav-pills flex-column">
+                            <a class="nav-link active" href="#" data-section="dashboard">
+                                <i class="bi bi-speedometer2 me-2"></i>
+                                Dashboard
                             </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-3">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <i class="bi bi-film fs-1 text-success mb-2"></i>
-                            <h5 class="card-title">Mijn Verhuur</h5>
-                            <p class="text-muted">Bekijk je gehuurde films</p>
-                            <a href="/customer/rentals" class="btn btn-success">
-                                <i class="bi bi-list"></i> Mijn Verhuur
+                            <a class="nav-link" href="#" data-section="profile">
+                                <i class="bi bi-person me-2"></i>
+                                Mijn Profiel
                             </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-3">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <i class="bi bi-person fs-1 text-info mb-2"></i>
-                            <h5 class="card-title">Mijn Profiel</h5>
-                            <p class="text-muted">Bewerk je gegevens</p>
-                            <a href="/profile" class="btn btn-info text-white">
-                                Profiel Bewerken
+                            <a class="nav-link" href="#" data-section="rentals">
+                                <i class="bi bi-film me-2"></i>
+                                Mijn Verhuur
                             </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-3">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <i class="bi bi-credit-card fs-1 text-warning mb-2"></i>
-                            <h5 class="card-title">Betalingen</h5>
-                            <p class="text-muted">Bekijk je betaalgeschiedenis</p>
-                            <a href="/customer/payments" class="btn btn-warning">
-                                <i class="bi bi-receipt"></i> Betalingen
+                            
+                            
+                            <a class="nav-link" href="/films">
+                                <i class="bi bi-collection-play me-2"></i>
+                                Films Bekijken
                             </a>
+                        </nav>
+                        
+                        <div class="mt-4 pt-4 border-top border-secondary">
+                            <div class="text-center">
+                                <a href="/logout" class="btn btn-outline-light btn-sm">
+                                    <i class="bi bi-box-arrow-right me-2"></i>
+                                    Uitloggen
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Recent Activity -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">
-                                <i class="bi bi-clock-history"></i>
-                                Recente Activiteit
-                            </h5>
+                
+                <!-- Main Content -->
+                <div class="col-lg-9">
+                    <div class="main-content p-4">
+                        <!-- Dashboard Section -->
+                        <div id="dashboard-section" class="content-section">
+                            <!-- Welcome Header -->
+                            <div class="welcome-card text-white p-4 mb-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h2 class="mb-1">
+                                            <i class="bi bi-sun me-2"></i>
+                                            Goedemorgen, <%= user.full_name || user.first_name || user.username %>!
+                                        </h2>
+                                        <p class="mb-0 opacity-75">Klaar voor een nieuwe filmavond?</p>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="fs-5 opacity-75">
+                                            <%= new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' }) %>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Quick Stats -->
+                            <div class="row g-4 mb-4">
+                                <div class="col-md-4">
+                                    <div class="card stat-card primary h-100">
+                                        <div class="card-body text-center">
+                                            <div class="d-flex align-items-center justify-content-center mb-3">
+                                                <div class="bg-danger bg-opacity-10 rounded-circle p-3">
+                                                    <i class="bi bi-collection-play fs-2 text-danger"></i>
+                                                </div>
+                                            </div>
+                                            <h5 class="card-title text-danger">Films Ontdekken</h5>
+                                            <p class="text-muted mb-3">Browse door duizenden films</p>
+                                            <a href="/films" class="btn btn-primary">
+                                                <i class="bi bi-search me-2"></i>
+                                                Films Bekijken
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card stat-card success h-100">
+                                        <div class="card-body text-center">
+                                            <div class="d-flex align-items-center justify-content-center mb-3">
+                                                <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                                                    <i class="bi bi-film fs-2 text-success"></i>
+                                                </div>
+                                            </div>
+                                            <h5 class="card-title text-success">Mijn Verhuur</h5>
+                                            <p class="text-muted mb-3">Beheer je gehuurde films</p>
+                                            <a href="#" class="btn btn-success" data-section="rentals">
+                                                <i class="bi bi-list me-2"></i>
+                                                Verhuur Bekijken
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card stat-card info h-100">
+                                        <div class="card-body text-center">
+                                            <div class="d-flex align-items-center justify-content-center mb-3">
+                                                <div class="bg-info bg-opacity-10 rounded-circle p-3">
+                                                    <i class="bi bi-person fs-2 text-info"></i>
+                                                </div>
+                                            </div>
+                                            <h5 class="card-title text-info">Account</h5>
+                                            <p class="text-muted mb-3">Beheer je persoonlijke gegevens</p>
+                                            <a href="#" class="btn btn-info" data-section="profile">
+                                                <i class="bi bi-gear me-2"></i>
+                                                Profiel Bewerken
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Recent Activity & Tips -->
+                            <div class="row g-4">
+                                <div class="col-md-8">
+                                    <div class="card border-0 shadow-sm">
+                                        <div class="card-header bg-white border-0">
+                                            <h5 class="mb-0">
+                                                <i class="bi bi-star text-warning me-2"></i>
+                                                Aanbevolen voor jou
+                                            </h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="alert alert-primary border-0 bg-danger bg-opacity-10">
+                                                <div class="d-flex">
+                                                    <i class="bi bi-lightbulb text-danger me-3 fs-4"></i>
+                                                    <div>
+                                                        <h6 class="text-danger mb-1">Welkom bij Sakila Video!</h6>
+                                                        <p class="mb-2 text-light">Start je filmavontuur door onze uitgebreide collectie te verkennen.</p>
+                                                        <a href="/films" class="btn btn-primary btn-sm">
+                                                            <i class="bi bi-play-circle me-1"></i>
+                                                            Start Verkennen
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card border-0 shadow-sm">
+                                        <div class="card-header bg-white border-0">
+                                            <h5 class="mb-0">
+                                                <i class="bi bi-question-circle text-info me-2"></i>
+                                                Tips
+                                            </h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-start mb-3">
+                                                <i class="bi bi-check-circle text-success me-2 mt-1"></i>
+                                                <small class="text-light">Gebruik filters om snel films te vinden</small>
+                                            </div>
+                                            <div class="d-flex align-items-start mb-3">
+                                                <i class="bi bi-check-circle text-success me-2 mt-1"></i>
+                                                <small class="text-light">Check je verhuurgeschiedenis regelmatig</small>
+                                            </div>
+                                            <div class="d-flex align-items-start">
+                                                <i class="bi bi-check-circle text-success me-2 mt-1"></i>
+                                                <small class="text-light">Houd je profiel gegevens bij</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <div class="alert alert-info">
-                                <i class="bi bi-info-circle"></i>
-                                <strong>Welkom bij Sakila Video!</strong> 
-                                Je kunt nu films huren en je account beheren.
-                                <hr>
-                                <div class="d-flex gap-2">
-                                    <a href="/films" class="btn btn-sm btn-primary">
-                                        Start met Films Bekijken
-                                    </a>
-                                    <a href="/profile" class="btn btn-sm btn-outline-primary">
-                                        Profiel Instellen
-                                    </a>
+                        
+                        <!-- Rentals Section -->
+                        <div id="rentals-section" class="content-section d-none">
+                            <div class="d-flex align-items-center mb-4">
+                                <i class="bi bi-film text-danger fs-2 me-3"></i>
+                                <div>
+                                    <h2 class="text-white mb-1">Mijn Verhuur</h2>
+                                    <p class="text-muted mb-0">Bekijk je huidige en eerdere verhuur</p>
+                                </div>
+                            </div>
+                            
+                            <div id="rentals-content">
+                                <div class="text-center py-5">
+                                    <div class="spinner-border text-danger" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="text-muted mt-3">Verhuurgegevens laden...</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Profile Section -->
+                        <div id="profile-section" class="content-section d-none">
+                            <div class="d-flex align-items-center mb-4">
+                                <i class="bi bi-person text-info fs-2 me-3"></i>
+                                <div>
+                                    <h2 class="text-white mb-1">Mijn Profiel</h2>
+                                    <p class="text-muted mb-0">Beheer je persoonlijke gegevens</p>
+                                </div>
+                            </div>
+                            
+                            <div id="profile-content">
+                                <div class="text-center py-5">
+                                    <div class="spinner-border text-info" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="text-muted mt-3">Profielgegevens laden...</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-
         <% } else if (dashboardType === 'staff') { %>
             <!-- Staff Dashboard Content -->
             <div class="row mb-4">
@@ -224,5 +463,449 @@
     <%- include('partials/footer') %>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Highlight active nav item based on current section
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('.sidebar .nav-link');
+            const sections = document.querySelectorAll('.content-section');
+            
+            console.log('Dashboard loaded, found', navLinks.length, 'nav links and', sections.length, 'sections');
+            
+            // Function to show a specific section
+            function showSection(sectionName) {
+                console.log('Showing section:', sectionName);
+                
+                // Update active nav link
+                navLinks.forEach(l => {
+                    l.classList.remove('active');
+                    if (l.getAttribute('data-section') === sectionName) {
+                        l.classList.add('active');
+                    }
+                });
+                
+                // Show/hide sections
+                sections.forEach(section => {
+                    if (section.id === sectionName + '-section') {
+                        section.classList.remove('d-none');
+                        console.log('Showing section:', section.id);
+                        
+                        // Load content if needed
+                        if (sectionName === 'rentals' && !section.dataset.loaded) {
+                            console.log('Loading rentals content...');
+                            loadRentalsContent();
+                            section.dataset.loaded = 'true';
+                        } else if (sectionName === 'profile' && !section.dataset.loaded) {
+                            console.log('Loading profile content...');
+                            loadProfileContent();
+                            section.dataset.loaded = 'true';
+                        }
+                    } else {
+                        section.classList.add('d-none');
+                    }
+                });
+            }
+            
+            // Check for URL hash on load
+            function checkUrlHash() {
+                const hash = window.location.hash.substring(1);
+                if (hash && ['dashboard', 'rentals', 'profile'].includes(hash)) {
+                    showSection(hash);
+                } else {
+                    showSection('dashboard'); // Default to dashboard
+                }
+            }
+            
+            // Add click handlers for navigation
+            navLinks.forEach(link => {
+                const sectionName = link.getAttribute('data-section');
+                if (sectionName) {
+                    link.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        console.log('Navigation clicked:', sectionName);
+                        
+                        // Update URL hash
+                        window.location.hash = sectionName;
+                        showSection(sectionName);
+                    });
+                }
+            });
+            
+            // Also add handlers for buttons with data-section
+            const sectionButtons = document.querySelectorAll('[data-section]');
+            sectionButtons.forEach(button => {
+                const sectionName = button.getAttribute('data-section');
+                if (sectionName && !button.classList.contains('nav-link')) {
+                    button.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        console.log('Section button clicked:', sectionName);
+                        
+                        // Update URL hash
+                        window.location.hash = sectionName;
+                        showSection(sectionName);
+                    });
+                }
+            });
+            
+            // Handle browser back/forward buttons
+            window.addEventListener('hashchange', checkUrlHash);
+            
+            // Initial load
+            checkUrlHash();
+        });
+        
+        function loadRentalsContent() {
+            const rentalsContent = document.getElementById('rentals-content');
+            console.log('Loading rentals content...');
+            
+            fetch('/customer/rentals-data')
+                .then(response => {
+                    console.log('Rentals response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Rentals data received:', data);
+                    if (data.success) {
+                        renderRentalsContent(data.rentals, data.stats, rentalsContent);
+                    } else {
+                        rentalsContent.innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                Fout bij het laden van verhuurgegevens: ${data.message}
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading rentals:', error);
+                    rentalsContent.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Er is een fout opgetreden bij het laden van je verhuurgegevens.
+                        </div>
+                    `;
+                });
+        }
+        
+        function renderRentalsContent(rentals, stats, container) {
+            let html = '';
+            
+            // Stats cards
+            if (stats) {
+                html += `
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-3">
+                            <div class="card stat-card h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-clock-history fs-1 text-warning mb-2"></i>
+                                    <h4 class="text-warning">${stats.pending || 0}</h4>
+                                    <small class="text-muted">In Behandeling</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card stat-card h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-check-circle fs-1 text-success mb-2"></i>
+                                    <h4 class="text-success">${stats.paid || 0}</h4>
+                                    <small class="text-muted">Betaald</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card stat-card h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-film fs-1 text-primary mb-2"></i>
+                                    <h4 class="text-primary">${stats.rented || 0}</h4>
+                                    <small class="text-muted">Gehuurd</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card stat-card h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-check2-circle fs-1 text-info mb-2"></i>
+                                    <h4 class="text-info">${stats.returned || 0}</h4>
+                                    <small class="text-muted">Teruggebracht</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-4 mb-4">
+                        <div class="col-md-12">
+                            <div class="card stat-card">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-currency-euro fs-1 text-success mb-2"></i>
+                                    <h3 class="text-success">€${(stats.total_spent || 0).toFixed(2)}</h3>
+                                    <small class="text-muted">Totaal Uitgegeven (${stats.total_rentals || 0} verhuur(en))</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Rentals list
+            html += '<div class="card">';
+            html += '<div class="card-header"><h5 class="mb-0"><i class="bi bi-clock-history text-danger me-2"></i>Verhuur Geschiedenis</h5></div>';
+            html += '<div class="card-body">';
+            
+            if (rentals && rentals.length > 0) {
+                html += '<div class="row g-3">';
+                rentals.forEach(rental => {
+                    const statusBadge = getStatusBadge(rental.status);
+                    const rentalDate = new Date(rental.rental_date).toLocaleDateString('nl-NL');
+                    
+                    html += `
+                        <div class="col-12">
+                            <div class="card bg-dark border-secondary">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-auto">
+                                            <div class="bg-danger bg-opacity-20 rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                                <i class="bi bi-film fs-4 text-danger"></i>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <h6 class="mb-1 text-white">${rental.film_title}</h6>
+                                                    <small class="text-muted"><i class="bi bi-tag"></i> ${rental.category}</small>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <small class="text-muted d-block">Gehuurd op</small>
+                                                    <span class="fw-medium text-light">${rentalDate}</span>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <small class="text-muted d-block">Status</small>
+                                                    ${statusBadge}
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <small class="text-muted d-block">Bedrag</small>
+                                                    <span class="h6 text-success mb-0">€${parseFloat(rental.amount || 0).toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        ${rental.status === 'pending' ? 
+                                            `<div class="col-auto">
+                                                <button class="btn btn-outline-danger btn-sm" onclick="cancelRental(${rental.rental_id}, '${rental.film_title}')">
+                                                    <i class="bi bi-x-circle"></i> Annuleren
+                                                </button>
+                                            </div>` : 
+                                            ''
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            } else {
+                html += `
+                    <div class="text-center py-5">
+                        <i class="bi bi-film display-1 text-muted mb-3"></i>
+                        <h3 class="text-muted">Geen verhuur gevonden</h3>
+                        <p class="text-muted">Je hebt nog geen films gehuurd.</p>
+                        <a href="/films" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Huur je eerste film
+                        </a>
+                    </div>
+                `;
+            }
+            
+            html += '</div></div>';
+            container.innerHTML = html;
+        }
+        
+        function getStatusBadge(status) {
+            switch(status) {
+                case 'pending':
+                    return '<span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> In Behandeling</span>';
+                case 'paid':
+                    return '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Betaald</span>';
+                case 'rented':
+                    return '<span class="badge bg-primary"><i class="bi bi-play-circle"></i> Gehuurd</span>';
+                case 'returned':
+                    return '<span class="badge bg-info"><i class="bi bi-check2-circle"></i> Teruggebracht</span>';
+                default:
+                    return '<span class="badge bg-secondary">Onbekend</span>';
+            }
+        }
+        
+        function loadProfileContent() {
+            const profileContent = document.getElementById('profile-content');
+            console.log('Loading profile content...');
+            
+            fetch('/customer/profile-data')
+                .then(response => {
+                    console.log('Profile response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Profile data received:', data);
+                    if (data.success) {
+                        renderProfileContent(data.customer, profileContent);
+                    } else {
+                        profileContent.innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                Fout bij het laden van profielgegevens: ${data.message}
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading profile:', error);
+                    profileContent.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Er is een fout opgetreden bij het laden van je profielgegevens.
+                        </div>
+                    `;
+                });
+        }
+        
+        function renderProfileContent(customer, container) {
+            const html = `
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-person text-info me-2"></i>Persoonlijke Gegevens</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="profileForm">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="first_name" class="form-label text-light">Voornaam</label>
+                                    <input type="text" class="form-control bg-dark border-secondary text-light" id="first_name" value="${customer.first_name || ''}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="last_name" class="form-label text-light">Achternaam</label>
+                                    <input type="text" class="form-control bg-dark border-secondary text-light" id="last_name" value="${customer.last_name || ''}" required>
+                                </div>
+                                <div class="col-12">
+                                    <label for="email" class="form-label text-light">Email</label>
+                                    <input type="email" class="form-control bg-dark border-secondary text-light" id="email" value="${customer.email || ''}" required>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-info">
+                                        <i class="bi bi-save me-2"></i>Wijzigingen Opslaan
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+            
+            // Add form submit handler
+            document.getElementById('profileForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                updateProfile();
+            });
+        }
+        
+        function updateProfile() {
+            const formData = {
+                first_name: document.getElementById('first_name').value,
+                last_name: document.getElementById('last_name').value,
+                email: document.getElementById('email').value
+            };
+            
+            fetch('/customer/profile-update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', 'Profiel bijgewerkt!', 'Je wijzigingen zijn opgeslagen.');
+                } else {
+                    showToast('error', 'Fout!', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error updating profile:', error);
+                showToast('error', 'Fout!', 'Er is een fout opgetreden bij het bijwerken van je profiel.');
+            });
+        }
+        
+        // Rental cancellation function (reused from rentals page)
+        function cancelRental(rentalId, filmTitle) {
+            if (confirm(`Weet je zeker dat je de verhuur van "${filmTitle}" wilt annuleren?`)) {
+                fetch(`/customer/rentals/${rentalId}/cancel`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('success', 'Geannuleerd!', data.message);
+                        // Reload rentals content
+                        document.getElementById('rentals-section').dataset.loaded = 'false';
+                        loadRentalsContent();
+                    } else {
+                        showToast('error', 'Fout!', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('error', 'Fout!', 'Er is een fout opgetreden bij het annuleren van de verhuur');
+                });
+            }
+        }
+        
+        // Toast notification function
+        function showToast(type, title, message) {
+            const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+            
+            const toastId = 'toast-' + Date.now();
+            const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            const icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
+            
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi ${icon} me-2"></i>
+                            <strong>${title}</strong> ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, {
+                autohide: true,
+                delay: type === 'success' ? 3000 : 5000
+            });
+            
+            toast.show();
+            
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        }
+        
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'toast-container position-fixed top-0 end-0 p-3';
+            container.style.zIndex = '9999';
+            document.body.appendChild(container);
+            return container;
+        }
+    </script>
 </body>
 </html>

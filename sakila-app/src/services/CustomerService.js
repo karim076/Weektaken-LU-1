@@ -95,18 +95,34 @@ class CustomerService {
   /**
    * Get customer rental history
    */
-  async getCustomerRentals(customerId, page = 1, limit = 10) {
+  async getCustomerRentals(customerId, page = 1, limit = 100) {
     try {
-      const rentals = await this.customerDAO.getCustomerRentalHistory(customerId, page, limit);
-      const totalCount = await this.customerDAO.getCustomerRentalCount(customerId);
+      // Use the existing method that gets customer with rental history
+      const result = await this.customerDAO.getCustomerWithRentalHistory(customerId);
       
+      if (!result || !result.rentals) {
+        return {
+          rentals: [],
+          pagination: {
+            currentPage: page,
+            totalPages: 0,
+            totalCount: 0,
+            limit
+          }
+        };
+      }
+      
+      // Return just the rentals array for backward compatibility
+      const rentals = result.rentals || [];
+      
+      // For now, return all rentals without pagination since the DAO method doesn't support it
       return {
-        rentals,
+        rentals: rentals,
         pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(totalCount / limit),
-          totalCount,
-          limit
+          currentPage: 1,
+          totalPages: 1,
+          totalCount: rentals.length,
+          limit: rentals.length
         }
       };
     } catch (error) {
