@@ -167,10 +167,14 @@
                         
                         <div class="mt-4 pt-4 border-top border-secondary">
                             <div class="text-center">
-                                <a href="/logout" class="btn btn-outline-light btn-sm">
-                                    <i class="bi bi-box-arrow-right me-2"></i>
-                                    Uitloggen
-                                </a>
+                                <form method="POST" action="/logout" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-light btn-sm">
+                                            <i class="bi bi-box-arrow-right me-2"></i>
+                                            Uitloggen
+                                        </a>
+                                    </button>
+                                </form>
+                                
                             </div>
                         </div>
                     </div>
@@ -372,7 +376,7 @@
                         <div class="card-body text-center">
                             <i class="bi bi-people fs-1 text-primary mb-2"></i>
                             <h5>Klanten Beheren</h5>
-                            <a href="/customers" class="btn btn-primary">Ga naar Klanten</a>
+                            <a href="/customer" class="btn btn-primary">Ga naar Klanten</a>
                         </div>
                     </div>
                 </div>
@@ -422,7 +426,7 @@
                                 <a href="/admin/dashboard" class="btn btn-danger">
                                     <i class="bi bi-speedometer2"></i> Volledig Admin Panel
                                 </a>
-                                <a href="/customers" class="btn btn-outline-danger">
+                                <a href="/customer" class="btn btn-outline-danger">
                                     <i class="bi bi-people"></i> Klanten Beheren
                                 </a>
                                 <a href="/films" class="btn btn-outline-danger">
@@ -594,7 +598,7 @@
             if (stats) {
                 html += `
                     <div class="row g-4 mb-4">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="card stat-card h-100">
                                 <div class="card-body text-center">
                                     <i class="bi bi-clock-history fs-1 text-warning mb-2"></i>
@@ -603,7 +607,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="card stat-card h-100">
                                 <div class="card-body text-center">
                                     <i class="bi bi-check-circle fs-1 text-success mb-2"></i>
@@ -612,7 +616,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="card stat-card h-100">
                                 <div class="card-body text-center">
                                     <i class="bi bi-film fs-1 text-primary mb-2"></i>
@@ -621,7 +625,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="card stat-card h-100">
                                 <div class="card-body text-center">
                                     <i class="bi bi-check2-circle fs-1 text-info mb-2"></i>
@@ -630,15 +634,21 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="row g-4 mb-4">
-                        <div class="col-md-12">
-                            <div class="card stat-card">
+                        <div class="col-md-2">
+                            <div class="card stat-card h-100">
                                 <div class="card-body text-center">
-                                    <i class="bi bi-currency-euro fs-1 text-success mb-2"></i>
-                                    <h3 class="text-success">€${(stats.total_spent || 0).toFixed(2)}</h3>
-                                    <small class="text-muted">Totaal Uitgegeven (${stats.total_rentals || 0} verhuur(en))</small>
+                                    <i class="bi bi-wallet2 fs-2 text-warning mb-2"></i>
+                                    <h6 class="text-warning">€${(stats.paid_amount || 0).toFixed(2)}</h6>
+                                    <small class="text-muted">Nog Actief</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="card stat-card h-100">
+                                <div class="card-body text-center">
+                                    <i class="bi bi-currency-euro fs-2 text-success mb-2"></i>
+                                    <h6 class="text-success">€${(stats.total_spent || 0).toFixed(2)}</h6>
+                                    <small class="text-muted">Totaal</small>
                                 </div>
                             </div>
                         </div>
@@ -656,6 +666,18 @@
                 rentals.forEach(rental => {
                     const statusBadge = getStatusBadge(rental.status);
                     const rentalDate = new Date(rental.rental_date).toLocaleDateString('nl-NL');
+                    const filmPrice = parseFloat(rental.rental_rate || rental.amount || 0).toFixed(2);
+                    const totalAmount = parseFloat(rental.amount || 0).toFixed(2);
+                    const filmTitle = rental.film_title || rental.title || 'Onbekende Film';
+                    const category = rental.category || 'Onbekend';
+                    
+                    console.log('Rental data:', {
+                        id: rental.rental_id,
+                        title: filmTitle,
+                        rental_rate: rental.rental_rate,
+                        amount: rental.amount,
+                        status: rental.status
+                    });
                     
                     html += `
                         <div class="col-12">
@@ -669,33 +691,79 @@
                                         </div>
                                         <div class="col">
                                             <div class="row">
-                                                <div class="col-md-4">
-                                                    <h6 class="mb-1 text-white">${rental.film_title}</h6>
-                                                    <small class="text-muted"><i class="bi bi-tag"></i> ${rental.category}</small>
-                                                </div>
                                                 <div class="col-md-3">
+                                                    <h6 class="mb-1 text-white">${filmTitle}</h6>
+                                                    <small class="text-muted"><i class="bi bi-tag"></i> ${category}</small>
+                                                </div>
+                                                <div class="col-md-2">
                                                     <small class="text-muted d-block">Gehuurd op</small>
                                                     <span class="fw-medium text-light">${rentalDate}</span>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <small class="text-muted d-block">Filmprijs</small>
+                                                    <span class="fw-medium text-info">€${filmPrice}</span>
+                                                    <br><small class="text-muted">per periode</small>
                                                 </div>
                                                 <div class="col-md-2">
                                                     <small class="text-muted d-block">Status</small>
                                                     ${statusBadge}
                                                 </div>
                                                 <div class="col-md-2">
-                                                    <small class="text-muted d-block">Bedrag</small>
-                                                    <span class="h6 text-success mb-0">€${parseFloat(rental.amount || 0).toFixed(2)}</span>
+                                                    <small class="text-muted d-block">Totaal Bedrag</small>
+                                                    <span class="h6 ${rental.status === 'pending' ? 'text-danger' : 'text-success'} mb-0">€${totalAmount}</span>
+                                                    <br><small class="text-muted">${rental.status === 'pending' ? 'Nog te betalen' : rental.status === 'returned' ? 'Afgerond' : 'Betaald'}</small>
                                                 </div>
                                             </div>
                                         </div>
-                                        ${rental.status === 'pending' ? 
-                                            `<div class="col-auto">
-                                                <button class="btn btn-outline-danger btn-sm" onclick="cancelRental(${rental.rental_id}, '${rental.film_title}')">
-                                                    <i class="bi bi-x-circle"></i> Annuleren
+                                        <div class="col-auto">
+                                            <div class="dropdown">
+                                                <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                    <i class="bi bi-three-dots"></i>
                                                 </button>
-                                            </div>` : 
-                                            ''
-                                        }
+                                                <ul class="dropdown-menu">
+                                                    <li><a class="dropdown-item" href="/customer/rentals/${rental.rental_id}"><i class="bi bi-eye"></i> Details</a></li>
+                                                    <li><a class="dropdown-item" href="/films/${rental.film_id}"><i class="bi bi-info-circle"></i> Film Info</a></li>
+                                                                                                        ${
+                                                                                                            rental.status === 'pending'
+                                                                                                            ? (
+                                                    `<li><hr class="dropdown-divider"></li>
+                                                     <li><a class="dropdown-item text-warning" href="#" onclick="payRental(${rental.rental_id}, ${totalAmount})"><i class="bi bi-credit-card"></i> Nu Betalen (€${totalAmount})</a></li>
+                                                     <li><a class="dropdown-item text-danger" href="#" onclick="cancelRental(${rental.rental_id}, '` + filmTitle.replace(/'/g, "\\'") + `')"><i class="bi bi-x-circle"></i> Annuleren</a></li>`
+                                                                                                            )
+                                                                                                            : rental.status === 'returned'
+                                                                                                            ? (
+                                                    `<li><hr class="dropdown-divider"></li>
+                                                     <li><a class="dropdown-item text-success" href="/films"><i class="bi bi-arrow-repeat"></i> Opnieuw Huren</a></li>`
+                                                                                                            )
+                                                                                                            : rental.status === 'rented'
+                                                                                                            ? (
+                                                    `<li><hr class="dropdown-divider"></li>
+                                                     <li><a class="dropdown-item text-info" href="#" onclick="returnRental(${rental.rental_id}, '` + filmTitle.replace(/'/g, "\\'") + `')"><i class="bi bi-arrow-return-left"></i> Inleveren</a></li>
+                                                     <li><a class="dropdown-item text-warning" href="#" onclick="extendRental(${rental.rental_id}, '` + filmTitle.replace(/'/g, "\\'") + `')"><i class="bi bi-clock"></i> Verlengen</a></li>`
+                                                                                                            )
+                                                                                                            : ''
+                                                                                                        }
+                                                </ul>
+                                            </div>
+                                        </div>
                                     </div>
+                                    ${rental.status === 'pending' ? 
+                                        `<div class="row mt-3">
+                                            <div class="col-12">
+                                                <div class="alert alert-warning py-2 mb-0">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <div>
+                                                            <i class="bi bi-exclamation-triangle"></i>
+                                                            <strong>Actie vereist:</strong> Betaling van €${totalAmount} om verhuur te activeren
+                                                        </div>
+                                                        <button class="btn btn-warning btn-sm" onclick="payRental(${rental.rental_id}, ${totalAmount})">
+                                                            <i class="bi bi-credit-card"></i> Nu Betalen
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>` : ''
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -722,13 +790,13 @@
         function getStatusBadge(status) {
             switch(status) {
                 case 'pending':
-                    return '<span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> In Behandeling</span>';
+                    return '<span class="badge bg-warning text-dark"><i class="bi bi-clock"></i> Te Betalen</span>';
                 case 'paid':
                     return '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Betaald</span>';
                 case 'rented':
-                    return '<span class="badge bg-primary"><i class="bi bi-play-circle"></i> Gehuurd</span>';
+                    return '<span class="badge bg-primary"><i class="bi bi-play-circle"></i> Actief Gehuurd</span>';
                 case 'returned':
-                    return '<span class="badge bg-info"><i class="bi bi-check2-circle"></i> Teruggebracht</span>';
+                    return '<span class="badge bg-info"><i class="bi bi-check2-circle"></i> Voltooid</span>';
                 default:
                     return '<span class="badge bg-secondary">Onbekend</span>';
             }
@@ -771,30 +839,129 @@
             const html = `
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-person text-info me-2"></i>Persoonlijke Gegevens</h5>
+                        <h5 class="mb-0"><i class="bi bi-person text-info me-2"></i>Mijn Profiel</h5>
                     </div>
                     <div class="card-body">
                         <form id="profileForm">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="first_name" class="form-label text-light">Voornaam</label>
+                            <!-- Basic Information -->
+                            <div class="row mb-4">
+                                <div class="col-md-6 mb-3">
+                                    <label for="first_name" class="form-label text-light">Voornaam *</label>
                                     <input type="text" class="form-control bg-dark border-secondary text-light" id="first_name" value="${customer.first_name || ''}" required>
                                 </div>
-                                <div class="col-md-6">
-                                    <label for="last_name" class="form-label text-light">Achternaam</label>
+                                <div class="col-md-6 mb-3">
+                                    <label for="last_name" class="form-label text-light">Achternaam *</label>
                                     <input type="text" class="form-control bg-dark border-secondary text-light" id="last_name" value="${customer.last_name || ''}" required>
                                 </div>
-                                <div class="col-12">
-                                    <label for="email" class="form-label text-light">Email</label>
+                                <div class="col-md-12 mb-3">
+                                    <label for="email" class="form-label text-light">Email *</label>
                                     <input type="email" class="form-control bg-dark border-secondary text-light" id="email" value="${customer.email || ''}" required>
                                 </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="username" class="form-label text-light">Gebruikersnaam *</label>
+                                    <input type="text" class="form-control bg-dark border-secondary text-light" id="username" value="${customer.username || ''}" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="phone" class="form-label text-light">Telefoonnummer</label>
+                                    <input type="tel" class="form-control bg-dark border-secondary text-light" id="phone" value="${customer.phone || ''}" placeholder="06-12345678">
+                                </div>
+                            </div>
+
+                            <!-- Address Information -->
+                            <div class="row mb-4">
                                 <div class="col-12">
+                                    <h6 class="text-info mb-3">
+                                        <i class="bi bi-house"></i> Adresgegevens
+                                    </h6>
+                                </div>
+                                <div class="col-md-8 mb-3">
+                                    <label for="address" class="form-label text-light">Straat + Huisnummer</label>
+                                    <input type="text" class="form-control bg-dark border-secondary text-light" id="address" value="${customer.address || ''}" placeholder="Hoofdstraat 123">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="postal_code" class="form-label text-light">Postcode</label>
+                                    <input type="text" class="form-control bg-dark border-secondary text-light" id="postal_code" value="${customer.district || ''}" placeholder="1234 AB">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="city" class="form-label text-light">Stad</label>
+                                    <input type="text" class="form-control bg-dark border-secondary text-light" id="city" value="${customer.city || ''}" placeholder="Amsterdam">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="country" class="form-label text-light">Land</label>
+                                    <input type="text" class="form-control bg-dark border-secondary text-light" id="country" value="${customer.country || 'Nederland'}" placeholder="Nederland">
+                                </div>
+                            </div>
+
+                            <!-- Preferences -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h6 class="text-info mb-3">
+                                        <i class="bi bi-gear"></i> Voorkeuren
+                                    </h6>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="language" class="form-label text-light">Taal</label>
+                                    <select class="form-select bg-dark border-secondary text-light" id="language">
+                                        <option value="nl" ${(customer.language || 'nl') === 'nl' ? 'selected' : ''}>Nederlands</option>
+                                        <option value="en" ${customer.language === 'en' ? 'selected' : ''}>English</option>
+                                        <option value="de" ${customer.language === 'de' ? 'selected' : ''}>Deutsch</option>
+                                        <option value="fr" ${customer.language === 'fr' ? 'selected' : ''}>Français</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
                                     <button type="submit" class="btn btn-info">
-                                        <i class="bi bi-save me-2"></i>Wijzigingen Opslaan
+                                        <i class="bi bi-save me-2"></i>Profiel Opslaan
+                                    </button>
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                                        <i class="bi bi-shield-lock me-2"></i>Wachtwoord Wijzigen
                                     </button>
                                 </div>
                             </div>
                         </form>
+                    </div>
+                </div>
+
+                <!-- Change Password Modal -->
+                <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content bg-dark">
+                            <div class="modal-header border-secondary">
+                                <h5 class="modal-title text-light" id="changePasswordModalLabel">
+                                    <i class="bi bi-shield-lock text-warning me-2"></i>Wachtwoord Wijzigen
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="passwordForm">
+                                    <div class="mb-3">
+                                        <label for="modal_current_password" class="form-label text-light">Huidig Wachtwoord *</label>
+                                        <input type="password" class="form-control bg-dark border-secondary text-light" id="modal_current_password" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="modal_new_password" class="form-label text-light">Nieuw Wachtwoord *</label>
+                                        <input type="password" class="form-control bg-dark border-secondary text-light" id="modal_new_password" minlength="6" required>
+                                        <div class="form-text text-muted">Minimaal 6 tekens</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="modal_confirm_password" class="form-label text-light">Bevestig Nieuw Wachtwoord *</label>
+                                        <input type="password" class="form-control bg-dark border-secondary text-light" id="modal_confirm_password" required>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer border-secondary">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    <i class="bi bi-x-circle me-2"></i>Annuleren
+                                </button>
+                                <button type="button" class="btn btn-warning" onclick="changePassword()">
+                                    <i class="bi bi-check-circle me-2"></i>Wachtwoord Wijzigen
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -809,11 +976,32 @@
         }
         
         function updateProfile() {
+            // Collect basic profile data (no password)
             const formData = {
+                username: document.getElementById('username').value,
                 first_name: document.getElementById('first_name').value,
                 last_name: document.getElementById('last_name').value,
-                email: document.getElementById('email').value
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                address: document.getElementById('address').value,
+                postal_code: document.getElementById('postal_code').value,
+                city: document.getElementById('city').value,
+                country: document.getElementById('country').value,
+                language: document.getElementById('language').value
             };
+
+            // Basic validation
+            if (!formData.username || !formData.first_name || !formData.last_name || !formData.email) {
+                showToast('error', 'Fout!', 'Gebruikersnaam, voornaam, achternaam en email zijn verplicht.');
+                return;
+            }
+
+            // Email validation
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailPattern.test(formData.email)) {
+                showToast('error', 'Fout!', 'Email adres is niet geldig.');
+                return;
+            }
             
             fetch('/customer/profile-update', {
                 method: 'POST',
@@ -822,17 +1010,87 @@
                 },
                 body: JSON.stringify(formData)
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('success', 'Profiel bijgewerkt!', 'Je wijzigingen zijn opgeslagen.');
+            .then(response => {
+                if (response.redirected) {
+                    // Handle redirect for success/error messages
+                    const url = new URL(response.url);
+                    const success = url.searchParams.get('success');
+                    const error = url.searchParams.get('error');
+                    
+                    if (success) {
+                        showToast('success', 'Gelukt!', decodeURIComponent(success));
+                    } else if (error) {
+                        showToast('error', 'Fout!', decodeURIComponent(error));
+                    }
                 } else {
+                    return response.json();
+                }
+            })
+            .then(data => {
+                if (data && data.success) {
+                    showToast('success', 'Profiel bijgewerkt!', 'Je wijzigingen zijn opgeslagen.');
+                } else if (data && !data.success) {
                     showToast('error', 'Fout!', data.message);
                 }
             })
             .catch(error => {
                 console.error('Error updating profile:', error);
                 showToast('error', 'Fout!', 'Er is een fout opgetreden bij het bijwerken van je profiel.');
+            });
+        }
+
+        function changePassword() {
+            const currentPassword = document.getElementById('modal_current_password').value;
+            const newPassword = document.getElementById('modal_new_password').value;
+            const confirmPassword = document.getElementById('modal_confirm_password').value;
+
+            // Password validation
+            if (!currentPassword) {
+                showToast('error', 'Fout!', 'Huidig wachtwoord is vereist.');
+                return;
+            }
+            if (!newPassword) {
+                showToast('error', 'Fout!', 'Nieuw wachtwoord is vereist.');
+                return;
+            }
+            if (newPassword.length < 6) {
+                showToast('error', 'Fout!', 'Nieuw wachtwoord moet minstens 6 tekens bevatten.');
+                return;
+            }
+            if (newPassword !== confirmPassword) {
+                showToast('error', 'Fout!', 'Wachtwoorden komen niet overeen.');
+                return;
+            }
+
+            const passwordData = {
+                current_password: currentPassword,
+                new_password: newPassword,
+                confirm_password: confirmPassword
+            };
+            
+            fetch('/customer/change-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(passwordData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', 'Wachtwoord gewijzigd!', data.message);
+                    // Clear password fields and close modal
+                    document.getElementById('modal_current_password').value = '';
+                    document.getElementById('modal_new_password').value = '';
+                    document.getElementById('modal_confirm_password').value = '';
+                    bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+                } else {
+                    showToast('error', 'Fout!', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error changing password:', error);
+                showToast('error', 'Fout!', 'Er is een fout opgetreden bij het wijzigen van je wachtwoord.');
             });
         }
         
@@ -859,6 +1117,88 @@
                 .catch(error => {
                     console.error('Error:', error);
                     showToast('error', 'Fout!', 'Er is een fout opgetreden bij het annuleren van de verhuur');
+                });
+            }
+        }
+        
+        // Payment function
+        function payRental(rentalId, amount) {
+            if (confirm(`Wilt u €${amount} betalen voor deze verhuur?`)) {
+                fetch(`/customer/rentals/${rentalId}/pay`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ amount: amount })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('success', 'Betaling Gelukt!', `€${amount} is succesvol betaald`);
+                        // Reload rentals content
+                        document.getElementById('rentals-section').dataset.loaded = 'false';
+                        loadRentalsContent();
+                    } else {
+                        showToast('error', 'Betaling Mislukt!', data.message || 'Er is een fout opgetreden bij de betaling');
+                    }
+                })
+                .catch(error => {
+                    console.error('Payment error:', error);
+                    showToast('error', 'Betaling Mislukt!', 'Er is een fout opgetreden bij de betaling');
+                });
+            }
+        }
+        
+        // Return rental function
+        function returnRental(rentalId, filmTitle) {
+            if (confirm(`Wilt u "${filmTitle}" inleveren?`)) {
+                fetch(`/customer/rentals/${rentalId}/return`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('success', 'Ingeleverd!', `"${filmTitle}" is succesvol ingeleverd`);
+                        // Reload rentals content
+                        document.getElementById('rentals-section').dataset.loaded = 'false';
+                        loadRentalsContent();
+                    } else {
+                        showToast('error', 'Inleveren Mislukt!', data.message || 'Er is een fout opgetreden bij het inleveren');
+                    }
+                })
+                .catch(error => {
+                    console.error('Return error:', error);
+                    showToast('error', 'Inleveren Mislukt!', 'Er is een fout opgetreden bij het inleveren');
+                });
+            }
+        }
+        
+        // Extend rental function
+        function extendRental(rentalId, filmTitle) {
+            if (confirm(`Wilt u de verhuur van "${filmTitle}" verlengen?`)) {
+                fetch(`/customer/rentals/${rentalId}/extend`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('success', 'Verlengd!', `Verhuur van "${filmTitle}" is verlengd`);
+                        // Reload rentals content
+                        document.getElementById('rentals-section').dataset.loaded = 'false';
+                        loadRentalsContent();
+                    } else {
+                        showToast('error', 'Verlengen Mislukt!', data.message || 'Er is een fout opgetreden bij het verlengen');
+                    }
+                })
+                .catch(error => {
+                    console.error('Extend error:', error);
+                    showToast('error', 'Verlengen Mislukt!', 'Er is een fout opgetreden bij het verlengen');
                 });
             }
         }

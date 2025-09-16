@@ -69,16 +69,22 @@ class RentalService extends BaseDAO {
           r.rental_id,
           r.rental_date,
           r.return_date,
+          r.due_date,
           r.status,
           r.amount,
           f.title as film_title,
           f.film_id,
+          f.rental_rate,
+          f.rental_duration,
+          f.description,
           c.name as category,
           CASE 
+            WHEN r.due_date IS NOT NULL THEN r.due_date
             WHEN r.return_date IS NULL AND r.status IN ('paid', 'rented') 
             THEN DATE_ADD(r.rental_date, INTERVAL f.rental_duration DAY)
             ELSE r.return_date
-          END as expected_return_date
+          END as expected_return_date,
+          DATEDIFF(CURDATE(), COALESCE(r.due_date, DATE_ADD(r.rental_date, INTERVAL f.rental_duration DAY))) as days_overdue
         FROM rental r
         JOIN inventory i ON r.inventory_id = i.inventory_id
         JOIN film f ON i.film_id = f.film_id
@@ -157,6 +163,19 @@ class RentalService extends BaseDAO {
   }
 
   /**
+   * Get all rentals by customer (alias for getCustomerRentals for backward compatibility)
+   */
+  async getAllRentalsByCustomer(customerId, page = 1, limit = 10) {
+    try {
+      // This is just an alias for getCustomerRentals
+      return await this.getCustomerRentals(customerId, page, limit);
+    } catch (error) {
+      console.error('Get all rentals by customer error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Update rental status (for staff)
    */
   async updateRentalStatus(rentalId, newStatus, staffId) {
@@ -188,6 +207,18 @@ class RentalService extends BaseDAO {
 
     } catch (error) {
       console.error('Update rental status error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all rentals by customer ID (alias for getCustomerRentals for backward compatibility)
+   */
+  async getAllRentalsByCustomer(customerId, page = 1, limit = 10) {
+    try {
+      return await this.getCustomerRentals(customerId, page, limit);
+    } catch (error) {
+      console.error('Get all rentals by customer error:', error);
       throw error;
     }
   }
@@ -344,6 +375,210 @@ class RentalService extends BaseDAO {
     } catch (error) {
       console.error('Get rental details error:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Pay for a rental (change status from pending to paid)
+   */
+  async payRental(rentalId, customerId, amount) {
+    try {
+      // First verify the rental belongs to the customer and is pending
+      const rental = await this.query(`
+        SELECT r.*, f.title as film_title, f.rental_duration
+        FROM rental r
+        JOIN inventory i ON r.inventory_id = i.inventory_id
+        JOIN film f ON i.film_id = f.film_id
+        WHERE r.rental_id = ? AND r.customer_id = ?
+      `, [rentalId, customerId]);
+
+      if (!rental.length) {
+        return {
+          success: false,
+          message: 'Verhuur niet gevonden of hoort niet bij uw account'
+        };
+      }
+
+      const rentalData = rental[0];
+
+      // Check if payment is needed
+      if (rentalData.status === 'paid' || rentalData.status === 'rented') {
+        return {
+          success: false,
+          message: 'Deze verhuur is al betaald'
+        };
+      }
+
+      if (rentalData.status !== 'pending') {
+        return {
+          success: false,
+          message: 'Deze verhuur kan niet meer betaald worden'
+        };
+      }
+
+      // Verify amount matches
+      if (parseFloat(amount) !== parseFloat(rentalData.amount)) {
+        return {
+          success: false,
+          message: 'Betalingsbedrag komt niet overeen'
+        };
+      }
+
+      // Update rental status to paid and set due date
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + rentalData.rental_duration);
+
+      await this.query(`
+        UPDATE rental 
+        SET status = 'paid', 
+            due_date = ?,
+            last_update = NOW()
+        WHERE rental_id = ?
+      `, [dueDate, rentalId]);
+
+      return {
+        success: true,
+        message: `Betaling van €${amount} voor "${rentalData.film_title}" is gelukt`
+      };
+
+    } catch (error) {
+      console.error('Pay rental error:', error);
+      return {
+        success: false,
+        message: 'Er is een fout opgetreden bij de betaling'
+      };
+    }
+  }
+
+  /**
+   * Return a rental (change status from paid/rented to returned)
+   */
+  async returnRental(rentalId, customerId) {
+    try {
+      // First verify the rental belongs to the customer and can be returned
+      const rental = await this.query(`
+        SELECT r.*, f.title as film_title
+        FROM rental r
+        JOIN inventory i ON r.inventory_id = i.inventory_id
+        JOIN film f ON i.film_id = f.film_id
+        WHERE r.rental_id = ? AND r.customer_id = ?
+      `, [rentalId, customerId]);
+
+      if (!rental.length) {
+        return {
+          success: false,
+          message: 'Verhuur niet gevonden of hoort niet bij uw account'
+        };
+      }
+
+      const rentalData = rental[0];
+
+      // Check if rental can be returned
+      if (rentalData.status === 'returned' || rentalData.status === 'completed') {
+        return {
+          success: false,
+          message: 'Deze verhuur is al ingeleverd'
+        };
+      }
+
+      if (rentalData.status !== 'paid' && rentalData.status !== 'rented') {
+        return {
+          success: false,
+          message: 'Deze verhuur kan niet ingeleverd worden'
+        };
+      }
+
+      // Update rental status to returned
+      await this.query(`
+        UPDATE rental 
+        SET status = 'returned', 
+            return_date = NOW(),
+            last_update = NOW()
+        WHERE rental_id = ?
+      `, [rentalId]);
+
+      return {
+        success: true,
+        message: `"${rentalData.film_title}" is succesvol ingeleverd`
+      };
+
+    } catch (error) {
+      console.error('Return rental error:', error);
+      return {
+        success: false,
+        message: 'Er is een fout opgetreden bij het inleveren'
+      };
+    }
+  }
+
+  /**
+   * Extend a rental (add more days to due date)
+   */
+  async extendRental(rentalId, customerId, extraDays = 7) {
+    try {
+      // First verify the rental belongs to the customer and can be extended
+      const rental = await this.query(`
+        SELECT r.*, f.title as film_title, f.rental_rate
+        FROM rental r
+        JOIN inventory i ON r.inventory_id = i.inventory_id
+        JOIN film f ON i.film_id = f.film_id
+        WHERE r.rental_id = ? AND r.customer_id = ?
+      `, [rentalId, customerId]);
+
+      if (!rental.length) {
+        return {
+          success: false,
+          message: 'Verhuur niet gevonden of hoort niet bij uw account'
+        };
+      }
+
+      const rentalData = rental[0];
+
+      // Check if rental can be extended
+      if (rentalData.status === 'returned' || rentalData.status === 'completed' || rentalData.status === 'cancelled') {
+        return {
+          success: false,
+          message: 'Deze verhuur kan niet meer verlengd worden'
+        };
+      }
+
+      if (rentalData.status !== 'paid' && rentalData.status !== 'rented') {
+        return {
+          success: false,
+          message: 'Deze verhuur moet eerst betaald worden voordat het verlengd kan worden'
+        };
+      }
+
+      // Calculate new due date
+      const currentDueDate = new Date(rentalData.due_date);
+      const newDueDate = new Date(currentDueDate);
+      newDueDate.setDate(newDueDate.getDate() + extraDays);
+
+      // Calculate extension fee (typically 50% of original rental rate per week)
+      const extensionFee = (parseFloat(rentalData.rental_rate) * 0.5).toFixed(2);
+
+      // Update rental with new due date and add extension fee to amount
+      const newAmount = (parseFloat(rentalData.amount) + parseFloat(extensionFee)).toFixed(2);
+
+      await this.query(`
+        UPDATE rental 
+        SET due_date = ?,
+            amount = ?,
+            last_update = NOW()
+        WHERE rental_id = ?
+      `, [newDueDate, newAmount, rentalId]);
+
+      return {
+        success: true,
+        message: `Verhuur van "${rentalData.film_title}" is verlengd tot ${newDueDate.toLocaleDateString('nl-NL')}. Verlengingskosten: €${extensionFee}`
+      };
+
+    } catch (error) {
+      console.error('Extend rental error:', error);
+      return {
+        success: false,
+        message: 'Er is een fout opgetreden bij het verlengen'
+      };
     }
   }
 }

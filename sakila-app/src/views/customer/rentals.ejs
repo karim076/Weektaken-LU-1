@@ -139,7 +139,7 @@
                     <div class="row g-3">
                         <% rentals.forEach(rental => { %>
                             <div class="col-12">
-                                <div class="card">
+                                <div class="card">  
                                     <div class="card-body">
                                         <div class="row align-items-center">
                                             <!-- Film Icon & Info -->
@@ -153,7 +153,7 @@
                                             <!-- Film Details -->
                                             <div class="col">
                                                 <div class="row">
-                                                    <div class="col-md-4">
+                                                    <div class="col-md-3">
                                                         <h6 class="mb-1">
                                                             <%= rental.title || rental.film_title %>
                                                         </h6>
@@ -163,39 +163,86 @@
                                                         </small>
                                                     </div>
                                                     
-                                                    <div class="col-md-3">
+                                                    <div class="col-md-2">
                                                         <small class="text-muted d-block">Gehuurd op</small>
                                                         <span class="fw-medium">
                                                             <%= new Date(rental.rental_date).toLocaleDateString('nl-NL') %>
                                                         </span>
                                                     </div>
                                                     
-                                                    <div class="col-md-2">
+                                                    <div class="col-md-3">
+                                                        <small class="text-muted d-block">Filmprijs</small>
+                                                        <span class="fw-medium text-info">
+                                                            €<%= parseFloat(rental.rental_rate || rental.amount || 0).toFixed(2) %>
+                                                        </span>
+                                                        <div class="mt-1">
+                                                            <small class="text-muted">Per verhuurperiode</small>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="col-md-3">
                                                         <small class="text-muted d-block">Status</small>
                                                         <% if (rental.status === 'pending') { %>
                                                             <span class="badge bg-warning text-dark">
-                                                                <i class="bi bi-clock"></i> In Behandeling
+                                                                <i class="bi bi-clock"></i> Te Betalen
                                                             </span>
+                                                            <div class="mt-1">
+                                                                <small class="text-danger fw-bold">
+                                                                    Nog te betalen: €<%= parseFloat(rental.amount || 0).toFixed(2) %>
+                                                                </small>
+                                                            </div>
                                                         <% } else if (rental.status === 'paid') { %>
                                                             <span class="badge bg-success">
                                                                 <i class="bi bi-check-circle"></i> Betaald
                                                             </span>
+                                                            <div class="mt-1">
+                                                                <small class="text-success">
+                                                                    Klaar om op te halen
+                                                                </small>
+                                                            </div>
                                                         <% } else if (rental.status === 'rented') { %>
                                                             <span class="badge bg-primary">
-                                                                <i class="bi bi-play-circle"></i> Gehuurd
+                                                                <i class="bi bi-play-circle"></i> Actief Gehuurd
                                                             </span>
+                                                            <div class="mt-1">
+                                                                <small class="text-primary">
+                                                                    In uw bezit
+                                                                </small>
+                                                            </div>
                                                         <% } else if (rental.status === 'returned') { %>
                                                             <span class="badge bg-info">
-                                                                <i class="bi bi-check2-circle"></i> Teruggebracht
+                                                                <i class="bi bi-check2-circle"></i> Voltooid
+                                                            </span>
+                                                            <div class="mt-1">
+                                                                <small class="text-info">
+                                                                    Teruggebracht
+                                                                </small>
+                                                            </div>
+                                                        <% } else { %>
+                                                            <span class="badge bg-secondary">
+                                                                <i class="bi bi-question-circle"></i> <%= rental.status %>
                                                             </span>
                                                         <% } %>
                                                     </div>
                                                     
                                                     <div class="col-md-2">
-                                                        <small class="text-muted d-block">Bedrag</small>
-                                                        <span class="h6 text-success mb-0">
+                                                        <small class="text-muted d-block">Totaal Bedrag</small>
+                                                        <span class="h6 mb-0 <%= rental.status === 'pending' ? 'text-danger' : 'text-success' %>">
                                                             €<%= parseFloat(rental.amount || 0).toFixed(2) %>
                                                         </span>
+                                                        <% if (rental.status === 'pending') { %>
+                                                            <div class="mt-1">
+                                                                <small class="text-muted">Nog niet betaald</small>
+                                                            </div>
+                                                        <% } else if (rental.status === 'returned') { %>
+                                                            <div class="mt-1">
+                                                                <small class="text-muted">Afgerond</small>
+                                                            </div>
+                                                        <% } else { %>
+                                                            <div class="mt-1">
+                                                                <small class="text-success">Betaald</small>
+                                                            </div>
+                                                        <% } %>
                                                     </div>
                                                 </div>
                                             </div>
@@ -210,31 +257,44 @@
                                                     <ul class="dropdown-menu">
                                                         <li>
                                                             <a class="dropdown-item" 
-                                                               href="/customer/rentals/<%= rental.rental_id %>">
+                                                                href="/customer/rentals/<%= rental.rental_id %>">
                                                                 <i class="bi bi-eye"></i> Details Bekijken
                                                             </a>
                                                         </li>
                                                         <li>
                                                             <a class="dropdown-item" 
-                                                               href="/films/<%= rental.film_id %>">
+                                                                href="/films/<%= rental.film_id %>">
                                                                 <i class="bi bi-info-circle"></i> Film Info
                                                             </a>
                                                         </li>
-                                                        <% if (rental.status === 'returned') { %>
+                                                        <% if (rental.status === 'pending') { %>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <a class="dropdown-item text-warning" 
+                                                                href="#" 
+                                                                onclick="payRental('<%= rental.rental_id %>')">
+                                                                <i class="bi bi-credit-card"></i> Nu Betalen (€<%= parseFloat(rental.amount || 0).toFixed(2) %>)
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item text-danger" 
+                                                                href="#" 
+                                                                onclick="cancelRental('<%= rental.rental_id %>', '<%= rental.film_title %>')">
+                                                                <i class="bi bi-x-circle"></i> Verhuur Annuleren
+                                                            </a>
+                                                        </li>
+                                                        <% } else if (rental.status === 'returned') { %>
                                                         <li><hr class="dropdown-divider"></li>
                                                         <li>
                                                             <a class="dropdown-item text-success" href="/films">
                                                                 <i class="bi bi-arrow-repeat"></i> Opnieuw Huren
                                                             </a>
                                                         </li>
-                                                        <% } %>
-                                                        <% if (rental.status === 'pending') { %>
+                                                        <% } else if (rental.status === 'rented') { %>
                                                         <li><hr class="dropdown-divider"></li>
                                                         <li>
-                                                            <a class="dropdown-item text-danger" 
-                                                               href="#" 
-                                                               onclick="cancelRental(<%= rental.rental_id %>, '<%= rental.film_title %>')">
-                                                                <i class="bi bi-x-circle"></i> Verhuur Annuleren
+                                                            <a class="dropdown-item text-info" href="/contact">
+                                                                <i class="bi bi-arrow-return-left"></i> Terugbrengen
                                                             </a>
                                                         </li>
                                                         <% } %>
@@ -243,26 +303,57 @@
                                             </div>
                                         </div>
                                         
-                                        <!-- Return Date Info -->
-                                        <% if (rental.return_date) { %>
-                                        <div class="row mt-2">
+                                        <!-- Additional Status Info -->
+                                        <div class="row mt-3">
                                             <div class="col-12">
-                                                <small class="text-muted">
-                                                    <i class="bi bi-calendar-check"></i>
-                                                    Teruggebracht op <%= new Date(rental.return_date).toLocaleDateString('nl-NL') %>
-                                                </small>
+                                                <% if (rental.status === 'pending') { %>
+                                                    <div class="alert alert-warning py-2 mb-0">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <div>
+                                                                <i class="bi bi-exclamation-triangle"></i>
+                                                                <strong>Actie vereist:</strong> Betaling van €<%= parseFloat(rental.amount || 0).toFixed(2) %> om verhuur te activeren
+                                                            </div>
+                                                            <button class="btn btn-warning btn-sm" onclick="payRental('<%= rental.rental_id %>')">
+                                                                <i class="bi bi-credit-card"></i> Nu Betalen
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                <% } else if (rental.status === 'paid') { %>
+                                                    <div class="alert alert-success py-2 mb-0">
+                                                        <i class="bi bi-check-circle"></i>
+                                                        <strong>Betaling voltooid!</strong> U kunt de film ophalen bij onze locatie
+                                                    </div>
+                                                <% } else if (rental.status === 'rented' && rental.expected_return_date) { %>
+                                                    <% 
+                                                        const today = new Date();
+                                                        const returnDate = new Date(rental.expected_return_date);
+                                                        const daysLeft = Math.ceil((returnDate - today) / (1000 * 60 * 60 * 24));
+                                                    %>
+                                                    <% if (daysLeft < 0) { %>
+                                                        <div class="alert alert-danger py-2 mb-0">
+                                                            <i class="bi bi-exclamation-circle"></i>
+                                                            <strong>Te laat!</strong> Film is <%= Math.abs(daysLeft) %> dag(en) over tijd. Breng zo snel mogelijk terug om extra kosten te voorkomen.
+                                                        </div>
+                                                    <% } else if (daysLeft <= 1) { %>
+                                                        <div class="alert alert-warning py-2 mb-0">
+                                                            <i class="bi bi-clock"></i>
+                                                            <strong>Binnenkort inleveren!</strong> Terugbrengen voor <%= new Date(rental.expected_return_date).toLocaleDateString('nl-NL') %>
+                                                        </div>
+                                                    <% } else { %>
+                                                        <div class="alert alert-info py-2 mb-0">
+                                                            <i class="bi bi-calendar"></i>
+                                                            <strong>Actief gehuurd.</strong> Terugbrengen voor <%= new Date(rental.expected_return_date).toLocaleDateString('nl-NL') %> (<%= daysLeft %> dagen)
+                                                        </div>
+                                                    <% } %>
+                                                <% } else if (rental.status === 'returned') { %>
+                                                    <div class="alert alert-light py-2 mb-0">
+                                                        <i class="bi bi-check-circle-fill text-success"></i>
+                                                        <strong>Verhuur voltooid.</strong> 
+                                                        Teruggebracht op <%= new Date(rental.return_date).toLocaleDateString('nl-NL') %>
+                                                    </div>
+                                                <% } %>
                                             </div>
                                         </div>
-                                        <% } else if (rental.expected_return_date) { %>
-                                        <div class="row mt-2">
-                                            <div class="col-12">
-                                                <small class="text-warning">
-                                                    <i class="bi bi-calendar-event"></i>
-                                                    Verwacht terug: <%= new Date(rental.expected_return_date).toLocaleDateString('nl-NL') %>
-                                                </small>
-                                            </div>
-                                        </div>
-                                        <% } %>
                                     </div>
                                 </div>
                             </div>
@@ -417,6 +508,103 @@
             });
         });
         
+        // Payment function
+        window.payRental = function(rentalId, amount) {
+            if (confirm(`Wilt u €${amount} betalen voor deze verhuur?`)) {
+                // Simulate payment process
+                fetch(`/customer/rentals/${rentalId}/pay`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ amount: amount })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('success', 'Betaling Gelukt!', `€${amount} is succesvol betaald`);
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        showToast('error', 'Betaling Mislukt!', data.message || 'Er is een fout opgetreden bij de betaling');
+                    }
+                })
+                .catch(error => {
+                    console.error('Payment error:', error);
+                    showToast('error', 'Betaling Mislukt!', 'Er is een fout opgetreden bij de betaling');
+                });
+            }
+        };
+        
+        // Return rental function
+        window.returnRental = function(rentalId, filmTitle) {
+            if (confirm(`Wilt u "${filmTitle}" inleveren?`)) {
+                fetch(`/customer/rentals/${rentalId}/return`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('success', 'Ingeleverd!', `"${filmTitle}" is succesvol ingeleverd`);
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        showToast('error', 'Inleveren Mislukt!', data.message || 'Er is een fout opgetreden bij het inleveren');
+                    }
+                })
+                .catch(error => {
+                    console.error('Return error:', error);
+                    showToast('error', 'Inleveren Mislukt!', 'Er is een fout opgetreden bij het inleveren');
+                });
+            }
+        };
+        
+        // Extend rental function
+        window.extendRental = function(rentalId, filmTitle) {
+            if (confirm(`Wilt u de verhuur van "${filmTitle}" verlengen?`)) {
+                fetch(`/customer/rentals/${rentalId}/extend`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('success', 'Verlengd!', `Verhuur van "${filmTitle}" is verlengd`);
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        showToast('error', 'Verlengen Mislukt!', data.message || 'Er is een fout opgetreden bij het verlengen');
+                    }
+                })
+                .catch(error => {
+                    console.error('Extend error:', error);
+                    showToast('error', 'Verlengen Mislukt!', 'Er is een fout opgetreden bij het verlengen');
+                });
+            }
+        };
+        
+        // View details function
+        window.viewDetails = function(rentalId) {
+            // Redirect to rental details page
+            window.location.href = `/customer/rentals/${rentalId}`;
+        };
+        
+        // Contact support function
+        window.contactSupport = function(rentalId) {
+            const subject = `Vraag over verhuur #${rentalId}`;
+            const body = `Hallo,\n\nIk heb een vraag over mijn verhuur met ID: ${rentalId}.\n\nMijn vraag is:\n\n\nMet vriendelijke groet`;
+            const mailtoLink = `mailto:support@sakilafilms.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.location.href = mailtoLink;
+        };
+        
         // Toast notification function
         function showToast(type, title, message) {
             const toastContainer = document.getElementById('toastContainer') || createToastContainer();
@@ -429,7 +617,7 @@
                 <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
                     <div class="d-flex">
                         <div class="toast-body">
-                            <i class="bi ${icon} me-2"></i>
+                            <i class="bi ${icon} me-2"></i>í
                             <strong>${title}</strong> ${message}
                         </div>
                         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>

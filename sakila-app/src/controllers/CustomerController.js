@@ -364,26 +364,108 @@ class CustomerController {
   updateProfile = async (req, res) => {
     try {
       const customerId = req.user.user_id || req.user.customer_id || req.user.id;
-      const { first_name, last_name, email } = req.body;
+      const { 
+        first_name, 
+        last_name, 
+        email, 
+        phone, 
+        address, 
+        postal_code, 
+        city, 
+        country, 
+        birth_date,
+        language, 
+        preferred_store, 
+        email_notifications, 
+        marketing_emails, 
+        notes,
+        current_password,
+        new_password,
+        confirm_password
+      } = req.body;
 
+      // Validate required fields
       if (!first_name || !last_name || !email) {
-        return res.redirect('/customer/profile?error=All fields are required');
+        return res.redirect('/profile?error=' + encodeURIComponent('Voornaam, achternaam en email zijn verplicht'));
       }
 
-      const result = await this.customerService.updateCustomer(customerId, {
+      // Email validation
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(email)) {
+        return res.redirect('/profile?error=' + encodeURIComponent('Email adres is niet geldig'));
+      }
+
+      // Password validation if changing password
+      if (new_password || current_password || confirm_password) {
+        if (!current_password) {
+          return res.redirect('/profile?error=' + encodeURIComponent('Huidig wachtwoord is vereist om je wachtwoord te wijzigen'));
+        }
+        if (!new_password) {
+          return res.redirect('/profile?error=' + encodeURIComponent('Nieuw wachtwoord is vereist'));
+        }
+        if (new_password.length < 6) {
+          return res.redirect('/profile?error=' + encodeURIComponent('Nieuw wachtwoord moet minstens 6 tekens bevatten'));
+        }
+        if (new_password !== confirm_password) {
+          return res.redirect('/profile?error=' + encodeURIComponent('Wachtwoorden komen niet overeen'));
+        }
+      }
+
+      // Prepare update data
+      const updateData = {
         first_name,
         last_name,
-        email
-      });
+        email,
+        phone: phone || null,
+        address: address || null,
+        postal_code: postal_code || null,
+        city: city || null,
+        country: country || 'Nederland',
+        birth_date: birth_date || null,
+        language: language || 'nl',
+        preferred_store: preferred_store || null,
+        email_notifications: email_notifications === 'on',
+        marketing_emails: marketing_emails === 'on',
+        notes: notes || null
+      };
+
+      // If password change is requested, verify current password first
+      if (new_password) {
+        const AuthService = require('../services/AuthService');
+        const authService = new AuthService();
+        
+        // Get current customer data to verify password
+        const customerResult = await this.customerService.getCustomerById(customerId);
+        if (!customerResult.success) {
+          return res.redirect('/profile?error=' + encodeURIComponent('Kon huidige klantgegevens niet ophalen'));
+        }
+
+        // Verify current password
+        const bcrypt = require('bcryptjs');
+        const isValidPassword = await bcrypt.compare(current_password, customerResult.data.password || '');
+        
+        if (!isValidPassword) {
+          return res.redirect('/profile?error=' + encodeURIComponent('Huidig wachtwoord is incorrect'));
+        }
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(new_password, 10);
+        updateData.password = hashedPassword;
+      }
+
+      const result = await this.customerService.updateCustomer(customerId, updateData);
 
       if (result.success) {
-        res.redirect('/profile?success=Profile updated successfully');
+        const successMessage = new_password ? 
+          'Profiel en wachtwoord succesvol bijgewerkt' : 
+          'Profiel succesvol bijgewerkt';
+        res.redirect('/profile?success=' + encodeURIComponent(successMessage));
       } else {
         res.redirect('/profile?error=' + encodeURIComponent(result.message));
       }
     } catch (error) {
       console.error('Update profile error:', error);
-      res.redirect('/profile?error=An error occurred');
+      res.redirect('/profile?error=' + encodeURIComponent('Er is een fout opgetreden bij het bijwerken van je profiel'));
     }
   };
 
@@ -533,28 +615,27 @@ class CustomerController {
    */
   getCustomerRentalsData = async (customerId) => {
     try {
-      // Get all rentals without pagination for stats
-      const result = await this.customerService.getCustomerRentals(customerId, 1, 100);
+      console.log('=== getCustomerRentalsData called for customer:', customerId);
+      console.log('=== this.rentalService:', typeof this.rentalService);
+      console.log('=== getCustomerRentals function:', typeof this.rentalService.getCustomerRentals);
       
-      // Extract rentals array from the result
-      let rentals = [];
-      if (result && result.rentals) {
-        rentals = result.rentals;
-      } else if (Array.isArray(result)) {
-        rentals = result;
+      // Use RentalService directly for better data
+      const result = await this.rentalService.getCustomerRentals(customerId, 1, 100);
+      
+      console.log('RentalService result:', result);
+      
+      if (!result.success) {
+        return {
+          success: false,
+          message: 'Er is een fout opgetreden bij het laden van de verhuurgegevens'
+        };
       }
       
-      console.log('Rentals data for customer', customerId, ':', rentals.length, 'rentals found');
+      const rentals = result.rentals || [];
+      const stats = result.stats || {};
       
-      // Calculate stats
-      const stats = {
-        pending: rentals.filter(r => r.status === 'pending').length,
-        paid: rentals.filter(r => r.status === 'paid').length,
-        rented: rentals.filter(r => r.status === 'rented').length,
-        returned: rentals.filter(r => r.status === 'returned').length,
-        total_rentals: rentals.length,
-        total_spent: rentals.reduce((sum, r) => sum + parseFloat(r.amount || 0), 0)
-      };
+      console.log('Rentals data for customer', customerId, ':', rentals.length, 'rentals found');
+      console.log('Stats data:', stats);
       
       return {
         success: true,
@@ -620,6 +701,57 @@ class CustomerController {
       return {
         success: false,
         message: 'Er is een fout opgetreden bij het bijwerken van het profiel'
+      };
+    }
+  };
+
+  /**
+   * Change customer password
+   */
+  changeCustomerPassword = async (customerId, currentPassword, newPassword) => {
+    try {
+      // Get customer password directly from database
+      const CustomerDAO = require('../dao/CustomerDAO');
+      const customerDAO = new CustomerDAO();
+      
+      const customerSql = 'SELECT password FROM customer WHERE customer_id = ?';
+      const customerResult = await customerDAO.query(customerSql, [customerId]);
+      
+      if (!customerResult.length) {
+        return {
+          success: false,
+          message: 'Klant niet gevonden'
+        };
+      }
+
+      // Verify current password
+      const bcrypt = require('bcryptjs');
+      const isValidPassword = await bcrypt.compare(currentPassword, customerResult[0].password || '');
+      
+      if (!isValidPassword) {
+        return {
+          success: false,
+          message: 'Huidig wachtwoord is incorrect'
+        };
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      
+      // Update only the password
+      const result = await this.customerService.updateCustomer(customerId, {
+        password: hashedPassword
+      });
+
+      return {
+        success: result.success,
+        message: result.success ? 'Wachtwoord succesvol gewijzigd' : result.message
+      };
+    } catch (error) {
+      console.error('Change customer password error:', error);
+      return {
+        success: false,
+        message: 'Er is een fout opgetreden bij het wijzigen van het wachtwoord'
       };
     }
   };

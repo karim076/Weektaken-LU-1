@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-// ✅ Import destructured methods directly
+// Import destructured methods directly
 const { optionalAuth, requireCustomer } = require('../middleware/auth');
 
 // Import controller

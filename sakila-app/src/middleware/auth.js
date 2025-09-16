@@ -111,7 +111,16 @@ const requireAuthWeb = (req, res, next) => {
         }
 
         const decoded = jwtService.verifyToken(token);
+        
+        // Ensure role is set
+        if (!decoded.role) {
+            if (decoded.user_type === 'customer') decoded.role = 'customer';
+            else if (decoded.user_type === 'staff') decoded.role = 'staff';
+            else if (decoded.user_type === 'admin' || decoded.user_type === 'owner') decoded.role = 'admin';
+        }
+        
         req.user = decoded;
+        res.locals.user = decoded;
         next();
     } catch (error) {
         console.error('Web auth failed:', error.message);
@@ -189,7 +198,22 @@ const optionalAuth = (req, res, next) => {
         
         if (token) {
             const decoded = jwtService.verifyToken(token);
+            
+            // Ensure role is set
+            if (!decoded.role) {
+                if (decoded.user_type === 'customer') decoded.role = 'customer';
+                else if (decoded.user_type === 'staff') decoded.role = 'staff';
+                else if (decoded.user_type === 'admin' || decoded.user_type === 'owner') decoded.role = 'admin';
+            }
+            
             req.user = decoded;
+            res.locals.user = decoded; // Crucial: set for views!
+        }
+        
+        // Fallback to session user
+        if (!req.user && req.session?.user) {
+            req.user = req.session.user;
+            res.locals.user = req.session.user;
         }
     } catch (error) {
         // Ignore token errors for optional auth

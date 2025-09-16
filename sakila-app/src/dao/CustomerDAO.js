@@ -239,6 +239,88 @@ class CustomerDAO extends BaseDAO {
   }
 
   /**
+   * Update customer and address information together
+   */
+  async updateCustomerAndAddress(customerId, customerData, addressData) {
+    const connection = await this.db.getConnection();
+    
+    try {
+      await connection.beginTransaction();
+
+      // First get the customer's address_id
+      const getAddressIdSql = 'SELECT address_id FROM customer WHERE customer_id = ?';
+      const [customerResult] = await connection.execute(getAddressIdSql, [customerId]);
+      
+      if (!customerResult.length) {
+        throw new Error('Customer not found');
+      }
+      
+      const addressId = customerResult[0].address_id;
+
+      // Update customer table if customerData provided
+      if (customerData && Object.keys(customerData).length > 0) {
+        const customerFields = [];
+        const customerValues = [];
+
+        for (const [key, value] of Object.entries(customerData)) {
+          if (value !== undefined) {
+            customerFields.push(`${key} = ?`);
+            customerValues.push(value);
+          }
+        }
+
+        if (customerFields.length > 0) {
+          customerFields.push('last_update = NOW()');
+          customerValues.push(customerId);
+
+          const customerSql = `
+            UPDATE customer 
+            SET ${customerFields.join(', ')}
+            WHERE customer_id = ?
+          `;
+
+          await connection.execute(customerSql, customerValues);
+        }
+      }
+
+      // Update address table if addressData provided
+      if (addressData && Object.keys(addressData).length > 0) {
+        const addressFields = [];
+        const addressValues = [];
+
+        for (const [key, value] of Object.entries(addressData)) {
+          if (value !== undefined) {
+            addressFields.push(`${key} = ?`);
+            addressValues.push(value);
+          }
+        }
+
+        if (addressFields.length > 0) {
+          addressFields.push('last_update = NOW()');
+          addressValues.push(addressId);
+
+          const addressSql = `
+            UPDATE address 
+            SET ${addressFields.join(', ')}
+            WHERE address_id = ?
+          `;
+
+          await connection.execute(addressSql, addressValues);
+        }
+      }
+
+      await connection.commit();
+      
+      return { affectedRows: 1 };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
    * Get customers by store
    */
   async getCustomersByStore(storeId) {
@@ -320,6 +402,22 @@ class CustomerDAO extends BaseDAO {
 
     const rows = await this.query(sql, [customerId]);
     return rows.length > 0 ? rows[0] : null;
+  }
+
+  /**
+   * Check if username exists for a different customer
+   */
+  async findByUsername(username, excludeCustomerId = null) {
+    let sql = 'SELECT customer_id, username FROM customer WHERE username = ?';
+    let params = [username];
+    
+    if (excludeCustomerId) {
+      sql += ' AND customer_id != ?';
+      params.push(excludeCustomerId);
+    }
+    
+    const result = await this.query(sql, params);
+    return result[0] || null;
   }
 }
 
