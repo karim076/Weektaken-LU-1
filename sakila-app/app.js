@@ -78,6 +78,14 @@ app.get('/dashboard', (req, res) => authController.showDashboard(req, res));
 const filmRoutes = require('./src/routes/films');
 const customerRoutes = require('./src/routes/customer');
 const adminRoutes = require('./src/routes/admin');
+<<<<<<< Updated upstream
+=======
+
+// Favicon route (prevent 404 errors)
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+>>>>>>> Stashed changes
 
 // Favicon route (prevent 404 errors)
 app.get('/favicon.ico', (req, res) => {
@@ -181,6 +189,9 @@ app.get('/profile-test', authMiddleware.requireCustomerWeb, async (req, res) => 
 app.use('/films', filmRoutes);
 app.use('/customer', customerRoutes);
 app.use('/admin', authMiddleware.requireAdminWeb, adminRoutes);
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 // Error handling middleware (must be last)
