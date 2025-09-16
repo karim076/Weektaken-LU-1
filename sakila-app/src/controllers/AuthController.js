@@ -55,10 +55,22 @@ class AuthController {
         });
       }
 
+<<<<<<< Updated upstream
       // Set session
       req.session.sessionId = result.user.sessionId;
       req.session.userId = result.user.id;
       req.session.userType = result.user.type;
+=======
+      // Set JWT token in httpOnly cookie
+      const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // HTTPS in production
+        sameSite: 'strict',
+        maxAge: 15 * 60 * 1000 // 15 minutes
+      };
+      
+      res.cookie('token', result.token, cookieOptions);
+>>>>>>> Stashed changes
 
       // Redirect based on user type or to requested page
       let redirectUrl = redirect;
