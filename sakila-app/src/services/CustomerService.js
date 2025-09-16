@@ -21,6 +21,33 @@ class CustomerService {
   }
 
   /**
+   * Get customer details (wrapper for controller compatibility)
+   */
+  async getCustomerDetails(customerId) {
+    try {
+      const customer = await this.customerDAO.getCustomerWithDetails(customerId);
+      
+      if (!customer) {
+        return {
+          success: false,
+          message: 'Klant niet gevonden'
+        };
+      }
+      
+      return {
+        success: true,
+        data: customer
+      };
+    } catch (error) {
+      console.error('Get customer details error:', error);
+      return {
+        success: false,
+        message: 'Er is een fout opgetreden bij het ophalen van klantgegevens'
+      };
+    }
+  }
+
+  /**
    * Get all customers with pagination and search
    */
   async getAllCustomers(page = 1, limit = 10, search = '') {
@@ -75,19 +102,51 @@ class CustomerService {
   /**
    * Update customer information
    */
-  async updateCustomer(customerId, customerData) {
+  async updateCustomer(customerId, profileData) {
     try {
-      const result = await this.customerDAO.updateCustomer(customerId, customerData);
+      // Check if username is being changed and if it's already taken
+      if (profileData.username) {
+        const existingUser = await this.customerDAO.findByUsername(profileData.username, customerId);
+        if (existingUser) {
+          return {
+            success: false,
+            message: 'Deze gebruikersnaam is al in gebruik'
+          };
+        }
+      }
+      
+      // Separate customer data from address data
+      const customerData = {};
+      const addressData = {};
+      
+      // Fields that belong to customer table
+      const customerFields = ['username', 'first_name', 'last_name', 'email', 'password'];
+      // Fields that belong to address table  
+      const addressFields = ['address', 'phone'];
+      
+      for (const [key, value] of Object.entries(profileData)) {
+        if (customerFields.includes(key)) {
+          customerData[key] = value;
+        } else if (addressFields.includes(key)) {
+          addressData[key] = value;
+        } else if (key === 'postal_code') {
+          // Map postal_code to district for Sakila compatibility
+          addressData['district'] = value;
+        }
+        // Ignore city, country, language for now as they need special handling in Sakila
+      }
+      
+      const result = await this.customerDAO.updateCustomerAndAddress(customerId, customerData, addressData);
       
       return {
         success: result.affectedRows > 0,
-        message: result.affectedRows > 0 ? 'Customer updated successfully' : 'No changes made'
+        message: result.affectedRows > 0 ? 'Profiel succesvol bijgewerkt' : 'Geen wijzigingen aangebracht'
       };
     } catch (error) {
       console.error('Update customer error:', error);
       return {
         success: false,
-        message: error.message || 'Failed to update customer'
+        message: error.message || 'Fout bij het bijwerken van het profiel'
       };
     }
   }
