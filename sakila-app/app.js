@@ -6,6 +6,35 @@ const path = require('path');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 
+// Initialize database connection
+const databaseConfig = require('./src/config/database');
+
+// Import middleware from src structure
+const { errorHandler, notFound } = require('./src/middleware/error');
+const { optionalAuth } = require('./src/middleware/auth');
+
+// Import routes from src structure
+const customerRoutes = require('./src/routes/customers');
+const filmRoutes = require('./src/routes/films');
+const adminRoutes = require('./src/routes/admin');
+
+// Session configuration (for backward compatibility)
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'sakila-app-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { 
+        secure: process.env.NODE_ENV === 'production', // HTTPS in production
+        maxAge: 15 * 60 * 1000 // 15 minutes
+    }
+}));
+
+
+// Import controllers from src structure
+const HomeController = require('./src/controllers/HomeController');
+const AuthController = require('./src/controllers/AuthController');
+
+
 const app = express();
 const port = process.env.PORT || 3001;
 
@@ -21,7 +50,6 @@ app.use(session({
     saveUninitialized: false,
     cookie: { 
         secure: process.env.NODE_ENV === 'production', // HTTPS in production
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
 
@@ -53,6 +81,29 @@ const customerRoutes = require('./src/routes/customers');
 const adminRoutes = require('./src/routes/admin');
 const customerDashboardRoutes = require('./src/routes/customer');
 
+// Authentication routes
+app.get('/login', (req, res) => authController.showLogin(req, res));
+app.post('/login', (req, res) => authController.login(req, res));
+app.get('/register', (req, res) => authController.showRegister(req, res));
+app.post('/register', (req, res) => authController.register(req, res));
+app.post('/logout', (req, res) => authController.logout(req, res));
+app.get('/dashboard', (req, res) => authController.showDashboard(req, res));
+
+// Import routes
+const filmRoutes = require('./src/routes/films');
+const customerRoutes = require('./src/routes/customer');
+const adminRoutes = require('./src/routes/admin');
+
+// Favicon route (prevent 404 errors)
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
+// Favicon route (prevent 404 errors)
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
 // Home routes
 app.get('/', authMiddleware.optionalAuth, homeController.index.bind(homeController));
 app.get('/home', authMiddleware.optionalAuth, homeController.index.bind(homeController));
@@ -63,6 +114,97 @@ app.post('/login', authController.login.bind(authController));
 app.get('/register', authController.showRegister.bind(authController));
 app.post('/register', authController.register.bind(authController));
 app.post('/logout', authController.logout.bind(authController));
+
+
+// API routes
+// app.get('/api/cities', async (req, res) => {
+//   try {
+//     const BaseDAO = require('./src/dao/BaseDAO');
+//     const baseDAO = new BaseDAO();
+    
+//     // Get all cities, ordered alphabetically, no limit
+//     const cities = await baseDAO.query('SELECT city_id, city FROM city ORDER BY city');
+    
+//     res.json({
+//       success: true,
+//       cities: cities
+//     });
+//   } catch (error) {
+//     console.error('Error fetching cities:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Failed to fetch cities'
+//     });
+//   }
+// });
+
+// Dashboard route (general)
+app.get('/dashboard', authMiddleware.requireAuthWeb, homeController.dashboard.bind(homeController));
+
+// Profile route (general) - using CustomerController
+const CustomerController = require('./src/controllers/CustomerController');
+const customerController = new CustomerController();
+
+// Simple profile route that should definitely work
+app.get('/profile', authMiddleware.requireCustomerWeb, async (req, res) => {
+  try {
+    console.log('Direct profile route called');
+    const customerId = req.user.user_id || req.user.customer_id || req.user.id;
+    const CustomerService = require('./src/services/CustomerService');
+    const customerService = new CustomerService();
+    const customer = await customerService.getCustomerById(customerId);
+    
+    console.log('Got customer data, rendering simple profile');
+    res.render('profile-simple', {
+      title: 'My Profile - Sakila',
+      user: req.user,
+      customer
+    });
+  } catch (error) {
+    console.error('Profile route error:', error);
+    res.status(500).send(`Profile Error: ${error.message}`);
+  }
+});
+
+app.post('/profile', authMiddleware.requireCustomerWeb, customerController.updateProfile.bind(customerController));
+
+// Simple test profile route
+app.get('/profile-test', authMiddleware.requireCustomerWeb, async (req, res) => {
+  try {
+    console.log('Profile-test: Starting test');
+    const customerId = req.user.user_id || req.user.customer_id || req.user.id;
+    const customerService = new CustomerService();
+    const customer = await customerService.getCustomerById(customerId);
+    
+    console.log('Profile-test: Got customer data, attempting EJS render');
+    
+    res.render('/customer/profile', {
+      title: 'Profile Test - Sakila',
+      user: req.user,
+      customer,
+      success: null,
+      error: null
+    });
+  } catch (error) {
+    console.error('Profile-test EJS error:', error);
+    res.send(`
+      <h1>Profile Test ERROR</h1>
+      <pre>Error: ${error.message}
+      Stack: ${error.stack}</pre>
+    `);
+  }
+});
+
+// API routes
+app.use('/films', filmRoutes);
+app.use('/customers', customerRoutes);
+app.use('/admin', authMiddleware.requireAdminWeb, adminRoutes);
+app.use('/customer', customerDashboardRoutes);
+
+// Feature routes using src structure
+// app.use('/customers', customerRoutes);
+// app.use('/films', filmRoutes);
+// app.use('/admin', adminRoutes);
 
 // API routes
 app.get('/api/cities', async (req, res) => {
@@ -145,9 +287,9 @@ app.get('/profile-test', authMiddleware.requireCustomerWeb, async (req, res) => 
 
 // API routes
 app.use('/films', filmRoutes);
-app.use('/customers', customerRoutes);
+app.use('/customer', customerRoutes);
 app.use('/admin', authMiddleware.requireAdminWeb, adminRoutes);
-app.use('/customer', customerDashboardRoutes);
+
 
 // Error handling middleware (should be last)
 app.use(errorMiddleware.notFound);

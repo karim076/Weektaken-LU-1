@@ -55,14 +55,26 @@ class AuthController {
         });
       }
 
+
+      // Set session
+      req.session.sessionId = result.user.sessionId;
+      req.session.userId = result.user.id;
+      req.session.userType = result.user.type;
+
       // Set JWT token in httpOnly cookie
       const cookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production', // HTTPS in production
         sameSite: 'strict',
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+
+        maxAge: 15 * 60 * 1000 // 15 minutes
       };
       
+      res.cookie('token', result.token, cookieOptions);
+
+      //   maxAge: 15 * 60 * 1000// 15 minutes
+      // };
+
       res.cookie('token', result.token, cookieOptions);
 
       // Also set session data for backward compatibility
