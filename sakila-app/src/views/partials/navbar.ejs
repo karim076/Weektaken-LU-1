@@ -55,7 +55,7 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="bi bi-person-circle"></i>
-                            <%= user.fullName || user.username %>
+                            <%= user.first_name || user.fullName || user.full_name || user.username %>
                             <% if (user.userType) { %>
                                 <span class="badge bg-secondary ms-1"><%= user.userType %></span>
                             <% } %>

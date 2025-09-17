@@ -60,7 +60,7 @@
                         <div class="d-flex align-items-center">
                             <i class="bi bi-person-circle fs-2 me-3"></i>
                             <div>
-                                <h5 class="mb-1">Welkom terug, <%= user.first_name || user.username %>!</h5>
+                                <h5 class="mb-1">Welkom terug, <%= user.first_name || user.fullName || user.full_name || user.username %>!</h5>
                                 <p class="mb-0">Je hebt toegang tot onze volledige filmcollectie.</p>
                             </div>
                         </div>
@@ -68,7 +68,7 @@
                 </div>
             </div>
         <% } %>
-
+            
         <!-- Top Favorite Movies Section -->
         <div class="row mb-5">
             <div class="col-12">

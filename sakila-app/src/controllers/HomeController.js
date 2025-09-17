@@ -1,8 +1,10 @@
 const FilmService = require('../services/FilmService');
+const CustomerService = require('../services/CustomerService');
 
 class HomeController {
   constructor() {
     this.filmService = new FilmService();
+    this.customerService = new CustomerService();
   }
   
   // GET /
@@ -34,6 +36,8 @@ class HomeController {
     try {
       // Determine dashboard type based on user role
       let dashboardType = 'default';
+      let userData = req.user;
+      
       if (req.user) {
         const userType = req.user.user_type || req.user.type;
         const userRole = req.user.role;
@@ -59,17 +63,37 @@ class HomeController {
               dashboardType = 'default';
           }
         }
+        
+        // For customer users, get complete customer data including first_name and last_name
+        if (dashboardType === 'customer' && req.user.customer_id) {
+          try {
+            const customerResult = await this.customerService.getCustomerDetails(req.user.customer_id);
+            if (customerResult.success && customerResult.data) {
+              // Merge customer data with existing user data
+              userData = {
+                ...req.user,
+                ...customerResult.data,
+                // Keep original fields for compatibility
+                user_id: req.user.user_id,
+                customer_id: req.user.customer_id
+              };
+            }
+          } catch (error) {
+            console.error('Error getting customer details for dashboard:', error);
+            // Continue with original user data if customer details fail
+          }
+        }
       }
 
       console.log('Dashboard debug info:');
-      console.log('  User:', req.user);
-      console.log('  User Type:', req.user?.user_type);
-      console.log('  User Role:', req.user?.role);
+      console.log('  User:', userData);
+      console.log('  User Type:', userData?.user_type);
+      console.log('  User Role:', userData?.role);
       console.log('  Dashboard Type:', dashboardType);
 
       res.render('dashboard', {
         title: 'Dashboard - Sakila App',
-        user: req.user,
+        user: userData,
         dashboardType: dashboardType
       });
     } catch (error) {
