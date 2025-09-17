@@ -461,6 +461,24 @@ class FilmDAO extends BaseDAO {
       connection.release();
     }
   }
+
+  /**
+   * Get available inventory for a film
+   */
+  async getAvailableInventory(filmId, storeId) {
+    const [rows] = await this.db.execute(`
+      SELECT i.inventory_id
+      FROM inventory i
+      LEFT JOIN rental r ON i.inventory_id = r.inventory_id 
+        AND r.return_date IS NULL 
+        AND r.status IN ('paid', 'rented')
+      WHERE i.film_id = ? AND i.store_id = ?
+        AND r.rental_id IS NULL
+      LIMIT 1
+    `, [filmId, storeId]);
+    
+    return rows;
+  }
 }
 
 module.exports = FilmDAO;

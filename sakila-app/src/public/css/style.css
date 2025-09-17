@@ -1231,16 +1231,307 @@ footer a {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
-/* Mobile responsiveness for profile form */
-@media (max-width: 768px) {
-    .profile-form .col-md-6 {
-        margin-bottom: 1rem;
+/* ===========================
+   RENTAL STATUS STYLES
+   ========================= */
+
+/* Status badge color system */
+.badge.status-processing {
+    background: linear-gradient(135deg, #ffc107 0%, #ff8c00 100%) !important;
+    color: #000 !important;
+    box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
+}
+
+.badge.status-pending {
+    background: linear-gradient(135deg, #dc3545 0%, #c21807 100%) !important;
+    color: #fff !important;
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+}
+
+.badge.status-paid {
+    background: linear-gradient(135deg, #198754 0%, #0f5132 100%) !important;
+    color: #fff !important;
+    box-shadow: 0 2px 4px rgba(25, 135, 84, 0.3);
+}
+
+.badge.status-rented {
+    background: linear-gradient(135deg, #0d6efd 0%, #0842a0 100%) !important;
+    color: #fff !important;
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
+}
+
+.badge.status-returned {
+    background: linear-gradient(135deg, #0dcaf0 0%, #087990 100%) !important;
+    color: #000 !important;
+    box-shadow: 0 2px 4px rgba(13, 202, 240, 0.3);
+}
+
+/* Status indicator dots */
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+}
+
+.status-dot.processing {
+    background: #ffc107;
+    animation: pulse-yellow 2s infinite;
+}
+
+.status-dot.pending {
+    background: #dc3545;
+    animation: pulse-red 2s infinite;
+}
+
+.status-dot.paid {
+    background: #198754;
+}
+
+.status-dot.rented {
+    background: #0d6efd;
+}
+
+.status-dot.returned {
+    background: #0dcaf0;
+}
+
+/* Pulse animations for active statuses */
+@keyframes pulse-yellow {
+    0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+}
+
+@keyframes pulse-red {
+    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+}
+
+/* Enhanced alert styles for rental statuses */
+.alert.rental-processing {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 140, 0, 0.1) 100%);
+    border-left: 4px solid #ffc107;
+    color: #856404 !important;
+}
+
+.alert.rental-pending {
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.1) 0%, rgba(194, 24, 7, 0.1) 100%);
+    border-left: 4px solid #dc3545;
+    color: #721c24 !important;
+}
+
+.alert.rental-paid {
+    background: linear-gradient(135deg, rgba(25, 135, 84, 0.1) 0%, rgba(15, 81, 50, 0.1) 100%);
+    border-left: 4px solid #198754;
+    color: #0f5132 !important;
+}
+
+/* Rental action buttons */
+.btn-cancel-rental {
+    background: linear-gradient(135deg, #dc3545 0%, #c21807 100%);
+    border: none;
+    color: #fff;
+    transition: all 0.3s ease;
+}
+
+.btn-cancel-rental:hover {
+    background: linear-gradient(135deg, #c21807 0%, #a91e2c 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+}
+
+.btn-pay-rental {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    border: none;
+    color: #000;
+    transition: all 0.3s ease;
+}
+
+.btn-pay-rental:hover {
+    background: linear-gradient(135deg, #e0a800 0%, #cc9a00 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+}
+
+/* ===========================
+   ENHANCED MODAL ANIMATIONS
+   ========================= */
+
+/* Modal animations */
+.modal-content.animate-processing {
+    animation: modalProcessing 1s ease-in-out infinite;
+}
+
+.modal-content.animate-success {
+    animation: modalSuccess 0.6s ease-out;
+}
+
+.modal-content.animate-error {
+    animation: modalError 0.5s ease-out;
+}
+
+@keyframes modalProcessing {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+}
+
+@keyframes modalSuccess {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); background-color: rgba(25, 135, 84, 0.1); }
+    100% { transform: scale(1); }
+}
+
+@keyframes modalError {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+/* Button loading state */
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.btn-loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: inherit;
+    animation: btnLoading 1.5s ease-in-out infinite;
+}
+
+@keyframes btnLoading {
+    0%, 100% { opacity: 0.1; }
+    50% { opacity: 0.3; }
+}
+
+/* ===========================
+   ENHANCED TOAST STYLES
+   ========================= */
+
+.enhanced-toast {
+    min-width: 350px;
+    max-width: 400px;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.enhanced-toast.pulse-success {
+    animation: toastPulse 0.6s ease-out;
+}
+
+@keyframes toastPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); box-shadow: 0 0 20px rgba(25, 135, 84, 0.4); }
+    100% { transform: scale(1); }
+}
+
+.enhanced-toast .toast-body {
+    padding: 1rem 1.25rem;
+}
+
+/* Toast container improvements */
+.toast-container {
+    z-index: 9999;
+}
+
+/* Modal backdrop blur effect */
+.modal.show .modal-backdrop {
+    backdrop-filter: blur(3px);
+}
+
+/* Enhanced modal styling */
+.modal-content {
+    border-radius: 16px !important;
+    overflow: hidden;
+}
+
+.modal-header.bg-gradient {
+    position: relative;
+}
+
+.modal-header.bg-gradient::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.1) 1px, transparent 1px),
+                      radial-gradient(circle at 80% 40%, rgba(255,255,255,0.1) 1px, transparent 1px),
+                      radial-gradient(circle at 40% 80%, rgba(255,255,255,0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+    opacity: 0.3;
+}
+
+/* Improved card hover effects in modal */
+.modal .card {
+    transition: all 0.2s ease;
+}
+
+.modal .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Button hover enhancements */
+.modal-footer .btn {
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.modal-footer .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Status badge enhancements in modal */
+.modal .badge {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+/* Modal entrance animation */
+@keyframes modalSlideIn {
+    0% { 
+        transform: scale(0.8) translateY(-50px); 
+        opacity: 0; 
     }
-    
-    .profile-form .form-section {
-        border-left: none;
-        border-top: 4px solid #0d6efd;
-        padding-left: 0;
-        padding-top: 1rem;
+    100% { 
+        transform: scale(1) translateY(0); 
+        opacity: 1; 
     }
+}
+
+/* Modal exit animation */
+.modal.fade .modal-dialog {
+    transition: transform 0.3s ease-out;
+}
+
+/* Improved backdrop transition */
+.modal-backdrop.fade {
+    transition: opacity 0.3s ease-out, backdrop-filter 0.3s ease-out;
+}
+
+.modal-backdrop.show {
+    backdrop-filter: blur(5px);
+}
+
+/* Enhance modal shadows */
+.modal-content {
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2), 0 8px 25px rgba(0, 0, 0, 0.1);
 }

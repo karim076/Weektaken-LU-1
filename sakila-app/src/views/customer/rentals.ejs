@@ -48,9 +48,9 @@
             <div class="col-md-3">
                 <div class="card text-center h-100">
                     <div class="card-body">
-                        <i class="bi bi-clock-history fs-1 text-warning mb-2"></i>
-                        <h4 class="text-warning"><%= stats.pending || 0 %></h4>
-                        <small class="text-muted">In Behandeling</small>
+                        <i class="bi bi-hourglass-half fs-1 text-warning mb-2"></i>
+                        <h4 class="text-warning"><%= (stats.processing || 0) + (stats.pending || 0) %></h4>
+                        <small class="text-muted">In Behandeling/Te Betalen</small>
                     </div>
                 </div>
             </div>
@@ -68,7 +68,7 @@
                     <div class="card-body">
                         <i class="bi bi-film fs-1 text-primary mb-2"></i>
                         <h4 class="text-primary"><%= stats.rented || 0 %></h4>
-                        <small class="text-muted">Gehuurd</small>
+                        <small class="text-muted">Actief Gehuurd</small>
                     </div>
                 </div>
             </div>
@@ -77,7 +77,7 @@
                     <div class="card-body">
                         <i class="bi bi-check-circle fs-1 text-info mb-2"></i>
                         <h4 class="text-info"><%= stats.returned || 0 %></h4>
-                        <small class="text-muted">Teruggebracht</small>
+                        <small class="text-muted">Voltooid</small>
                     </div>
                 </div>
             </div>
@@ -182,9 +182,20 @@
                                                     
                                                     <div class="col-md-3">
                                                         <small class="text-muted d-block">Status</small>
-                                                        <% if (rental.status === 'pending') { %>
-                                                            <span class="badge bg-warning text-dark">
-                                                                <i class="bi bi-clock"></i> Te Betalen
+                                                        <% if (rental.status === 'processing') { %>
+                                                            <span class="badge status-processing">
+                                                                <span class="status-dot processing"></span>
+                                                                <i class="bi bi-hourglass-half"></i> In Behandeling
+                                                            </span>
+                                                            <div class="mt-1">
+                                                                <small class="text-warning fw-bold">
+                                                                    Wordt verwerkt...
+                                                                </small>
+                                                            </div>
+                                                        <% } else if (rental.status === 'pending') { %>
+                                                            <span class="badge status-pending">
+                                                                <span class="status-dot pending"></span>
+                                                                <i class="bi bi-exclamation-circle"></i> Te Betalen
                                                             </span>
                                                             <div class="mt-1">
                                                                 <small class="text-danger fw-bold">
@@ -192,7 +203,8 @@
                                                                 </small>
                                                             </div>
                                                         <% } else if (rental.status === 'paid') { %>
-                                                            <span class="badge bg-success">
+                                                            <span class="badge status-paid">
+                                                                <span class="status-dot paid"></span>
                                                                 <i class="bi bi-check-circle"></i> Betaald
                                                             </span>
                                                             <div class="mt-1">
@@ -201,7 +213,8 @@
                                                                 </small>
                                                             </div>
                                                         <% } else if (rental.status === 'rented') { %>
-                                                            <span class="badge bg-primary">
+                                                            <span class="badge status-rented">
+                                                                <span class="status-dot rented"></span>
                                                                 <i class="bi bi-play-circle"></i> Actief Gehuurd
                                                             </span>
                                                             <div class="mt-1">
@@ -210,7 +223,8 @@
                                                                 </small>
                                                             </div>
                                                         <% } else if (rental.status === 'returned') { %>
-                                                            <span class="badge bg-info">
+                                                            <span class="badge status-returned">
+                                                                <span class="status-dot returned"></span>
                                                                 <i class="bi bi-check2-circle"></i> Voltooid
                                                             </span>
                                                             <div class="mt-1">
@@ -267,7 +281,16 @@
                                                                 <i class="bi bi-info-circle"></i> Film Info
                                                             </a>
                                                         </li>
-                                                        <% if (rental.status === 'pending') { %>
+                                                        <% if (rental.status === 'processing') { %>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <a class="dropdown-item text-danger" 
+                                                                href="#" 
+                                                                onclick="cancelRental('<%= rental.rental_id %>', '<%= rental.film_title %>')">
+                                                                <i class="bi bi-x-circle"></i> Verhuur Annuleren
+                                                            </a>
+                                                        </li>
+                                                        <% } else if (rental.status === 'pending') { %>
                                                         <li><hr class="dropdown-divider"></li>
                                                         <li>
                                                             <a class="dropdown-item text-warning" 
@@ -306,16 +329,33 @@
                                         <!-- Additional Status Info -->
                                         <div class="row mt-3">
                                             <div class="col-12">
-                                                <% if (rental.status === 'pending') { %>
-                                                    <div class="alert alert-warning py-2 mb-0">
+                                                <% if (rental.status === 'processing') { %>
+                                                    <div class="alert rental-processing py-2 mb-0">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <div>
+                                                                <i class="bi bi-hourglass-half"></i>
+                                                                <strong>In behandeling:</strong> Uw verhuur wordt momenteel verwerkt. U kunt deze nog annuleren.
+                                                            </div>
+                                                            <button class="btn btn-cancel-rental btn-sm" onclick="cancelRental('<%= rental.rental_id %>', '<%= rental.film_title %>')">
+                                                                <i class="bi bi-x-circle"></i> Annuleren
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                <% } else if (rental.status === 'pending') { %>
+                                                    <div class="alert rental-pending py-2 mb-0">
                                                         <div class="d-flex justify-content-between align-items-center">
                                                             <div>
                                                                 <i class="bi bi-exclamation-triangle"></i>
                                                                 <strong>Actie vereist:</strong> Betaling van €<%= parseFloat(rental.amount || 0).toFixed(2) %> om verhuur te activeren
                                                             </div>
-                                                            <button class="btn btn-warning btn-sm" onclick="payRental('<%= rental.rental_id %>')">
-                                                                <i class="bi bi-credit-card"></i> Nu Betalen
-                                                            </button>
+                                                            <div class="btn-group">
+                                                                <button class="btn btn-pay-rental btn-sm" onclick="payRental('<%= rental.rental_id %>')">
+                                                                    <i class="bi bi-credit-card"></i> Nu Betalen
+                                                                </button>
+                                                                <button class="btn btn-cancel-rental btn-sm" onclick="cancelRental('<%= rental.rental_id %>', '<%= rental.film_title %>')">
+                                                                    <i class="bi bi-x-circle"></i> Annuleren
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 <% } else if (rental.status === 'paid') { %>
@@ -407,36 +447,73 @@
     
     <!-- Cancel Rental Modal -->
     <div class="modal fade" id="cancelRentalModal" tabindex="-1" aria-labelledby="cancelRentalModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title" id="cancelRentalModalLabel">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        Verhuur Annuleren
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-gradient text-white border-0" style="background: linear-gradient(135deg, #dc3545 0%, #c21807 100%);">
+                    <h5 class="modal-title d-flex align-items-center" id="cancelRentalModalLabel">
+                        <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3">
+                            <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+                        </div>
+                        <div>
+                            <div class="h5 mb-1">Verhuur Annuleren</div>
+                            <small class="opacity-75">Bevestig je actie</small>
+                        </div>
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="text-center mb-3">
-                        <i class="bi bi-question-circle-fill text-warning" style="font-size: 3rem;"></i>
+                <div class="modal-body p-4">
+                    <div class="text-center mb-4">
+                        <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                             style="width: 80px; height: 80px;">
+                            <i class="bi bi-question-circle-fill text-warning" style="font-size: 2.5rem;"></i>
+                        </div>
+                        <h4 class="text-dark mb-2">Weet je dit zeker?</h4>
+                        <p class="text-muted">Je staat op het punt om de volgende verhuur te annuleren:</p>
                     </div>
-                    <h6 class="text-center mb-3">Weet je zeker dat je deze verhuur wilt annuleren?</h6>
-                    <div class="alert alert-info">
-                        <strong>Film:</strong> <span id="modalFilmTitle"></span><br>
-                        <small class="text-muted">
-                            <i class="bi bi-info-circle"></i>
-                            Deze actie kan niet ongedaan worden gemaakt. De film komt weer beschikbaar voor andere klanten.
-                        </small>
+                    
+                    <!-- Film Info Card -->
+                    <div class="card bg-light border-0 mb-4">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                     style="width: 50px; height: 50px;">
+                                    <i class="bi bi-film text-primary fs-4"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1 text-dark" id="modalFilmTitle">Film Titel</h6>
+                                    <small class="text-muted">
+                                        <i class="bi bi-clock me-1"></i>
+                                        Status: <span class="badge bg-warning text-dark">In Behandeling</span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Warning Info -->
+                    <div class="alert alert-warning border-0 bg-warning bg-opacity-10">
+                        <div class="d-flex">
+                            <i class="bi bi-info-circle-fill text-warning me-3 mt-1"></i>
+                            <div>
+                                <h6 class="text-warning mb-2">Belangrijk om te weten:</h6>
+                                <ul class="list-unstyled mb-0 small text-muted">
+                                    <li class="mb-1">• Deze actie kan niet ongedaan worden gemaakt</li>
+                                    <li class="mb-1">• De film komt weer beschikbaar voor andere klanten</li>
+                                    <li class="mb-1">• Er worden geen kosten in rekening gebracht</li>
+                                    <li>• Je kunt de film later opnieuw huren</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle"></i>
+                <div class="modal-footer border-0 bg-light p-4">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">
+                        <i class="bi bi-arrow-left me-2"></i>
                         Nee, Behouden
                     </button>
-                    <button type="button" class="btn btn-danger" id="confirmCancelBtn">
-                        <i class="bi bi-trash"></i>
-                        Ja, Annuleren
+                    <button type="button" class="btn btn-danger px-4" id="confirmCancelBtn">
+                        <i class="bi bi-trash me-2"></i>
+                        <span id="confirmBtnText">Ja, Annuleren</span>
                     </button>
                 </div>
             </div>
@@ -454,8 +531,53 @@
             currentRentalId = rentalId;
             currentFilmTitle = filmTitle;
             
-            // Update modal content
+            // Find the rental data to show more details
+            const rentalCard = document.querySelector(`[onclick*="${rentalId}"]`).closest('.card');
+            const statusBadge = rentalCard.querySelector('.badge');
+            const rentalDate = rentalCard.querySelector('.fw-medium').textContent;
+            const amount = rentalCard.querySelector('.h6').textContent;
+            
+            // Update modal content with detailed information
             document.getElementById('modalFilmTitle').textContent = filmTitle;
+            
+            // Add rental details to modal if not already present
+            const existingDetails = document.getElementById('modalRentalDetails');
+            if (!existingDetails) {
+                const modalBody = document.querySelector('#cancelRentalModal .modal-body');
+                const filmInfoCard = modalBody.querySelector('.card');
+                
+                // Add extra details to the film info card
+                const detailsDiv = document.createElement('div');
+                detailsDiv.id = 'modalRentalDetails';
+                detailsDiv.className = 'mt-2 pt-2 border-top';
+                detailsDiv.innerHTML = `
+                    <div class="row text-sm">
+                        <div class="col-6">
+                            <small class="text-muted">Gehuurd op:</small><br>
+                            <small class="fw-medium">${rentalDate}</small>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Bedrag:</small><br>
+                            <small class="fw-medium text-success">${amount}</small>
+                        </div>
+                    </div>
+                `;
+                
+                filmInfoCard.querySelector('.card-body').appendChild(detailsDiv);
+            } else {
+                // Update existing details
+                const rentalDateSpan = existingDetails.querySelector('.row .col-6:first-child .fw-medium');
+                const amountSpan = existingDetails.querySelector('.row .col-6:last-child .fw-medium');
+                rentalDateSpan.textContent = rentalDate;
+                amountSpan.textContent = amount;
+            }
+            
+            // Add entrance animation to modal
+            const modalElement = document.getElementById('cancelRentalModal');
+            modalElement.addEventListener('shown.bs.modal', function() {
+                const modalContent = this.querySelector('.modal-content');
+                modalContent.style.animation = 'modalSlideIn 0.3s ease-out';
+            }, { once: true });
             
             // Show the modal
             cancelModal.show();
@@ -465,11 +587,18 @@
         document.getElementById('confirmCancelBtn').addEventListener('click', function() {
             if (!currentRentalId) return;
             
-            // Disable button and show loading state
+            // Disable button and show loading state with animation
             const btn = this;
-            const originalText = btn.innerHTML;
+            const btnText = document.getElementById('confirmBtnText');
+            const originalText = btnText.innerHTML;
+            
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Annuleren...';
+            btn.classList.add('btn-loading');
+            btnText.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Annuleren...';
+            
+            // Add shake animation to modal
+            const modal = document.querySelector('#cancelRentalModal .modal-content');
+            modal.classList.add('animate-processing');
             
             console.log('Cancelling rental:', currentRentalId);
             
@@ -482,29 +611,52 @@
             .then(response => response.json())
             .then(data => {
                 btn.disabled = false;
-                btn.innerHTML = originalText;
+                btn.classList.remove('btn-loading');
+                btnText.innerHTML = originalText;
+                modal.classList.remove('animate-processing');
                 
                 if (data.success) {
-                    // Hide modal
-                    cancelModal.hide();
+                    // Success animation
+                    modal.classList.add('animate-success');
+                    btnText.innerHTML = '<i class="bi bi-check-circle me-2"></i>Geannuleerd!';
+                    btn.classList.remove('btn-danger');
+                    btn.classList.add('btn-success');
                     
-                    // Show success toast
-                    showToast('success', 'Geannuleerd!', data.message);
-                    
-                    // Reload page after a short delay
+                    // Hide modal after animation
                     setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
+                        cancelModal.hide();
+                        
+                        // Show success toast with better styling
+                        showEnhancedToast('success', 'Verhuur Geannuleerd!', data.message, 'bi-check-circle-fill');
+                        
+                        // Reload page after a short delay
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    }, 1000);
                 } else {
-                    // Show error toast
-                    showToast('error', 'Fout!', data.message);
+                    // Error state
+                    modal.classList.add('animate-error');
+                    showEnhancedToast('error', 'Annulering Mislukt!', data.message, 'bi-exclamation-triangle-fill');
+                    
+                    setTimeout(() => {
+                        modal.classList.remove('animate-error');
+                    }, 1000);
                 }
             })
             .catch(error => {
                 btn.disabled = false;
-                btn.innerHTML = originalText;
+                btn.classList.remove('btn-loading');
+                btnText.innerHTML = originalText;
+                modal.classList.remove('animate-processing');
+                modal.classList.add('animate-error');
+                
                 console.error('Error:', error);
-                showToast('error', 'Fout!', 'Er is een fout opgetreden bij het annuleren van de verhuur');
+                showEnhancedToast('error', 'Verbindingsfout!', 'Er is een fout opgetreden bij het annuleren van de verhuur', 'bi-wifi-off');
+                
+                setTimeout(() => {
+                    modal.classList.remove('animate-error');
+                }, 1000);
             });
         });
         
@@ -605,20 +757,26 @@
             window.location.href = mailtoLink;
         };
         
-        // Toast notification function
-        function showToast(type, title, message) {
+        // Enhanced Toast notification function
+        function showEnhancedToast(type, title, message, icon = '') {
             const toastContainer = document.getElementById('toastContainer') || createToastContainer();
             
             const toastId = 'toast-' + Date.now();
-            const bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
-            const icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-triangle-fill';
+            const bgClass = type === 'success' ? 'bg-success' : type === 'error' ? 'bg-danger' : 'bg-warning';
+            const defaultIcon = type === 'success' ? 'bi-check-circle-fill' : type === 'error' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill';
+            const finalIcon = icon || defaultIcon;
             
             const toastHtml = `
-                <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0 enhanced-toast" role="alert" aria-live="assertive" aria-atomic="true">
                     <div class="d-flex">
-                        <div class="toast-body">
-                            <i class="bi ${icon} me-2"></i>í
-                            <strong>${title}</strong> ${message}
+                        <div class="toast-body d-flex align-items-center">
+                            <div class="bg-white bg-opacity-20 rounded-circle p-2 me-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <i class="bi ${finalIcon} fs-5"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">${title}</div>
+                                <small class="opacity-90">${message}</small>
+                            </div>
                         </div>
                         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                     </div>
@@ -628,17 +786,42 @@
             toastContainer.insertAdjacentHTML('beforeend', toastHtml);
             
             const toastElement = document.getElementById(toastId);
+            
+            // Add slide-in animation
+            toastElement.style.transform = 'translateX(100%)';
+            toastElement.style.transition = 'transform 0.3s ease-out';
+            
             const toast = new bootstrap.Toast(toastElement, {
                 autohide: true,
-                delay: type === 'success' ? 3000 : 5000
+                delay: type === 'success' ? 4000 : 6000
             });
+            
+            // Trigger slide-in animation
+            setTimeout(() => {
+                toastElement.style.transform = 'translateX(0)';
+            }, 100);
             
             toast.show();
             
+            // Add pulse effect for success
+            if (type === 'success') {
+                setTimeout(() => {
+                    toastElement.classList.add('pulse-success');
+                }, 500);
+            }
+            
             // Remove toast element after it's hidden
             toastElement.addEventListener('hidden.bs.toast', () => {
-                toastElement.remove();
+                toastElement.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    toastElement.remove();
+                }, 300);
             });
+        }
+        
+        // Legacy toast function for compatibility
+        function showToast(type, title, message) {
+            showEnhancedToast(type, title, message);
         }
         
         function createToastContainer() {

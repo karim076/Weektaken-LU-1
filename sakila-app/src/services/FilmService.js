@@ -6,6 +6,9 @@ const FilmDAO = require('../dao/FilmDAO');
 class FilmService {
   constructor() {
     this.filmDAO = new FilmDAO();
+    // Import RentalService for proper rental creation
+    const RentalService = require('./RentalService');
+    this.rentalService = new RentalService();
   }
 
   /**
@@ -87,17 +90,30 @@ class FilmService {
     try {
       console.log(`FilmService.rentFilm called with: customerId=${customerId}, filmId=${filmId}, storeId=${storeId}`);
       
-      // Use the FilmDAO createRental method instead of custom logic
-      const result = await this.filmDAO.createRental(filmId, customerId, storeId || 1);
+      // First find available inventory for this film using filmDAO
+      const availableInventory = await this.filmDAO.getAvailableInventory(filmId, storeId || 1);
+
+      if (!availableInventory.length) {
+        return {
+          success: false,
+          message: 'Geen beschikbare exemplaren van deze film'
+        };
+      }
+
+      const inventoryId = availableInventory[0].inventory_id;
+      console.log('Found available inventory ID:', inventoryId);
       
-      console.log('FilmDAO.createRental result:', result);
+      // Use RentalService for proper status handling
+      const result = await this.rentalService.createRental(customerId, inventoryId, 1);
+      
+      console.log('RentalService.createRental result:', result);
       
       return {
         success: true,
         data: {
-          rentalId: result.rentalId || result.insertId
+          rentalId: result.rental_id
         },
-        message: 'Film succesvol gehuurd'
+        message: result.message || 'Film succesvol gehuurd'
       };
     } catch (error) {
       console.error('Rent film error:', error.message);

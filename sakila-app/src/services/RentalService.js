@@ -32,7 +32,7 @@ class RentalService extends BaseDAO {
         throw new Error('This copy is currently rented out');
       }
 
-      // Create the rental with pending status
+      // Create the rental with processing status initially
       const rentalDate = new Date();
       const amount = parseFloat(item.rental_rate);
 
@@ -70,8 +70,14 @@ class RentalService extends BaseDAO {
           r.rental_date,
           r.return_date,
           r.due_date,
-          r.status,
-          r.amount,
+          COALESCE(r.status, 
+            CASE 
+              WHEN r.return_date IS NOT NULL THEN 'returned'
+              WHEN r.amount IS NOT NULL AND r.amount > 0 THEN 'pending'
+              ELSE 'pending'
+            END
+          ) as status,
+          COALESCE(r.amount, f.rental_rate) as amount,
           f.title as film_title,
           f.film_id,
           f.rental_rate,
@@ -80,7 +86,7 @@ class RentalService extends BaseDAO {
           c.name as category,
           CASE 
             WHEN r.due_date IS NOT NULL THEN r.due_date
-            WHEN r.return_date IS NULL AND r.status IN ('paid', 'rented') 
+            WHEN r.return_date IS NULL AND COALESCE(r.status, 'pending') IN ('paid', 'rented') 
             THEN DATE_ADD(r.rental_date, INTERVAL f.rental_duration DAY)
             ELSE r.return_date
           END as expected_return_date,
@@ -108,26 +114,44 @@ class RentalService extends BaseDAO {
       // Get rental statistics
       const stats = await this.query(`
         SELECT 
-          status,
+          COALESCE(status, 
+            CASE 
+              WHEN return_date IS NOT NULL THEN 'returned'
+              WHEN amount IS NOT NULL AND amount > 0 THEN 'pending'
+              ELSE 'pending'
+            END
+          ) as status,
           COUNT(*) as count,
-          SUM(amount) as total_amount
+          SUM(COALESCE(amount, 0)) as total_amount
         FROM rental
         WHERE customer_id = ?
-        GROUP BY status
+        GROUP BY COALESCE(status, 
+          CASE 
+            WHEN return_date IS NOT NULL THEN 'returned'
+            WHEN amount IS NOT NULL AND amount > 0 THEN 'pending'
+            ELSE 'pending'
+          END
+        )
       `, [customerId]);
 
       // Get overall totals
       const overallStats = await this.query(`
         SELECT 
           COUNT(*) as total_rentals,
-          SUM(amount) as total_spent,
-          SUM(CASE WHEN status IN ('paid', 'rented') THEN amount ELSE 0 END) as paid_amount,
-          SUM(CASE WHEN status = 'returned' THEN amount ELSE 0 END) as completed_amount
+          SUM(COALESCE(amount, 0)) as total_spent,
+          SUM(CASE WHEN COALESCE(status, 'pending') IN ('paid', 'rented') THEN COALESCE(amount, 0) ELSE 0 END) as paid_amount,
+          SUM(CASE WHEN COALESCE(status, 
+            CASE 
+              WHEN return_date IS NOT NULL THEN 'returned'
+              ELSE 'pending'
+            END
+          ) = 'returned' THEN COALESCE(amount, 0) ELSE 0 END) as completed_amount
         FROM rental
         WHERE customer_id = ?
       `, [customerId]);
 
       const rentalStats = {
+        processing: 0,
         pending: 0,
         paid: 0,
         rented: 0,
@@ -146,7 +170,7 @@ class RentalService extends BaseDAO {
         success: true,
         rentals,
         stats: rentalStats,
-        activeRentals: rentals.filter(r => ['pending', 'paid', 'rented'].includes(r.status)),
+        activeRentals: rentals.filter(r => ['processing', 'pending', 'paid', 'rented'].includes(r.status)),
         pagination: {
           currentPage: page,
           totalPages,
@@ -290,11 +314,11 @@ class RentalService extends BaseDAO {
   }
 
   /**
-   * Cancel a pending rental
+   * Cancel a pending or processing rental
    */
   async cancelRental(rentalId, customerId) {
     try {
-      // First check if rental exists and is in pending status
+      // First check if rental exists and is in cancellable status
       const rental = await this.query(`
         SELECT r.*, f.title as film_title 
         FROM rental r
@@ -309,14 +333,14 @@ class RentalService extends BaseDAO {
 
       const rentalData = rental[0];
 
-      // Only allow cancellation of pending rentals
-      if (rentalData.status !== 'pending') {
-        throw new Error('Only pending rentals can be cancelled');
+      // Allow cancellation of pending and processing rentals
+      if (!['pending', 'processing'].includes(rentalData.status)) {
+        throw new Error('Only pending or processing rentals can be cancelled');
       }
 
       // Delete the rental record (this automatically makes inventory available again)
       const result = await this.query(`
-        DELETE FROM rental WHERE rental_id = ? AND customer_id = ? AND status = 'pending'
+        DELETE FROM rental WHERE rental_id = ? AND customer_id = ? AND status IN ('pending', 'processing')
       `, [rentalId, customerId]);
 
       if (result.affectedRows === 0) {
@@ -579,6 +603,32 @@ class RentalService extends BaseDAO {
         success: false,
         message: 'Er is een fout opgetreden bij het verlengen'
       };
+    }
+  }
+
+  /**
+   * Move rental from processing to pending status (ready for payment)
+   */
+  async moveToPayment(rentalId, customerId) {
+    try {
+      const result = await this.query(`
+        UPDATE rental 
+        SET status = 'pending' 
+        WHERE rental_id = ? AND customer_id = ? AND status = 'processing'
+      `, [rentalId, customerId]);
+
+      if (result.affectedRows === 0) {
+        throw new Error('Rental not found or not in processing status');
+      }
+
+      return {
+        success: true,
+        message: 'Rental ready for payment'
+      };
+
+    } catch (error) {
+      console.error('Move to payment error:', error);
+      throw error;
     }
   }
 }
