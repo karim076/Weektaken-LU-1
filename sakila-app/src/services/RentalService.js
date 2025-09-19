@@ -1,227 +1,151 @@
-const BaseDAO = require('../dao/BaseDAO');
+const RentalDAO = require('../dao/RentalDAO');
 
-class RentalService extends BaseDAO {
+/**
+ * Service layer for Rental business logic
+ * Contains no database access - delegates to DAO layer
+ */
+class RentalService {
   constructor() {
-    super();
+    this.rentalDAO = new RentalDAO();
   }
 
   /**
-   * Create new rental (customer rents a film)
+   * Create new rental (business logic)
    */
   async createRental(customerId, inventoryId, staffId = 1) {
     try {
-      // First check if inventory item is available
-      const availability = await this.query(`
-        SELECT i.inventory_id, f.title, f.rental_rate, f.rental_duration,
-               COUNT(r.rental_id) as active_rentals
-        FROM inventory i
-        JOIN film f ON i.film_id = f.film_id
-        LEFT JOIN rental r ON i.inventory_id = r.inventory_id 
-          AND r.return_date IS NULL 
-          AND r.status IN ('paid', 'rented')
-        WHERE i.inventory_id = ?
-        GROUP BY i.inventory_id
-      `, [inventoryId]);
-
-      if (!availability.length) {
-        throw new Error('Film inventory not found');
+      // Business rule: Check availability first
+      const availability = await this.rentalDAO.checkInventoryAvailability(inventoryId);
+      
+      if (!availability.available) {
+        throw new Error(availability.reason || 'Film not available for rental');
       }
 
-      const item = availability[0];
-      if (item.active_rentals > 0) {
-        throw new Error('This copy is currently rented out');
-      }
-
-      // Create the rental with processing status initially
+      // Business rule: Calculate rental amount and status
       const rentalDate = new Date();
-      const amount = parseFloat(item.rental_rate);
+      const amount = parseFloat(availability.item.rental_rate);
+      const status = 'pending'; // Business rule: new rentals start as pending
 
-      const result = await this.query(`
-        INSERT INTO rental (rental_date, inventory_id, customer_id, staff_id, status, amount)
-        VALUES (?, ?, ?, ?, 'pending', ?)
-      `, [rentalDate, inventoryId, customerId, staffId, amount]);
-
-      return {
-        success: true,
-        rental_id: result.insertId,
-        film_title: item.title,
-        amount: amount,
-        status: 'pending',
-        message: 'Rental created successfully. Please proceed to payment.'
-      };
-
-    } catch (error) {
-      console.error('Create rental error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get customer rentals with detailed information
-   */
-  async getCustomerRentals(customerId, page = 1, limit = 10) {
-    try {
-      const offset = (page - 1) * limit;
-
-      // Get rentals with film information
-      const rentals = await this.query(`
-        SELECT 
-          r.rental_id,
-          r.rental_date,
-          r.return_date,
-          r.due_date,
-          COALESCE(r.status, 
-            CASE 
-              WHEN r.return_date IS NOT NULL THEN 'returned'
-              WHEN r.amount IS NOT NULL AND r.amount > 0 THEN 'pending'
-              ELSE 'pending'
-            END
-          ) as status,
-          COALESCE(r.amount, f.rental_rate) as amount,
-          f.title as film_title,
-          f.film_id,
-          f.rental_rate,
-          f.rental_duration,
-          f.description,
-          c.name as category,
-          CASE 
-            WHEN r.due_date IS NOT NULL THEN r.due_date
-            WHEN r.return_date IS NULL AND COALESCE(r.status, 'pending') IN ('paid', 'rented') 
-            THEN DATE_ADD(r.rental_date, INTERVAL f.rental_duration DAY)
-            ELSE r.return_date
-          END as expected_return_date,
-          DATEDIFF(CURDATE(), COALESCE(r.due_date, DATE_ADD(r.rental_date, INTERVAL f.rental_duration DAY))) as days_overdue
-        FROM rental r
-        JOIN inventory i ON r.inventory_id = i.inventory_id
-        JOIN film f ON i.film_id = f.film_id
-        JOIN film_category fc ON f.film_id = fc.film_id
-        JOIN category c ON fc.category_id = c.category_id
-        WHERE r.customer_id = ?
-        ORDER BY r.rental_date DESC
-        LIMIT ? OFFSET ?
-      `, [customerId, limit, offset]);
-
-      // Get total count for pagination
-      const countResult = await this.query(`
-        SELECT COUNT(*) as total
-        FROM rental r
-        WHERE r.customer_id = ?
-      `, [customerId]);
-
-      const total = countResult[0].total;
-      const totalPages = Math.ceil(total / limit);
-
-      // Get rental statistics
-      const stats = await this.query(`
-        SELECT 
-          COALESCE(status, 
-            CASE 
-              WHEN return_date IS NOT NULL THEN 'returned'
-              WHEN amount IS NOT NULL AND amount > 0 THEN 'pending'
-              ELSE 'pending'
-            END
-          ) as status,
-          COUNT(*) as count,
-          SUM(COALESCE(amount, 0)) as total_amount
-        FROM rental
-        WHERE customer_id = ?
-        GROUP BY COALESCE(status, 
-          CASE 
-            WHEN return_date IS NOT NULL THEN 'returned'
-            WHEN amount IS NOT NULL AND amount > 0 THEN 'pending'
-            ELSE 'pending'
-          END
-        )
-      `, [customerId]);
-
-      // Get overall totals
-      const overallStats = await this.query(`
-        SELECT 
-          COUNT(*) as total_rentals,
-          SUM(COALESCE(amount, 0)) as total_spent,
-          SUM(CASE WHEN COALESCE(status, 'pending') IN ('paid', 'rented') THEN COALESCE(amount, 0) ELSE 0 END) as paid_amount,
-          SUM(CASE WHEN COALESCE(status, 
-            CASE 
-              WHEN return_date IS NOT NULL THEN 'returned'
-              ELSE 'pending'
-            END
-          ) = 'returned' THEN COALESCE(amount, 0) ELSE 0 END) as completed_amount
-        FROM rental
-        WHERE customer_id = ?
-      `, [customerId]);
-
-      const rentalStats = {
-        processing: 0,
-        pending: 0,
-        paid: 0,
-        rented: 0,
-        returned: 0,
-        total_spent: parseFloat(overallStats[0]?.total_spent || 0),
-        total_rentals: overallStats[0]?.total_rentals || 0,
-        paid_amount: parseFloat(overallStats[0]?.paid_amount || 0),
-        completed_amount: parseFloat(overallStats[0]?.completed_amount || 0)
-      };
-
-      stats.forEach(stat => {
-        rentalStats[stat.status] = stat.count;
+      // Create rental through DAO
+      const result = await this.rentalDAO.create({
+        rental_date: rentalDate,
+        inventory_id: inventoryId,
+        customer_id: customerId,
+        staff_id: staffId,
+        status: status,
+        amount: amount
       });
 
       return {
         success: true,
+        rental_id: result.rental_id,
+        film_title: availability.item.title,
+        amount: amount,
+        status: status,
+        message: 'Rental created successfully. Please proceed to payment.'
+      };
+
+    } catch (error) {
+      console.error('RentalService createRental error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get customer rentals with business logic applied
+   */
+  async getCustomerRentals(customerId, page = 1, limit = 10) {
+    try {
+      // Business rule: Validate pagination parameters
+      const validatedPage = Math.max(1, parseInt(page) || 1);
+      const validatedLimit = Math.min(50, Math.max(1, parseInt(limit) || 10));
+      const offset = (validatedPage - 1) * validatedLimit;
+
+      // Get data from DAO
+      const rentals = await this.rentalDAO.findByCustomerId(customerId, validatedLimit, offset);
+      const totalCount = await this.rentalDAO.countByCustomerId(customerId);
+      const stats = await this.rentalDAO.getStatsByCustomerId(customerId);
+
+      // Business logic: Process statistics
+      const processedStats = this.processRentalStats(stats);
+      
+      // Business logic: Filter active rentals
+      const activeRentals = rentals.filter(rental => 
+        ['processing', 'pending', 'paid', 'rented'].includes(rental.status)
+      );
+
+      // Business logic: Calculate pagination
+      const totalPages = Math.ceil(totalCount / validatedLimit);
+
+      return {
+        success: true,
         rentals,
-        stats: rentalStats,
-        activeRentals: rentals.filter(r => ['processing', 'pending', 'paid', 'rented'].includes(r.status)),
+        stats: processedStats,
+        activeRentals,
         pagination: {
-          currentPage: page,
+          currentPage: validatedPage,
           totalPages,
-          totalItems: total,
-          hasNext: page < totalPages,
-          hasPrev: page > 1
+          totalItems: totalCount,
+          hasNext: validatedPage < totalPages,
+          hasPrev: validatedPage > 1
         }
       };
 
     } catch (error) {
-      console.error('Get customer rentals error:', error);
+      console.error('RentalService getCustomerRentals error:', error);
       throw error;
     }
   }
 
   /**
-   * Get all rentals by customer (alias for getCustomerRentals for backward compatibility)
+   * Get single rental by ID
    */
-  async getAllRentalsByCustomer(customerId, page = 1, limit = 10) {
+  async getRentalById(rentalId) {
     try {
-      // This is just an alias for getCustomerRentals
-      return await this.getCustomerRentals(customerId, page, limit);
+      const rental = await this.rentalDAO.findById(rentalId);
+      
+      if (!rental) {
+        throw new Error('Rental not found');
+      }
+
+      return {
+        success: true,
+        rental
+      };
     } catch (error) {
-      console.error('Get all rentals by customer error:', error);
+      console.error('RentalService getRentalById error:', error);
       throw error;
     }
   }
 
   /**
-   * Update rental status (for staff)
+   * Update rental status (business logic for status transitions)
    */
   async updateRentalStatus(rentalId, newStatus, staffId) {
     try {
+      // Business rule: Validate status transition
       const validStatuses = ['pending', 'paid', 'rented', 'returned'];
       if (!validStatuses.includes(newStatus)) {
         throw new Error('Invalid status');
       }
 
-      // If marking as returned, set return_date
-      let query = 'UPDATE rental SET status = ?, staff_id = ? WHERE rental_id = ?';
-      let params = [newStatus, staffId, rentalId];
-
-      if (newStatus === 'returned') {
-        query = 'UPDATE rental SET status = ?, return_date = NOW(), staff_id = ? WHERE rental_id = ?';
-        params = [newStatus, staffId, rentalId];
+      // Get current rental to check current status
+      const currentRental = await this.rentalDAO.findById(rentalId);
+      if (!currentRental) {
+        throw new Error('Rental not found');
       }
 
-      const result = await this.query(query, params);
+      // Business rule: Check valid status transitions
+      const validTransitions = this.getValidStatusTransitions(currentRental.status);
+      if (!validTransitions.includes(newStatus)) {
+        throw new Error(`Cannot change status from ${currentRental.status} to ${newStatus}`);
+      }
 
-      if (result.affectedRows === 0) {
-        throw new Error('Rental not found');
+      // Update through DAO
+      const result = await this.rentalDAO.updateStatus(rentalId, newStatus, staffId);
+
+      if (!result.success) {
+        throw new Error('Failed to update rental status');
       }
 
       return {
@@ -230,406 +154,179 @@ class RentalService extends BaseDAO {
       };
 
     } catch (error) {
-      console.error('Update rental status error:', error);
+      console.error('RentalService updateRentalStatus error:', error);
       throw error;
     }
   }
 
   /**
-   * Get all rentals by customer ID (alias for getCustomerRentals for backward compatibility)
-   */
-  async getAllRentalsByCustomer(customerId, page = 1, limit = 10) {
-    try {
-      return await this.getCustomerRentals(customerId, page, limit);
-    } catch (error) {
-      console.error('Get all rentals by customer error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get all rentals for staff management
-   */
-  async getAllRentals(page = 1, limit = 20, status = null) {
-    try {
-      const offset = (page - 1) * limit;
-      
-      let whereClause = '';
-      let params = [];
-      
-      if (status) {
-        whereClause = 'WHERE r.status = ?';
-        params.push(status);
-      }
-
-      const rentals = await this.query(`
-        SELECT 
-          r.rental_id,
-          r.rental_date,
-          r.return_date,
-          r.status,
-          r.amount,
-          f.title as film_title,
-          f.film_id,
-          c.name as category,
-          cust.first_name,
-          cust.last_name,
-          cust.customer_id,
-          cust.email,
-          CASE 
-            WHEN r.return_date IS NULL AND r.status IN ('paid', 'rented') 
-            THEN DATE_ADD(r.rental_date, INTERVAL f.rental_duration DAY)
-            ELSE r.return_date
-          END as expected_return_date
-        FROM rental r
-        JOIN inventory i ON r.inventory_id = i.inventory_id
-        JOIN film f ON i.film_id = f.film_id
-        JOIN film_category fc ON f.film_id = fc.film_id
-        JOIN category c ON fc.category_id = c.category_id
-        JOIN customer cust ON r.customer_id = cust.customer_id
-        ${whereClause}
-        ORDER BY r.rental_date DESC
-        LIMIT ? OFFSET ?
-      `, [...params, limit, offset]);
-
-      // Get total count
-      const countQuery = `SELECT COUNT(*) as total FROM rental r ${whereClause}`;
-      const countResult = await this.query(countQuery, params);
-      const total = countResult[0].total;
-
-      return {
-        success: true,
-        rentals,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(total / limit),
-          totalItems: total
-        }
-      };
-
-    } catch (error) {
-      console.error('Get all rentals error:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Cancel a pending or processing rental
+   * Cancel rental (business logic)
    */
   async cancelRental(rentalId, customerId) {
     try {
-      // First check if rental exists and is in cancellable status
-      const rental = await this.query(`
-        SELECT r.*, f.title as film_title 
-        FROM rental r
-        JOIN inventory i ON r.inventory_id = i.inventory_id
-        JOIN film f ON i.film_id = f.film_id
-        WHERE r.rental_id = ? AND r.customer_id = ?
-      `, [rentalId, customerId]);
-
-      if (!rental.length) {
+      // Get rental to verify ownership and status
+      const rental = await this.rentalDAO.findById(rentalId);
+      
+      if (!rental) {
         throw new Error('Rental not found');
       }
 
-      const rentalData = rental[0];
-
-      // Allow cancellation of pending and processing rentals
-      if (!['pending', 'processing'].includes(rentalData.status)) {
-        throw new Error('Only pending or processing rentals can be cancelled');
+      // Business rule: Only customer can cancel their own rental
+      if (rental.customer_id !== customerId) {
+        throw new Error('Unauthorized: Cannot cancel another customer\'s rental');
       }
 
-      // Delete the rental record (this automatically makes inventory available again)
-      const result = await this.query(`
-        DELETE FROM rental WHERE rental_id = ? AND customer_id = ? AND status IN ('pending', 'processing')
-      `, [rentalId, customerId]);
+      // Business rule: Can only cancel processing/pending rentals
+      if (!['processing', 'pending'].includes(rental.status)) {
+        throw new Error('Cannot cancel rental in current status');
+      }
 
-      if (result.affectedRows === 0) {
+      // Delete rental through DAO
+      const result = await this.rentalDAO.delete(rentalId);
+
+      if (!result.success) {
         throw new Error('Failed to cancel rental');
       }
 
       return {
         success: true,
-        message: `Rental voor "${rentalData.film_title}" is geannuleerd. De film is weer beschikbaar.`
+        message: 'Rental cancelled successfully'
       };
 
     } catch (error) {
-      console.error('Cancel rental error:', error);
+      console.error('RentalService cancelRental error:', error);
       throw error;
     }
   }
 
   /**
-   * Get rental details
+   * Process payment for rental (business logic)
    */
-  async getRentalDetails(rentalId) {
+  async processPayment(rentalId, customerId, amount) {
     try {
-      const rental = await this.query(`
-        SELECT 
-          r.*,
-          f.title as film_title,
-          f.description,
-          f.rental_rate,
-          f.rental_duration,
-          c.name as category,
-          cust.first_name,
-          cust.last_name,
-          cust.email,
-          cust.phone,
-          staff.first_name as staff_first_name,
-          staff.last_name as staff_last_name
-        FROM rental r
-        JOIN inventory i ON r.inventory_id = i.inventory_id
-        JOIN film f ON i.film_id = f.film_id
-        JOIN film_category fc ON f.film_id = fc.film_id
-        JOIN category c ON fc.category_id = c.category_id
-        JOIN customer cust ON r.customer_id = cust.customer_id
-        LEFT JOIN staff ON r.staff_id = staff.staff_id
-        WHERE r.rental_id = ?
-      `, [rentalId]);
-
-      if (!rental.length) {
+      // Get rental to verify
+      const rental = await this.rentalDAO.findById(rentalId);
+      
+      if (!rental) {
         throw new Error('Rental not found');
       }
 
+      // Business rule: Verify ownership
+      if (rental.customer_id !== customerId) {
+        throw new Error('Unauthorized: Cannot pay for another customer\'s rental');
+      }
+
+      // Business rule: Can only pay for pending rentals
+      if (rental.status !== 'pending') {
+        throw new Error('Rental is not in a payable state');
+      }
+
+      // Business rule: Verify amount
+      if (parseFloat(amount) !== parseFloat(rental.amount)) {
+        throw new Error('Payment amount does not match rental amount');
+      }
+
+      // Update status to paid
+      const result = await this.rentalDAO.updateStatus(rentalId, 'paid');
+
+      if (!result.success) {
+        throw new Error('Failed to process payment');
+      }
+
       return {
         success: true,
-        rental: rental[0]
+        message: 'Payment processed successfully'
       };
 
     } catch (error) {
-      console.error('Get rental details error:', error);
+      console.error('RentalService processPayment error:', error);
       throw error;
     }
   }
 
   /**
-   * Pay for a rental (change status from pending to paid)
+   * Business logic: Process rental statistics
    */
-  async payRental(rentalId, customerId, amount) {
-    try {
-      // First verify the rental belongs to the customer and is pending
-      const rental = await this.query(`
-        SELECT r.*, f.title as film_title, f.rental_duration
-        FROM rental r
-        JOIN inventory i ON r.inventory_id = i.inventory_id
-        JOIN film f ON i.film_id = f.film_id
-        WHERE r.rental_id = ? AND r.customer_id = ?
-      `, [rentalId, customerId]);
+  processRentalStats(stats) {
+    const processedStats = {
+      processing: 0,
+      pending: 0,
+      paid: 0,
+      rented: 0,
+      returned: 0,
+      total_spent: parseFloat(stats.overallStats.total_spent || 0),
+      total_rentals: parseInt(stats.overallStats.total_rentals || 0),
+      paid_amount: parseFloat(stats.overallStats.paid_amount || 0),
+      completed_amount: parseFloat(stats.overallStats.completed_amount || 0)
+    };
 
-      if (!rental.length) {
-        return {
-          success: false,
-          message: 'Verhuur niet gevonden of hoort niet bij uw account'
-        };
+    // Process status counts
+    stats.statusStats.forEach(stat => {
+      if (processedStats.hasOwnProperty(stat.status)) {
+        processedStats[stat.status] = parseInt(stat.count);
       }
+    });
 
-      const rentalData = rental[0];
-
-      // Check if payment is needed
-      if (rentalData.status === 'paid' || rentalData.status === 'rented') {
-        return {
-          success: false,
-          message: 'Deze verhuur is al betaald'
-        };
-      }
-
-      if (rentalData.status !== 'pending') {
-        return {
-          success: false,
-          message: 'Deze verhuur kan niet meer betaald worden'
-        };
-      }
-
-      // Verify amount matches
-      if (parseFloat(amount) !== parseFloat(rentalData.amount)) {
-        return {
-          success: false,
-          message: 'Betalingsbedrag komt niet overeen'
-        };
-      }
-
-      // Update rental status to paid and set due date
-      const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + rentalData.rental_duration);
-
-      await this.query(`
-        UPDATE rental 
-        SET status = 'paid', 
-            due_date = ?,
-            last_update = NOW()
-        WHERE rental_id = ?
-      `, [dueDate, rentalId]);
-
-      return {
-        success: true,
-        message: `Betaling van €${amount} voor "${rentalData.film_title}" is gelukt`
-      };
-
-    } catch (error) {
-      console.error('Pay rental error:', error);
-      return {
-        success: false,
-        message: 'Er is een fout opgetreden bij de betaling'
-      };
-    }
+    return processedStats;
   }
 
   /**
-   * Return a rental (change status from paid/rented to returned)
+   * Business logic: Get valid status transitions
    */
-  async returnRental(rentalId, customerId) {
-    try {
-      // First verify the rental belongs to the customer and can be returned
-      const rental = await this.query(`
-        SELECT r.*, f.title as film_title
-        FROM rental r
-        JOIN inventory i ON r.inventory_id = i.inventory_id
-        JOIN film f ON i.film_id = f.film_id
-        WHERE r.rental_id = ? AND r.customer_id = ?
-      `, [rentalId, customerId]);
+  getValidStatusTransitions(currentStatus) {
+    const transitions = {
+      'processing': ['pending', 'cancelled'],
+      'pending': ['paid', 'cancelled'],
+      'paid': ['rented'],
+      'rented': ['returned'],
+      'returned': [], // Final state
+      'cancelled': [] // Final state
+    };
 
-      if (!rental.length) {
-        return {
-          success: false,
-          message: 'Verhuur niet gevonden of hoort niet bij uw account'
-        };
-      }
-
-      const rentalData = rental[0];
-
-      // Check if rental can be returned
-      if (rentalData.status === 'returned' || rentalData.status === 'completed') {
-        return {
-          success: false,
-          message: 'Deze verhuur is al ingeleverd'
-        };
-      }
-
-      if (rentalData.status !== 'paid' && rentalData.status !== 'rented') {
-        return {
-          success: false,
-          message: 'Deze verhuur kan niet ingeleverd worden'
-        };
-      }
-
-      // Update rental status to returned
-      await this.query(`
-        UPDATE rental 
-        SET status = 'returned', 
-            return_date = NOW(),
-            last_update = NOW()
-        WHERE rental_id = ?
-      `, [rentalId]);
-
-      return {
-        success: true,
-        message: `"${rentalData.film_title}" is succesvol ingeleverd`
-      };
-
-    } catch (error) {
-      console.error('Return rental error:', error);
-      return {
-        success: false,
-        message: 'Er is een fout opgetreden bij het inleveren'
-      };
-    }
+    return transitions[currentStatus] || [];
   }
 
   /**
-   * Extend a rental (add more days to due date)
+   * Business logic: Check if rental can be cancelled
    */
-  async extendRental(rentalId, customerId, extraDays = 7) {
-    try {
-      // First verify the rental belongs to the customer and can be extended
-      const rental = await this.query(`
-        SELECT r.*, f.title as film_title, f.rental_rate
-        FROM rental r
-        JOIN inventory i ON r.inventory_id = i.inventory_id
-        JOIN film f ON i.film_id = f.film_id
-        WHERE r.rental_id = ? AND r.customer_id = ?
-      `, [rentalId, customerId]);
-
-      if (!rental.length) {
-        return {
-          success: false,
-          message: 'Verhuur niet gevonden of hoort niet bij uw account'
-        };
-      }
-
-      const rentalData = rental[0];
-
-      // Check if rental can be extended
-      if (rentalData.status === 'returned' || rentalData.status === 'completed' || rentalData.status === 'cancelled') {
-        return {
-          success: false,
-          message: 'Deze verhuur kan niet meer verlengd worden'
-        };
-      }
-
-      if (rentalData.status !== 'paid' && rentalData.status !== 'rented') {
-        return {
-          success: false,
-          message: 'Deze verhuur moet eerst betaald worden voordat het verlengd kan worden'
-        };
-      }
-
-      // Calculate new due date
-      const currentDueDate = new Date(rentalData.due_date);
-      const newDueDate = new Date(currentDueDate);
-      newDueDate.setDate(newDueDate.getDate() + extraDays);
-
-      // Calculate extension fee (typically 50% of original rental rate per week)
-      const extensionFee = (parseFloat(rentalData.rental_rate) * 0.5).toFixed(2);
-
-      // Update rental with new due date and add extension fee to amount
-      const newAmount = (parseFloat(rentalData.amount) + parseFloat(extensionFee)).toFixed(2);
-
-      await this.query(`
-        UPDATE rental 
-        SET due_date = ?,
-            amount = ?,
-            last_update = NOW()
-        WHERE rental_id = ?
-      `, [newDueDate, newAmount, rentalId]);
-
-      return {
-        success: true,
-        message: `Verhuur van "${rentalData.film_title}" is verlengd tot ${newDueDate.toLocaleDateString('nl-NL')}. Verlengingskosten: €${extensionFee}`
-      };
-
-    } catch (error) {
-      console.error('Extend rental error:', error);
-      return {
-        success: false,
-        message: 'Er is een fout opgetreden bij het verlengen'
-      };
-    }
+  canBeCancelled(rental) {
+    return ['processing', 'pending'].includes(rental.status);
   }
 
   /**
-   * Move rental from processing to pending status (ready for payment)
+   * Business logic: Check if rental can be paid
    */
-  async moveToPayment(rentalId, customerId) {
-    try {
-      const result = await this.query(`
-        UPDATE rental 
-        SET status = 'pending' 
-        WHERE rental_id = ? AND customer_id = ? AND status = 'processing'
-      `, [rentalId, customerId]);
+  canBePaid(rental) {
+    return rental.status === 'pending';
+  }
 
-      if (result.affectedRows === 0) {
-        throw new Error('Rental not found or not in processing status');
-      }
-
-      return {
-        success: true,
-        message: 'Rental ready for payment'
-      };
-
-    } catch (error) {
-      console.error('Move to payment error:', error);
-      throw error;
+  /**
+   * Business logic: Check if rental is overdue
+   */
+  isOverdue(rental) {
+    if (!rental.expected_return_date || rental.return_date) {
+      return false;
     }
+    
+    const now = new Date();
+    const dueDate = new Date(rental.expected_return_date);
+    return now > dueDate;
+  }
+
+  /**
+   * Business logic: Calculate late fees
+   */
+  calculateLateFees(rental) {
+    if (!this.isOverdue(rental)) {
+      return 0;
+    }
+
+    const now = new Date();
+    const dueDate = new Date(rental.expected_return_date);
+    const daysLate = Math.ceil((now - dueDate) / (1000 * 60 * 60 * 24));
+    
+    // Business rule: €1 per day late fee
+    return daysLate * 1.00;
   }
 }
 

@@ -333,6 +333,11 @@ class CustomerService {
   validateCustomerData(customerData) {
     const errors = [];
 
+    // Check if customerData is null or undefined
+    if (!customerData) {
+      throw new Error('Customer data cannot be null or undefined');
+    }
+
     if (!customerData.firstName || customerData.firstName.trim().length < 2) {
       errors.push('First name must be at least 2 characters long');
     }

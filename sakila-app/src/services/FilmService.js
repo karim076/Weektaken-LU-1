@@ -2,13 +2,23 @@ const FilmDAO = require('../dao/FilmDAO');
 
 /**
  * Service for film business logic
+ * Contains no database access - delegates to DAO layer
  */
 class FilmService {
   constructor() {
     this.filmDAO = new FilmDAO();
-    // Import RentalService for proper rental creation
-    const RentalService = require('./RentalService');
-    this.rentalService = new RentalService();
+    this.rentalService = null; // Lazy load to avoid circular dependency
+  }
+
+  /**
+   * Lazy load RentalService to avoid circular dependency
+   */
+  getRentalService() {
+    if (!this.rentalService) {
+      const RentalService = require('./RentalService');
+      this.rentalService = new RentalService();
+    }
+    return this.rentalService;
   }
 
   /**
@@ -104,7 +114,7 @@ class FilmService {
       console.log('Found available inventory ID:', inventoryId);
       
       // Use RentalService for proper status handling
-      const result = await this.rentalService.createRental(customerId, inventoryId, 1);
+      const result = await this.getRentalService().createRental(customerId, inventoryId, 1);
       
       console.log('RentalService.createRental result:', result);
       
