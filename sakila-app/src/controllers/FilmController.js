@@ -1,13 +1,12 @@
 const FilmService = require('../services/FilmService');
-const RentalService = require('../services/RentalService');
 
 /**
  * Controller for film operations using service layer
+ * Controllers should not contain business logic - only call services
  */
 class FilmController {
   constructor() {
     this.filmService = new FilmService();
-    this.rentalService = new RentalService();
   }
 
   /**

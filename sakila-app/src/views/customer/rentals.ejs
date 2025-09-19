@@ -44,12 +44,12 @@
 
         <!-- Quick Stats -->
         <% if (stats) { %>
-        <div class="row g-4 mb-4">
+        <div class="row g-4 mb-4 rentals-stats-row">
             <div class="col-md-3">
                 <div class="card text-center h-100">
                     <div class="card-body">
                         <i class="bi bi-hourglass-half fs-1 text-warning mb-2"></i>
-                        <h4 class="text-warning"><%= (stats.processing || 0) + (stats.pending || 0) %></h4>
+                        <h4 class="text-warning" data-stat="pending"><%= (stats.processing || 0) + (stats.pending || 0) %></h4>
                         <small class="text-muted">In Behandeling/Te Betalen</small>
                     </div>
                 </div>
@@ -58,7 +58,7 @@
                 <div class="card text-center h-100">
                     <div class="card-body">
                         <i class="bi bi-credit-card fs-1 text-success mb-2"></i>
-                        <h4 class="text-success"><%= stats.paid || 0 %></h4>
+                        <h4 class="text-success" data-stat="paid"><%= stats.paid || 0 %></h4>
                         <small class="text-muted">Betaald</small>
                     </div>
                 </div>
@@ -67,7 +67,7 @@
                 <div class="card text-center h-100">
                     <div class="card-body">
                         <i class="bi bi-film fs-1 text-primary mb-2"></i>
-                        <h4 class="text-primary"><%= stats.rented || 0 %></h4>
+                        <h4 class="text-primary" data-stat="rented"><%= stats.rented || 0 %></h4>
                         <small class="text-muted">Actief Gehuurd</small>
                     </div>
                 </div>
@@ -76,7 +76,7 @@
                 <div class="card text-center h-100">
                     <div class="card-body">
                         <i class="bi bi-check-circle fs-1 text-info mb-2"></i>
-                        <h4 class="text-info"><%= stats.returned || 0 %></h4>
+                        <h4 class="text-info" data-stat="returned"><%= stats.returned || 0 %></h4>
                         <small class="text-muted">Voltooid</small>
                     </div>
                 </div>
