@@ -124,7 +124,7 @@ class RentalService {
   async updateRentalStatus(rentalId, newStatus, staffId) {
     try {
       // Business rule: Validate status transition
-      const validStatuses = ['pending', 'paid', 'rented', 'returned'];
+      const validStatuses = ['pending', 'reserved', 'in_behandeling', 'paid', 'rented', 'returned', 'cancelled'];
       if (!validStatuses.includes(newStatus)) {
         throw new Error('Invalid status');
       }
@@ -156,6 +156,55 @@ class RentalService {
     } catch (error) {
       console.error('RentalService updateRentalStatus error:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Update rental due date
+   */
+  async updateDueDate(rentalId, newDueDate, staffId, reason = null) {
+    try {
+      // Validate rental exists and is not returned
+      const rental = await this.rentalDAO.findById(rentalId);
+      if (!rental) {
+        return {
+          success: false,
+          message: 'Verhuur niet gevonden'
+        };
+      }
+
+      if (rental.return_date) {
+        return {
+          success: false,
+          message: 'Kan inleverdatum niet wijzigen voor teruggegeven film'
+        };
+      }
+
+      // Update due date in database
+      const result = await this.rentalDAO.updateDueDate(rentalId, newDueDate, staffId);
+
+      if (result.success) {
+        // Log the change if reason is provided
+        if (reason && reason.trim()) {
+          console.log(`Due date updated for rental ${rentalId} by staff ${staffId}. Reason: ${reason}`);
+        }
+
+        return {
+          success: true,
+          message: 'Inleverdatum succesvol bijgewerkt'
+        };
+      } else {
+        return {
+          success: false,
+          message: 'Fout bij bijwerken inleverdatum'
+        };
+      }
+    } catch (error) {
+      console.error('RentalService updateDueDate error:', error);
+      return {
+        success: false,
+        message: 'Er is een fout opgetreden bij het bijwerken van de inleverdatum'
+      };
     }
   }
 
@@ -276,7 +325,9 @@ class RentalService {
   getValidStatusTransitions(currentStatus) {
     const transitions = {
       'processing': ['pending', 'cancelled'],
-      'pending': ['paid', 'cancelled'],
+      'pending': ['paid', 'rented', 'cancelled'],
+      'reserved': ['in_behandeling', 'rented', 'cancelled'],
+      'in_behandeling': ['rented', 'cancelled'],
       'paid': ['rented'],
       'rented': ['returned'],
       'returned': [], // Final state
@@ -327,6 +378,279 @@ class RentalService {
     
     // Business rule: €1 per day late fee
     return daysLate * 1.00;
+  }
+
+  /**
+   * Staff Methods - Voor staff functionaliteit
+   */
+
+  // Haal recente verhuur op
+  async getRecentRentals(limit = 10) {
+    try {
+      const rentals = await this.rentalDAO.getRecentRentals(limit);
+      return {
+        success: true,
+        rentals: rentals || []
+      };
+    } catch (error) {
+      console.error('Get recent rentals error:', error);
+      return { success: false, rentals: [] };
+    }
+  }
+
+  // Haal achterstallige verhuur op
+  async getOverdueRentals() {
+    try {
+      const rentals = await this.rentalDAO.getOverdueRentals();
+      return {
+        success: true,
+        rentals: rentals || []
+      };
+    } catch (error) {
+      console.error('Get overdue rentals error:', error);
+      return { success: false, rentals: [] };
+    }
+  }
+
+  // Verhuur maken (staff checkout)
+  async createRental(rentalData) {
+    try {
+      const { customer_id, film_id, staff_id, rental_duration = 3 } = rentalData;
+      
+      // Zoek beschikbare inventory voor deze film
+      const inventory = await this.rentalDAO.findAvailableInventory(film_id);
+      if (!inventory) {
+        return {
+          success: false,
+          message: 'Film is niet beschikbaar voor verhuur'
+        };
+      }
+
+      // Maak verhuur aan
+      const rental = await this.rentalDAO.create({
+        inventory_id: inventory.inventory_id,
+        customer_id: customer_id,
+        staff_id: staff_id,
+        rental_date: new Date(),
+        status: 'rented' // Direct als 'rented' voor staff checkout
+      });
+
+      return {
+        success: true,
+        rental,
+        message: 'Film succesvol uitgegeven'
+      };
+    } catch (error) {
+      console.error('Create rental error:', error);
+      return {
+        success: false,
+        message: 'Fout bij aanmaken verhuur'
+      };
+    }
+  }
+
+  // Film teruggeven (staff checkin)
+  async returnRental(rentalId, staffId) {
+    try {
+      const result = await this.rentalDAO.returnRental(rentalId, staffId);
+      
+      if (result.success) {
+        return {
+          success: true,
+          rental: result.rental,
+          message: 'Film succesvol teruggegeven'
+        };
+      } else {
+        return {
+          success: false,
+          message: result.message || 'Fout bij teruggeven film'
+        };
+      }
+    } catch (error) {
+      console.error('Return rental error:', error);
+      return {
+        success: false,
+        message: 'Fout bij teruggeven film'
+      };
+    }
+  }
+
+  // Update verhuur status
+  async updateRentalStatus(rentalId, status) {
+    try {
+      const result = await this.rentalDAO.updateStatus(rentalId, status);
+      return {
+        success: true,
+        message: 'Status bijgewerkt'
+      };
+    } catch (error) {
+      console.error('Update rental status error:', error);
+      return {
+        success: false,
+        message: 'Fout bij bijwerken status'
+      };
+    }
+  }
+
+  // Haal verhuur op via ID
+  async getRentalById(rentalId) {
+    try {
+      return await this.rentalDAO.findById(rentalId);
+    } catch (error) {
+      console.error('Get rental by ID error:', error);
+      return null;
+    }
+  }
+
+  // Staff statistieken
+  async getTotalRentals() {
+    try {
+      const count = await this.rentalDAO.getTotalCount();
+      return { count };
+    } catch (error) {
+      console.error('Get total rentals error:', error);
+      return { count: 0 };
+    }
+  }
+
+  async getActiveRentals() {
+    try {
+      const count = await this.rentalDAO.getActiveCount();
+      return { count };
+    } catch (error) {
+      console.error('Get active rentals error:', error);
+      return { count: 0 };
+    }
+  }
+
+  async getOverdueCount() {
+    try {
+      const count = await this.rentalDAO.getOverdueCount();
+      return { count };
+    } catch (error) {
+      console.error('Get overdue count error:', error);
+      return { count: 0 };
+    }
+  }
+
+  async getTodayRentals() {
+    try {
+      const count = await this.rentalDAO.getTodayCount();
+      return { count };
+    } catch (error) {
+      console.error('Get today rentals error:', error);
+      return { count: 0 };
+    }
+  }
+
+  // Combined stats for dashboard
+  async getRentalStats() {
+    try {
+      const [total, active, overdue, today] = await Promise.all([
+        this.getTotalRentals(),
+        this.getActiveRentals(),
+        this.getOverdueCount(),
+        this.getTodayRentals()
+      ]);
+
+      return {
+        total: total.count || 0,
+        active: active.count || 0,
+        overdue: overdue.count || 0,
+        today: today.count || 0
+      };
+    } catch (error) {
+      console.error('Get rental stats error:', error);
+      return {
+        total: 0,
+        active: 0,
+        overdue: 0,
+        today: 0
+      };
+    }
+  }
+
+  // Get pending rentals (in behandeling/gereserveerd)
+  async getPendingRentals() {
+    try {
+      const rentals = await this.rentalDAO.getPendingRentals();
+      return {
+        success: true,
+        rentals: rentals || []
+      };
+    } catch (error) {
+      console.error('Get pending rentals error:', error);
+      return {
+        success: false,
+        rentals: []
+      };
+    }
+  }
+
+  // Get all rentals for staff interface
+  async getAllRentalsForStaff() {
+    try {
+      const rentals = await this.rentalDAO.getAllRentalsWithDetails();
+      return rentals || [];
+    } catch (error) {
+      console.error('Get all rentals for staff error:', error);
+      return [];
+    }
+  }
+
+  // Create rental (simplified for staff)
+  async createRental({ customer_id, film_id, staff_id }) {
+    try {
+      // Find available inventory for this film
+      const inventory = await this.rentalDAO.findAvailableInventory(film_id);
+      
+      if (!inventory) {
+        throw new Error('Geen beschikbare kopieën van deze film');
+      }
+
+      // Create the rental
+      const rentalDate = new Date();
+      const returnDate = new Date();
+      returnDate.setDate(returnDate.getDate() + 7); // 7 dagen verhuurperiode
+
+      const rental = await this.rentalDAO.create({
+        rental_date: rentalDate,
+        inventory_id: inventory.inventory_id,
+        customer_id: customer_id,
+        return_date: returnDate,
+        staff_id: staff_id || 1
+      });
+
+      return {
+        rental_id: rental.rental_id,
+        return_date: returnDate
+      };
+    } catch (error) {
+      console.error('Create rental error:', error);
+      throw error;
+    }
+  }
+
+  // Get active rentals for a specific customer
+  async getCustomerActiveRentals(customerId) {
+    try {
+      const rentals = await this.rentalDAO.getCustomerActiveRentals(customerId);
+      return rentals || [];
+    } catch (error) {
+      console.error('Get customer active rentals error:', error);
+      return [];
+    }
+  }
+
+  // Get all rentals for a specific customer (both active and returned)
+  async getCustomerAllRentals(customerId) {
+    try {
+      const rentals = await this.rentalDAO.getCustomerAllRentals(customerId);
+      return rentals || [];
+    } catch (error) {
+      console.error('Get customer all rentals error:', error);
+      return [];
+    }
   }
 }
 

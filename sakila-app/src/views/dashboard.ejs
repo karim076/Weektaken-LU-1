@@ -235,45 +235,424 @@
             </div>
         <% } else if (dashboardType === 'staff') { %>
             <!-- Staff Dashboard Content -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card bg-success text-white">
-                        <div class="card-body">
-                            <h1 class="h3 mb-0">
-                                <i class="bi bi-person-badge"></i>
-                                Staff Dashboard
-                            </h1>
-                            <p class="mb-0">Welkom <%= user.first_name || user.username %>, beheer de video verhuur</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <div class="row g-4">
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <i class="bi bi-people fs-1 text-primary mb-2"></i>
-                            <h5>Klanten Beheren</h5>
-                            <a href="/customer" class="btn btn-primary">Ga naar Klanten</a>
+                <!-- Sidebar -->
+                <div class="col-lg-3">
+                    <div class="sidebar p-4">
+                        <div class="user-profile mb-4">
+                            <div class="user-avatar bg-success bg-opacity-50 rounded-circle d-inline-flex align-items-center justify-content-center border border-success">
+                                <i class="bi bi-person-badge text-success" style="font-size: 3rem;"></i>
+                            </div>
+                            <h5 class="mt-3 mb-1"><%= user.full_name || user.first_name || user.username %></h5>
+                            <small class="text-muted">Staff Account</small>
+                        </div>
+                        
+                        <nav class="nav nav-pills flex-column">
+                            <a class="nav-link active" href="#staff-dashboard" data-section="staff-dashboard">
+                                <i class="bi bi-speedometer2 me-2"></i>
+                                Dashboard
+                            </a>
+                            <a class="nav-link" href="#staff-customers" data-section="staff-customers">
+                                <i class="bi bi-people me-2"></i>
+                                Klanten Beheren
+                            </a>
+                            <a class="nav-link" href="#staff-rental" data-section="staff-rental">
+                                <i class="bi bi-film me-2"></i>
+                                Verhuur Beheren
+                            </a>
+                            <a class="nav-link" href="#quick-rental" data-section="quick-rental">
+                                <i class="bi bi-lightning me-2"></i>
+                                Snelle Verhuur
+                            </a>
+                        </nav>
+                        
+                        <div class="logout-section">
+                            <div class="text-center">
+                                <form method="POST" action="/logout" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-light btn-sm">
+                                        <i class="bi bi-box-arrow-right me-2"></i>
+                                        Uitloggen
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <i class="bi bi-film fs-1 text-success mb-2"></i>
-                            <h5>Films Beheren</h5>
-                            <a href="/films" class="btn btn-success">Ga naar Films</a>
+                
+                <!-- Main Content -->
+                <div class="col-lg-9">
+                    <div class="main-content p-4">
+                        <!-- Dashboard Section -->
+                        <div id="staff-dashboard-section" class="content-section">
+                            <!-- Welcome Header -->
+                            <div class="welcome-card text-white p-4 mb-4" style="background: linear-gradient(135deg, #28a745, #20c997);">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h2 class="mb-1">
+                                            <i class="bi bi-person-badge me-2"></i>
+                                            Staff Dashboard
+                                        </h2>
+                                        <p class="mb-0 opacity-75">Welkom <%= user.first_name || user.username %>, beheer de video verhuur</p>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="welcome-date">
+                                            <%= new Date().toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' }) %>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Statistics Cards -->
+                            <div class="row g-4 mb-4">
+                                <div class="col-lg-3 col-md-6">
+                                    <div class="card stat-card h-100">
+                                        <div class="card-body text-center">
+                                            <div class="d-flex align-items-center justify-content-center mb-3">
+                                                <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+                                                    <i class="bi bi-people fs-2 text-primary"></i>
+                                                </div>
+                                            </div>
+                                            <h3 class="text-primary mb-1"><%= stats ? stats.totalCustomers : 0 %></h3>
+                                            <p class="text-muted mb-0">Totaal Klanten</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-lg-3 col-md-6">
+                                    <div class="card stat-card h-100">
+                                        <div class="card-body text-center">
+                                            <div class="d-flex align-items-center justify-content-center mb-3">
+                                                <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                                                    <i class="bi bi-film fs-2 text-success"></i>
+                                                </div>
+                                            </div>
+                                            <h3 class="text-success mb-1"><%= stats ? stats.activeRentals : 0 %></h3>
+                                            <p class="text-muted mb-0">Actieve Verhuur</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-lg-3 col-md-6">
+                                    <div class="card stat-card h-100">
+                                        <div class="card-body text-center">
+                                            <div class="d-flex align-items-center justify-content-center mb-3">
+                                                <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+                                                    <i class="bi bi-exclamation-triangle fs-2 text-warning"></i>
+                                                </div>
+                                            </div>
+                                            <h3 class="text-warning mb-1"><%= stats ? stats.overdueCount : 0 %></h3>
+                                            <p class="text-muted mb-0">Te Laat</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-lg-3 col-md-6">
+                                    <div class="card stat-card h-100">
+                                        <div class="card-body text-center">
+                                            <div class="d-flex align-items-center justify-content-center mb-3">
+                                                <div class="bg-info bg-opacity-10 rounded-circle p-3">
+                                                    <i class="bi bi-calendar-event fs-2 text-info"></i>
+                                                </div>
+                                            </div>
+                                            <h3 class="text-info mb-1"><%= stats ? stats.todayRentals : 0 %></h3>
+                                            <p class="text-muted mb-0">Vandaag Uitgegeven</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Quick Actions -->
+                            <div class="row g-4 mb-4">
+                                <div class="col-md-4">
+                                    <div class="card quick-action-card h-100">
+                                        <div class="card-body text-center">
+                                            <i class="bi bi-people fs-1 text-primary mb-3"></i>
+                                            <h5 class="card-title">Klanten Beheren</h5>
+                                            <p class="text-muted mb-3">Bekijk en bewerk klantgegevens</p>
+                                            <a href="/staff/customers" class="btn btn-primary">
+                                                <i class="bi bi-arrow-right me-2"></i>
+                                                Naar Klanten
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="card quick-action-card h-100">
+                                        <div class="card-body text-center">
+                                            <i class="bi bi-film fs-1 text-success mb-3"></i>
+                                            <h5 class="card-title">Film Uitgeven</h5>
+                                            <p class="text-muted mb-3">Geef films uit aan klanten</p>
+                                            <a href="/staff/rental-management" class="btn btn-success">
+                                                <i class="bi bi-plus-circle me-2"></i>
+                                                Film Uitgeven
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="card quick-action-card h-100">
+                                        <div class="card-body text-center">
+                                            <i class="bi bi-arrow-return-left fs-1 text-info mb-3"></i>
+                                            <h5 class="card-title">Film Innemen</h5>
+                                            <p class="text-muted mb-3">Verwerk film retour</p>
+                                            <a href="/staff/rental-management" class="btn btn-info">
+                                                <i class="bi bi-check-circle me-2"></i>
+                                                Film Innemen
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Recent Activity and Overdue -->
+                            <div class="row g-4">
+                                <div class="col-lg-8">
+                                    <div class="card">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h5 class="card-title mb-0">
+                                                <i class="bi bi-clock-history me-2"></i>
+                                                Recente Verhuur
+                                            </h5>
+                                            <a href="/staff/rental-management" class="btn btn-sm btn-outline-primary">Alle bekijken</a>
+                                        </div>
+                                        <div class="card-body">
+                                            <% if (recentRentals && recentRentals.length > 0) { %>
+                                                <div class="table-responsive">
+                                                    <table class="table table-sm table-dark">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Klant</th>
+                                                                <th>Film</th>
+                                                                <th>Uitgegeven</th>
+                                                                <th>Status</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <% recentRentals.slice(0, 5).forEach(rental => { %>
+                                                                <tr>
+                                                                    <td><%= rental.customer_name %></td>
+                                                                    <td><%= rental.film_title %></td>
+                                                                    <td><%= new Date(rental.rental_date).toLocaleDateString('nl-NL') %></td>
+                                                                    <td>
+                                                                        <% 
+                                                                        let statusColor = 'secondary';
+                                                                        let statusText = rental.status || 'Onbekend';
+                                                                        
+                                                                        if (rental.status === 'pending') {
+                                                                            statusColor = 'warning';
+                                                                            statusText = 'In Behandeling';
+                                                                        } else if (rental.status === 'active') {
+                                                                            statusColor = 'primary';
+                                                                            statusText = 'Uitgegeven';
+                                                                        } else if (rental.status === 'returned') {
+                                                                            statusColor = 'success';
+                                                                            statusText = 'Teruggegeven';
+                                                                        } else if (rental.status === 'overdue') {
+                                                                            statusColor = 'danger';
+                                                                            statusText = 'Te Laat';
+                                                                        } else if (rental.return_date) {
+                                                                            statusColor = 'success';
+                                                                            statusText = 'Teruggegeven';
+                                                                        } else {
+                                                                            statusColor = 'primary';
+                                                                            statusText = 'Uitgegeven';
+                                                                        }
+                                                                        %>
+                                                                        <span class="badge bg-<%= statusColor %>">
+                                                                            <%= statusText %>
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                            <% }); %>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            <% } else { %>
+                                                <div class="text-center text-muted py-4">
+                                                    <i class="bi bi-inbox fs-1 mb-3"></i>
+                                                    <p>Geen recente verhuur gevonden</p>
+                                                </div>
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-lg-4">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0">
+                                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                                Te Laat
+                                            </h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <% if (overdueRentals && overdueRentals.length > 0) { %>
+                                                <% overdueRentals.slice(0, 5).forEach(rental => { %>
+                                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                                        <div>
+                                                            <h6 class="mb-1"><%= rental.customer_name %></h6>
+                                                            <small class="text-muted"><%= rental.film_title %></small>
+                                                            <br>
+                                                            <small class="text-danger">
+                                                                <%= Math.ceil((new Date() - new Date(rental.return_date)) / (1000 * 60 * 60 * 24)) %> dagen te laat
+                                                            </small>
+                                                        </div>
+                                                        <span class="badge bg-danger">Te laat</span>
+                                                    </div>
+                                                <% }); %>
+                                            <% } else { %>
+                                                <div class="text-center text-muted py-3">
+                                                    <i class="bi bi-check-circle fs-2 mb-2"></i>
+                                                    <p class="mb-0">Geen te late verhuur!</p>
+                                                </div>
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <i class="bi bi-receipt fs-1 text-info mb-2"></i>
-                            <h5>Verhuur Beheren</h5>
-                            <p class="text-muted">Binnenkort beschikbaar</p>
+                        
+                        <!-- Staff Customers Section -->
+                        <div id="staff-customers-section" class="content-section d-none">
+                            <div class="d-flex align-items-center mb-4">
+                                <i class="bi bi-people text-success fs-2 me-3"></i>
+                                <div>
+                                    <h2 class="text-white mb-1">Klanten Beheren</h2>
+                                    <p class="text-muted mb-0">Zoek en beheer alle klanten</p>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="card bg-dark border-secondary">
+                                        <div class="card-header bg-success">
+                                            <h5 class="card-title mb-0 text-white">
+                                                <i class="bi bi-search me-2"></i>
+                                                Klanten Zoeken
+                                            </h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <input type="text" id="customer-search-input" class="form-control bg-dark text-white border-secondary" placeholder="Zoek op naam, email of klant ID...">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <button id="load-all-customers" class="btn btn-success">
+                                                        <i class="bi bi-people me-2"></i>
+                                                        Toon Alle Klanten
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div id="customers-table-container">
+                                                <div class="text-center py-4 text-muted">
+                                                    <i class="bi bi-people fs-1 mb-3"></i>
+                                                    <p>Klik op "Toon Alle Klanten" of zoek naar een specifieke klant</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Staff Rental Section -->
+                        <div id="staff-rental-section" class="content-section d-none">
+                            <div class="d-flex align-items-center mb-4">
+                                <i class="bi bi-film text-info fs-2 me-3"></i>
+                                <div>
+                                    <h2 class="text-white mb-1">Verhuur Beheren</h2>
+                                    <p class="text-muted mb-0">Beheer alle verhuurzaken</p>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="card bg-dark border-secondary">
+                                        <div class="card-header bg-info">
+                                            <h5 class="card-title mb-0 text-white">
+                                                <i class="bi bi-film me-2"></i>
+                                                Actieve Verhuur
+                                            </h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <input type="text" id="rental-search-input" class="form-control bg-dark text-white border-secondary" placeholder="Zoek op klant naam of film titel...">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <button id="load-all-rentals" class="btn btn-info">
+                                                        <i class="bi bi-film me-2"></i>
+                                                        Toon Alle Verhuur
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div id="rentals-table-container">
+                                                <div class="text-center py-4 text-muted">
+                                                    <i class="bi bi-film fs-1 mb-3"></i>
+                                                    <p>Klik op "Toon Alle Verhuur" of zoek naar specifieke verhuur</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Quick Rental Section -->
+                        <div id="quick-rental-section" class="content-section d-none">
+                            <div class="d-flex align-items-center mb-4">
+                                <i class="bi bi-lightning text-warning fs-2 me-3"></i>
+                                <div>
+                                    <h2 class="text-white mb-1">Snelle Verhuur</h2>
+                                    <p class="text-muted mb-0">Verhuur films snel en eenvoudig</p>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-lg-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0">Zoek Klant</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <input type="hidden" id="selected-customer-id">
+                                            <input type="text" id="quick-customer-search" class="form-control mb-3" placeholder="Zoek klant op naam of email...">
+                                            <div id="customer-results" class="border rounded" style="max-height: 200px; overflow-y: auto;"></div>
+                                            <div id="selected-customer-info" class="mt-3"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-lg-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0">Zoek Film</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <input type="hidden" id="selected-film-id">
+                                            <input type="text" id="quick-film-search" class="form-control mb-3" placeholder="Zoek film op titel...">
+                                            <div id="film-results" class="border rounded" style="max-height: 200px; overflow-y: auto;"></div>
+                                            <div id="selected-film-info" class="mt-3"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-body text-center">
+                                            <button id="quick-rent-btn" class="btn btn-success btn-lg">
+                                                <i class="bi bi-lightning me-2"></i>
+                                                Film Verhuren
+                                            </button>
+                                            <div id="rental-result" class="mt-3"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -349,10 +728,17 @@
     
     <!-- Dashboard JavaScript Modules -->
     <script src="/js/toast-notifications.js"></script>
-    <script src="/js/rental-manager.js"></script>
-    <script src="/js/rental-actions.js"></script>
-    <script src="/js/profile-manager.js"></script>
-    <script src="/js/dashboard-navigation.js"></script>
+    <script src="/js/rental-manager.js?v=<%= Date.now() %>"></script>
+    <script src="/js/rental-actions.js?v=<%= Date.now() %>"></script>
+    <script src="/js/profile-manager.js?v=<%= Date.now() %>"></script>
+    <script src="/js/dashboard-navigation.js?v=<%= Date.now() %>"></script>
+    
+    <!-- Staff JavaScript Modules (conditional loading) -->
+    <% if (dashboardType === 'staff') { %>
+        <script src="/js/simple-customer-manager.js?v=<%= Date.now() %>"></script>
+        <script src="/js/simple-rental-manager.js?v=<%= Date.now() %>"></script>
+        <script src="/js/simple-rental-system.js?v=<%= Date.now() %>"></script>
+    <% } %>
     
     <script>
         // Dashboard specific initialization code only

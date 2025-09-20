@@ -22,6 +22,7 @@ const CustomerController = require('./src/controllers/CustomerController');
 const filmRoutes = require('./src/routes/films');
 const customerRoutes = require('./src/routes/customer');
 const adminRoutes = require('./src/routes/admin');
+const staffRoutes = require('./src/routes/staff');
 
 // Initialize Express app
 const app = express();
@@ -111,6 +112,9 @@ app.use('/films', filmRoutes);
 
 // Customer management routes (both staff and customer functionality)
 app.use('/customer', customerRoutes);
+
+// Staff routes (protected for staff/admin)
+app.use('/staff', staffRoutes);
 
 // Admin panel routes (protected)
 app.use('/admin', authMiddleware.requireAdminWeb, adminRoutes);

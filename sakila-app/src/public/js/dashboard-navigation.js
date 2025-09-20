@@ -41,6 +41,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('Loading profile content...');
                     loadProfileContent();
                     section.dataset.loaded = 'true';
+                } else if (sectionName === 'staff-customers' && !section.dataset.loaded) {
+                    console.log('Loading staff customers content...');
+                    if (window.staffCustomerManager) {
+                        window.staffCustomerManager.loadCustomers();
+                    }
+                    section.dataset.loaded = 'true';
+                } else if (sectionName === 'staff-rental' && !section.dataset.loaded) {
+                    console.log('Loading staff rental content...');
+                    if (window.staffRentalManager) {
+                        window.staffRentalManager.loadRentalData();
+                    }
+                    section.dataset.loaded = 'true';
                 }
             } else {
                 section.classList.add('d-none');
@@ -51,10 +63,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Check for URL hash on load
     function checkUrlHash() {
         const hash = window.location.hash.substring(1);
-        if (hash && ['dashboard', 'rentals', 'profile'].includes(hash)) {
+        // Extend to support staff sections
+        const validSections = ['dashboard', 'rentals', 'profile', 'staff-dashboard', 'staff-customers', 'staff-rental', 'quick-rental'];
+        if (hash && validSections.includes(hash)) {
             showSection(hash);
         } else {
-            showSection('dashboard'); // Default to dashboard
+            // Default based on user role or dashboard type
+            const defaultSection = document.getElementById('staff-dashboard-section') ? 'staff-dashboard' : 'dashboard';
+            showSection(defaultSection);
         }
     }
     

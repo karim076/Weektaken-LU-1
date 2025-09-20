@@ -61,13 +61,31 @@
                             <% } %>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="/dashboard">
-                                <i class="bi bi-speedometer2"></i> Dashboard
-                            </a></li>
-                            <li><a class="dropdown-item" href="/dashboard#profile">
-                                <i class="bi bi-person-gear"></i> Profiel
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
+                            <% if (user.role === 'customer') { %>
+                                <li><a class="dropdown-item" href="/dashboard">
+                                    <i class="bi bi-speedometer2"></i> Dashboard
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dashboard#profile">
+                                    <i class="bi bi-person-gear"></i> Profiel
+                                </a></li>
+                            <% } else if (user.role === 'staff' || user.role === 'admin') { %>
+                                <li><a class="dropdown-item" href="/staff/dashboard">
+                                    <i class="bi bi-speedometer2"></i> Staff Dashboard
+                                </a></li>
+                                <li><a class="dropdown-item" href="/staff/customers">
+                                    <i class="bi bi-people"></i> Klanten Beheer
+                                </a></li>
+                                <li><a class="dropdown-item" href="/staff/rental-management">
+                                    <i class="bi bi-box-arrow-right"></i> Verhuur Beheer
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <% if (user.role === 'admin') { %>
+                                    <li><a class="dropdown-item" href="/admin/dashboard">
+                                        <i class="bi bi-shield-check"></i> Admin Panel
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                <% } %>
+                            <% } %>
                             <li>
                                 <form method="POST" action="/logout" class="d-inline">
                                     <button type="submit" class="dropdown-item text-danger">

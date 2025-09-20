@@ -327,6 +327,18 @@ class FilmService {
     }
   }
 
+  /**
+   * Search films for staff interface
+   */
+  async searchFilmsForStaff(query) {
+    try {
+      return await this.filmDAO.searchAvailableFilms(query);
+    } catch (error) {
+      console.error('FilmService searchFilmsForStaff error:', error);
+      return [];
+    }
+  }
+
 }
 
 module.exports = FilmService;

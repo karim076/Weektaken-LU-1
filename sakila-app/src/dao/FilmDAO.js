@@ -479,6 +479,36 @@ class FilmDAO extends BaseDAO {
     
     return rows;
   }
+
+  /**
+   * Search available films for staff interface
+   */
+  async searchAvailableFilms(query) {
+    try {
+      const sql = `
+        SELECT 
+          f.film_id,
+          f.title,
+          f.description,
+          f.rental_rate,
+          COUNT(i.inventory_id) as total_copies,
+          COUNT(CASE WHEN r.rental_id IS NULL THEN 1 END) as available_copies
+        FROM film f
+        LEFT JOIN inventory i ON f.film_id = i.film_id
+        LEFT JOIN rental r ON i.inventory_id = r.inventory_id AND r.return_date IS NULL
+        WHERE f.title LIKE ?
+        GROUP BY f.film_id, f.title, f.description, f.rental_rate
+        HAVING available_copies > 0
+        ORDER BY f.title
+        LIMIT 20
+      `;
+      
+      return await this.query(sql, [`%${query}%`]);
+    } catch (error) {
+      console.error('FilmDAO searchAvailableFilms error:', error);
+      return [];
+    }
+  }
 }
 
 module.exports = FilmDAO;

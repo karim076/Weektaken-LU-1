@@ -212,30 +212,66 @@ class CustomerDAO extends BaseDAO {
    * Update customer information
    */
   async updateCustomer(customerId, customerData) {
-    const fields = [];
-    const values = [];
+    try {
+      console.log('CustomerDAO updateCustomer - ID:', customerId, 'Data:', customerData);
+      
+      const fields = [];
+      const values = [];
 
-    for (const [key, value] of Object.entries(customerData)) {
-      if (value !== undefined) {
-        fields.push(`${key} = ?`);
-        values.push(value);
+      // Define valid customer table columns (only fields that actually exist in Sakila customer table)
+      const validColumns = ['first_name', 'last_name', 'email', 'username', 'password', 'active'];
+
+      for (const [key, value] of Object.entries(customerData)) {
+        if (value !== undefined && validColumns.includes(key)) {
+          // Convert boolean to 0/1 for MySQL
+          let dbValue = value;
+          if (typeof value === 'boolean') {
+            dbValue = value ? 1 : 0;
+          }
+          
+          fields.push(`${key} = ?`);
+          values.push(dbValue);
+        } else if (value !== undefined && !validColumns.includes(key)) {
+          console.log(`CustomerDAO updateCustomer - Skipping invalid column: ${key}`);
+        }
       }
+
+      if (fields.length === 0) {
+        console.log('CustomerDAO updateCustomer - No valid fields to update');
+        return {
+          success: false,
+          message: 'No valid fields to update'
+        };
+      }
+
+      fields.push('last_update = NOW()');
+      values.push(customerId);
+
+      const sql = `
+        UPDATE customer 
+        SET ${fields.join(', ')}
+        WHERE customer_id = ?
+      `;
+
+      console.log('CustomerDAO updateCustomer - SQL:', sql);
+      console.log('CustomerDAO updateCustomer - Values:', values);
+
+      const result = await this.query(sql, values);
+      console.log('CustomerDAO updateCustomer - Result:', result);
+      
+      const success = result.affectedRows > 0;
+      const message = success ? 'Customer updated successfully' : 'No customer updated - customer not found or no changes made';
+      
+      console.log('CustomerDAO updateCustomer - Final result:', { success, message });
+      
+      return { success, message };
+    } catch (error) {
+      console.error('CustomerDAO updateCustomer error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to update customer'
+      };
     }
-
-    if (fields.length === 0) {
-      throw new Error('No fields to update');
-    }
-
-    fields.push('last_update = NOW()');
-    values.push(customerId);
-
-    const sql = `
-      UPDATE customer 
-      SET ${fields.join(', ')}
-      WHERE customer_id = ?
-    `;
-
-    return await this.query(sql, values);
   }
 
   /**
@@ -418,6 +454,116 @@ class CustomerDAO extends BaseDAO {
     
     const result = await this.query(sql, params);
     return result[0] || null;
+  }
+
+  /**
+   * Search customers (basic - voor staff interface)
+   */
+  async searchCustomersBasic(query) {
+    try {
+      const sql = `
+        SELECT 
+          customer_id,
+          first_name,
+          last_name,
+          email,
+          active,
+          create_date,
+          CONCAT(first_name, ' ', last_name) as full_name
+        FROM customer
+        WHERE active = 1
+          AND (
+            first_name LIKE ? OR 
+            last_name LIKE ? OR 
+            email LIKE ? OR
+            CONCAT(first_name, ' ', last_name) LIKE ?
+          )
+        ORDER BY last_name, first_name
+        LIMIT 20
+      `;
+      
+      const searchTerm = `%${query}%`;
+      return await this.query(sql, [searchTerm, searchTerm, searchTerm, searchTerm]);
+    } catch (error) {
+      console.error('CustomerDAO searchCustomersBasic error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all active customers (voor staff interface)
+   */
+  async getAllActiveCustomers() {
+    try {
+      const sql = `
+        SELECT 
+          customer_id,
+          first_name,
+          last_name,
+          email,
+          active,
+          create_date,
+          last_update,
+          CONCAT(first_name, ' ', last_name) as full_name
+        FROM customer
+        WHERE active = 1
+        ORDER BY last_name, first_name
+        LIMIT 500
+      `;
+      
+      return await this.query(sql);
+    } catch (error) {
+      console.error('CustomerDAO getAllActiveCustomers error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get active rentals for a customer
+   */
+  async getActiveRentals(customerId) {
+    try {
+      const sql = `
+        SELECT 
+          r.rental_id,
+          r.rental_date,
+          r.return_date,
+          r.return_date,
+          f.film_id,
+          f.title,
+          i.inventory_id
+        FROM rental r
+        JOIN inventory i ON r.inventory_id = i.inventory_id
+        JOIN film f ON i.film_id = f.film_id
+        WHERE r.customer_id = ? AND r.return_date IS NULL
+        ORDER BY r.rental_date DESC
+      `;
+      
+      return await this.query(sql, [customerId]);
+    } catch (error) {
+      console.error('CustomerDAO getActiveRentals error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Delete customer (soft delete by setting active = 0)
+   */
+  async deleteCustomer(customerId) {
+    try {
+      // In Sakila, we typically don't hard delete customers due to rental history
+      // Instead, we set them as inactive
+      const sql = `
+        UPDATE customer 
+        SET active = 0, last_update = NOW()
+        WHERE customer_id = ?
+      `;
+      
+      return await this.query(sql, [customerId]);
+    } catch (error) {
+      console.error('CustomerDAO deleteCustomer error:', error);
+      throw error;
+    }
   }
 }
 

@@ -1,10 +1,12 @@
 const FilmService = require('../services/FilmService');
 const CustomerService = require('../services/CustomerService');
+const RentalService = require('../services/RentalService');
 
 class HomeController {
   constructor() {
     this.filmService = new FilmService();
     this.customerService = new CustomerService();
+    this.rentalService = new RentalService();
   }
   
   // GET /
@@ -91,11 +93,34 @@ class HomeController {
       console.log('  User Role:', userData?.role);
       console.log('  Dashboard Type:', dashboardType);
 
-      res.render('dashboard', {
+      // Prepare dashboard-specific data
+      let dashboardData = {
         title: 'Dashboard - Sakila App',
         user: userData,
         dashboardType: dashboardType
-      });
+      };
+
+      // Add staff-specific data if needed
+      if (dashboardType === 'staff') {
+        try {
+          // Get staff statistics
+          const stats = await this.getStaffStats();
+          const recentRentals = await this.rentalService.getRecentRentals(10);
+          const overdueRentals = await this.rentalService.getOverdueRentals();
+          
+          dashboardData.stats = stats;
+          dashboardData.recentRentals = recentRentals.rentals || [];
+          dashboardData.overdueRentals = overdueRentals.rentals || [];
+        } catch (error) {
+          console.error('Error getting staff dashboard data:', error);
+          // Continue with basic dashboard if staff data fails
+          dashboardData.stats = {};
+          dashboardData.recentRentals = [];
+          dashboardData.overdueRentals = [];
+        }
+      }
+
+      res.render('dashboard', dashboardData);
     } catch (error) {
       console.error('Dashboard controller error:', error);
       res.status(500).render('error', { 
@@ -104,6 +129,32 @@ class HomeController {
         message: 'An error occurred while loading the dashboard.',
         stack: process.env.NODE_ENV === 'development' ? error.stack : null
       });
+    }
+  }
+
+  // Get staff statistics for dashboard
+  async getStaffStats() {
+    try {
+      // Get basic stats from database
+      const customerCount = await this.customerService.getTotalCustomers();
+      const rentalStats = await this.rentalService.getRentalStats();
+      
+      return {
+        totalCustomers: customerCount.count || 0,
+        totalRentals: rentalStats.total || 0,
+        activeRentals: rentalStats.active || 0,
+        overdueCount: rentalStats.overdue || 0,
+        todayRentals: rentalStats.today || 0
+      };
+    } catch (error) {
+      console.error('Get staff stats error:', error);
+      return {
+        totalCustomers: 0,
+        totalRentals: 0,
+        activeRentals: 0,
+        overdueCount: 0,
+        todayRentals: 0
+      };
     }
   }
 }

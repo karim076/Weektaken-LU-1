@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Sakila App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body class="bg-dark text-light">
+    <%- include('../partials/navbar') %>
+    
+    <div class="container-fluid mt-4">
+        <!-- Staff Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="display-5 fw-bold text-danger">
+                            <i class="bi bi-speedometer2"></i> Staff Dashboard
+                        </h1>
+                        <p class="lead mb-0">Welkom <%= user.full_name || user.username %> - Beheer klanten en verhuur</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="/staff/customers" class="btn btn-primary">
+                            <i class="bi bi-people"></i> Klanten
+                        </a>
+                        <a href="/staff/rental-management" class="btn btn-success">
+                            <i class="bi bi-box-arrow-right"></i> Verhuur
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-2">
+                <div class="card bg-primary text-white">
+                    <div class="card-body text-center">
+                        <i class="bi bi-people display-4"></i>
+                        <h3 class="mt-2"><%= stats.totalCustomers %></h3>
+                        <p class="mb-0">Totaal Klanten</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <i class="bi bi-collection-play display-4"></i>
+                        <h3 class="mt-2"><%= stats.totalRentals %></h3>
+                        <p class="mb-0">Totaal Verhuur</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <i class="bi bi-clock display-4"></i>
+                        <h3 class="mt-2"><%= stats.activeRentals %></h3>
+                        <p class="mb-0">Actieve Verhuur</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card bg-warning text-dark">
+                    <div class="card-body text-center">
+                        <i class="bi bi-exclamation-triangle display-4"></i>
+                        <h3 class="mt-2"><%= stats.overdueCount %></h3>
+                        <p class="mb-0">Achterstallig</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="card bg-secondary text-white">
+                    <div class="card-body text-center">
+                        <i class="bi bi-calendar-day display-4"></i>
+                        <h3 class="mt-2"><%= stats.todayRentals %></h3>
+                        <p class="mb-0">Vandaag</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Rows -->
+        <div class="row">
+            <!-- Recent Rentals -->
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header bg-dark text-light d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-clock-history"></i> Recente Verhuur
+                        </h5>
+                        <a href="/staff/rental-management" class="btn btn-sm btn-outline-light">
+                            Bekijk Alle <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <% if (recentRentals && recentRentals.length > 0) { %>
+                            <div class="table-responsive">
+                                <table class="table table-dark table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Klant</th>
+                                            <th>Film</th>
+                                            <th>Status</th>
+                                            <th>Datum</th>
+                                            <th>Actie</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% recentRentals.forEach(rental => { %>
+                                            <tr>
+                                                <td>#<%= rental.rental_id %></td>
+                                                <td><%= rental.customer_name %></td>
+                                                <td><%= rental.film_title %></td>
+                                                <td>
+                                                    <% 
+                                                    let statusClass = 'secondary';
+                                                    if (rental.status === 'rented') statusClass = 'success';
+                                                    else if (rental.status === 'pending') statusClass = 'warning';
+                                                    else if (rental.status === 'returned') statusClass = 'info';
+                                                    %>
+                                                    <span class="badge bg-<%= statusClass %>"><%= rental.status %></span>
+                                                </td>
+                                                <td><%= new Date(rental.rental_date).toLocaleDateString('nl-NL') %></td>
+                                                <td>
+                                                    <a href="/staff/rentals/<%= rental.rental_id %>" class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-eye"></i>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <% } else { %>
+                            <div class="text-center text-muted py-4">
+                                <i class="bi bi-inbox display-4"></i>
+                                <p class="mt-2">Geen recente verhuur gevonden</p>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Overdue Rentals -->
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header bg-danger text-light">
+                        <h5 class="mb-0">
+                            <i class="bi bi-exclamation-triangle"></i> Achterstallige Verhuur
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <% if (overdueRentals && overdueRentals.length > 0) { %>
+                            <% overdueRentals.slice(0, 5).forEach(rental => { %>
+                                <div class="d-flex justify-content-between align-items-start mb-3 p-2 border rounded">
+                                    <div>
+                                        <h6 class="mb-1 text-light"><%= rental.customer_name %></h6>
+                                        <p class="mb-1 small text-muted"><%= rental.film_title %></p>
+                                        <small class="text-danger">
+                                            <i class="bi bi-calendar-x"></i> 
+                                            <%= rental.days_overdue %> dagen te laat
+                                        </small>
+                                    </div>
+                                    <a href="/staff/rentals/<%= rental.rental_id %>" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-arrow-right"></i>
+                                    </a>
+                                </div>
+                            <% }); %>
+                            <% if (overdueRentals.length > 5) { %>
+                                <div class="text-center mt-3">
+                                    <small class="text-muted">En <%= overdueRentals.length - 5 %> meer...</small>
+                                </div>
+                            <% } %>
+                        <% } else { %>
+                            <div class="text-center text-muted py-4">
+                                <i class="bi bi-check-circle display-4 text-success"></i>
+                                <p class="mt-2">Geen achterstallige verhuur!</p>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-dark text-light">
+                        <h5 class="mb-0">
+                            <i class="bi bi-lightning-fill"></i> Snelle Acties
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <a href="/staff/rental-management" class="btn btn-success w-100 py-3">
+                                    <i class="bi bi-box-arrow-right display-6 d-block"></i>
+                                    Film Uitgeven
+                                </a>
+                            </div>
+                            <div class="col-md-3">
+                                <a href="/staff/rental-management?tab=checkin" class="btn btn-info w-100 py-3">
+                                    <i class="bi bi-box-arrow-in-left display-6 d-block"></i>
+                                    Film Innemen
+                                </a>
+                            </div>
+                            <div class="col-md-3">
+                                <a href="/staff/customers" class="btn btn-primary w-100 py-3">
+                                    <i class="bi bi-people display-6 d-block"></i>
+                                    Klanten Beheren
+                                </a>
+                            </div>
+                            <div class="col-md-3">
+                                <a href="/films" class="btn btn-secondary w-100 py-3">
+                                    <i class="bi bi-collection-play display-6 d-block"></i>
+                                    Film Catalogus
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include('../partials/footer') %>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
