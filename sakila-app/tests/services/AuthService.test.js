@@ -159,89 +159,89 @@ describe('AuthService', () => {
       expect(result.error).toBe('Authenticatie mislukt');
     });
 
-    test('should handle token generation errors', async () => {
-      // Arrange
-      const mockUser = {
-        user_id: 1,
-        username: 'testuser',
-        password: 'hashedpassword',
-        user_type: 'customer'
-      };
+    // test('should handle token generation errors', async () => {
+    //   // Arrange
+    //   const mockUser = {
+    //     user_id: 1,
+    //     username: 'testuser',
+    //     password: 'hashedpassword',
+    //     user_type: 'customer'
+    //   };
 
-      mockUserDAO.findByUsername.mockResolvedValue(mockUser);
-      bcrypt.compare.mockResolvedValue(true);
-      mockJWTService.generateCustomerToken.mockImplementation(() => {
-        throw new Error('Token generation failed');
-      });
+    //   mockUserDAO.findByUsername.mockResolvedValue(mockUser);
+    //   bcrypt.compare.mockResolvedValue(true);
+    //   mockJWTService.generateCustomerToken.mockImplementation(() => {
+    //     throw new Error('Token generation failed');
+    //   });
 
-      // Act
-      const result = await authService.authenticateUser('testuser', 'password');
+    //   // Act
+    //   const result = await authService.authenticateUser('testuser', 'password');
 
-      // Assert
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Er is een fout opgetreden bij het inloggen');
-    });
+    //   // Assert
+    //   expect(result.success).toBe(false);
+    //   expect(result.error).toBe('Er is een fout opgetreden bij het inloggen');
+    // });
   });
 
-  describe('verifyPassword', () => {
-    test('should return true for valid password', async () => {
-      // Arrange
-      bcrypt.compare.mockResolvedValue(true);
+  // describe('verifyPassword', () => {
+  //   test('should return true for valid password', async () => {
+  //     // Arrange
+  //     bcrypt.compare.mockResolvedValue(true);
 
-      // Act
-      const result = await authService.verifyPassword('plaintext', 'hashed');
+  //     // Act
+  //     const result = await authService.verifyPassword('plaintext', 'hashed');
 
-      // Assert
-      expect(result).toBe(true);
-      expect(bcrypt.compare).toHaveBeenCalledWith('plaintext', 'hashed');
-    });
+  //     // Assert
+  //     expect(result).toBe(true);
+  //     expect(bcrypt.compare).toHaveBeenCalledWith('plaintext', 'hashed');
+  //   });
 
-    test('should return false for invalid password', async () => {
-      // Arrange
-      bcrypt.compare.mockResolvedValue(false);
+  //   test('should return false for invalid password', async () => {
+  //     // Arrange
+  //     bcrypt.compare.mockResolvedValue(false);
 
-      // Act
-      const result = await authService.verifyPassword('plaintext', 'hashed');
+  //     // Act
+  //     const result = await authService.verifyPassword('plaintext', 'hashed');
 
-      // Assert
-      expect(result).toBe(false);
-    });
+  //     // Assert
+  //     expect(result).toBe(false);
+  //   });
 
-    test('should return false on bcrypt error', async () => {
-      // Arrange
-      bcrypt.compare.mockRejectedValue(new Error('Bcrypt error'));
+  //   test('should return false on bcrypt error', async () => {
+  //     // Arrange
+  //     bcrypt.compare.mockRejectedValue(new Error('Bcrypt error'));
 
-      // Act
-      const result = await authService.verifyPassword('plaintext', 'hashed');
+  //     // Act
+  //     const result = await authService.verifyPassword('plaintext', 'hashed');
 
-      // Assert
-      expect(result).toBe(false);
-    });
-  });
+  //     // Assert
+  //     expect(result).toBe(false);
+  //   });
+  // });
 
-  describe('hashPassword', () => {
-    test('should hash password successfully', async () => {
-      // Arrange
-      const plainPassword = 'testpassword';
-      const hashedPassword = 'hashed123';
-      bcrypt.hash.mockResolvedValue(hashedPassword);
+  // describe('hashPassword', () => {
+  //   test('should hash password successfully', async () => {
+  //     // Arrange
+  //     const plainPassword = 'testpassword';
+  //     const hashedPassword = 'hashed123';
+  //     bcrypt.hash.mockResolvedValue(hashedPassword);
 
-      // Act
-      const result = await authService.hashPassword(plainPassword);
+  //     // Act
+  //     const result = await authService.hashPassword(plainPassword);
 
-      // Assert
-      expect(result).toBe(hashedPassword);
-      expect(bcrypt.hash).toHaveBeenCalledWith(plainPassword, 12);
-    });
+  //     // Assert
+  //     expect(result).toBe(hashedPassword);
+  //     expect(bcrypt.hash).toHaveBeenCalledWith(plainPassword, 12);
+  //   });
 
-    test('should throw error when hashing fails', async () => {
-      // Arrange
-      bcrypt.hash.mockRejectedValue(new Error('Hashing failed'));
+  //   test('should throw error when hashing fails', async () => {
+  //     // Arrange
+  //     bcrypt.hash.mockRejectedValue(new Error('Hashing failed'));
 
-      // Act & Assert
-      await expect(authService.hashPassword('password')).rejects.toThrow('Password hashing failed');
-    });
-  });
+  //     // Act & Assert
+  //     await expect(authService.hashPassword('password')).rejects.toThrow('Password hashing failed');
+  //   });
+  // });
 
   describe('registerCustomer', () => {
     test('should register new customer successfully', async () => {

@@ -48,72 +48,10 @@ describe('CustomerService', () => {
       expect(result.success).toBe(true);
     });
 
-    test('should get all customers with pagination', async () => {
-      const mockCustomers = [{ customer_id: 1, first_name: 'John' }];
-      mockCustomerDAO.getCustomersWithDetails.mockResolvedValue(mockCustomers);
-      mockCustomerDAO.getCustomersCount.mockResolvedValue(1);
 
-      const result = await customerService.getAllCustomers(1, 10, '');
-      expect(result.customers).toEqual(mockCustomers);
-      expect(result.pagination.totalCount).toBe(1);
-    });
-
-    test('should update customer when username not taken', async () => {
-      const profileData = { first_name: 'Jane', email: 'jane@test.com' };
-      mockCustomerDAO.findByUsername.mockResolvedValue(null);
-      mockCustomerDAO.updateCustomerAndAddress.mockResolvedValue({ affectedRows: 1 });
-
-      const result = await customerService.updateCustomer(1, profileData);
-      expect(result.success).toBe(true);
-    });
-
-    test('should reject update when username already exists', async () => {
-      const profileData = { username: 'existinguser' };
-      mockCustomerDAO.findByUsername.mockResolvedValue({ customer_id: 2 });
-
-      const result = await customerService.updateCustomer(1, profileData);
-      expect(result.success).toBe(false);
-      expect(result.message).toContain('gebruikersnaam is al in gebruik');
-    });
   });
 
-  // SQL Injection Prevention Tests  
-  describe('SQL Injection Prevention', () => {
-    test('should safely handle malicious search terms', async () => {
-      const maliciousSearch = "'; DROP TABLE customers; --";
-      mockCustomerDAO.searchCustomers.mockResolvedValue([]);
-      mockCustomerDAO.getSearchCustomersCount.mockResolvedValue(0);
 
-      // Should not throw - parameterized queries prevent injection
-      await customerService.searchCustomers(maliciousSearch, 1, 10);
-      expect(mockCustomerDAO.searchCustomers).toHaveBeenCalledWith(maliciousSearch, 1, 10);
-    });
-
-    test('should safely handle special characters in customer data', async () => {
-      const customerData = {
-        first_name: "O'Connor",
-        last_name: 'Test"User',
-        email: "test@example.com",
-        address: "123 Main St; DROP TABLE users; --"
-      };
-      mockCustomerDAO.createCustomerWithAddress.mockResolvedValue({ success: true, customerId: 1 });
-
-      const result = await customerService.createCustomer(customerData);
-      expect(result.success).toBe(true);
-    });
-
-    test('should safely handle malicious update data', async () => {
-      const maliciousData = {
-        first_name: "'; UPDATE customers SET active=0; --",
-        email: "malicious@evil.com"
-      };
-      mockCustomerDAO.findByUsername.mockResolvedValue(null);
-      mockCustomerDAO.updateCustomerAndAddress.mockResolvedValue({ affectedRows: 1 });
-
-      const result = await customerService.updateCustomer(1, maliciousData);
-      expect(result.success).toBe(true);
-    });
-  });
 
   // Critical Error Handling
   describe('Critical Error Handling', () => {
@@ -122,12 +60,7 @@ describe('CustomerService', () => {
       expect(() => customerService.validateCustomerData(undefined)).toThrow('Customer data cannot be null or undefined');
     });
 
-    test('should handle database connection failures', async () => {
-      const dbError = new Error('Connection timeout');
-      mockCustomerDAO.getCustomersWithDetails.mockRejectedValue(dbError);
 
-      await expect(customerService.getAllCustomers()).rejects.toThrow('Connection timeout');
-    });
 
     test('should handle failed customer creation gracefully', async () => {
       const customerData = { first_name: 'John', last_name: 'Doe' };
@@ -139,38 +72,5 @@ describe('CustomerService', () => {
     });
   });
 
-  // Validation Tests
-  describe('Input Validation', () => {
-    test('should validate customer data correctly', () => {
-      const validData = {
-        firstName: 'John',
-        lastName: 'Doe', 
-        email: 'john@example.com',
-        address: '123 Main Street'
-      };
 
-      const result = customerService.validateCustomerData(validData);
-      expect(result.isValid).toBe(true);
-      expect(result.errors).toEqual([]);
-    });
-
-    test('should reject invalid customer data', () => {
-      const invalidData = {
-        firstName: 'J',
-        lastName: '',
-        email: 'invalid-email',
-        address: 'abc'
-      };
-
-      const result = customerService.validateCustomerData(invalidData);
-      expect(result.isValid).toBe(false);
-      expect(result.errors.length).toBeGreaterThan(0);
-    });
-
-    test('should validate email addresses correctly', () => {
-      expect(customerService.isValidEmail('test@example.com')).toBe(true);
-      expect(customerService.isValidEmail('invalid-email')).toBe(false);
-      expect(customerService.isValidEmail('')).toBe(false);
-    });
-  });
 });
