@@ -1,219 +1,236 @@
-const AuthService = require('../services/AuthService');
+const JWTService = require('../services/JWTService');
+
+const jwtService = new JWTService();
 
 /**
- * Authentication middleware using the new service layer
+ * JWT Authentication Middleware
  */
-class AuthMiddleware {
-  constructor() {
-    this.authService = new AuthService();
-  }
-
-  /**
-   * Require authentication
-   */
-  requireAuth = async (req, res, next) => {
+const authenticateToken = (req, res, next) => {
     try {
-      const sessionId = req.session?.sessionId;
-      
-      if (!sessionId) {
-        return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
-      }
-
-      const user = await this.authService.getSession(sessionId);
-      
-      if (!user) {
-        req.session.destroy();
-        return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
-      }
-
-      req.user = user;
-      res.locals.user = user;
-      next();
-    } catch (error) {
-      console.error('Auth middleware error:', error);
-      res.redirect('/login');
-    }
-  };
-
-  /**
-   * Require staff access
-   */
-  requireStaff = async (req, res, next) => {
-    try {
-      const sessionId = req.session?.sessionId;
-      
-      if (!sessionId) {
-        return res.status(403).render('error', {
-          title: 'Toegang Geweigerd',
-          status: 403,
-          message: 'U moet ingelogd zijn als staff om deze pagina te bekijken'
-        });
-      }
-
-      const user = await this.authService.getSession(sessionId);
-      
-      if (!user || user.type !== 'staff') {
-        return res.status(403).render('error', {
-          title: 'Toegang Geweigerd',
-          status: 403,
-          message: 'U heeft geen staff toegang tot deze pagina'
-        });
-      }
-
-      req.user = user;
-      res.locals.user = user;
-      next();
-    } catch (error) {
-      console.error('Staff auth middleware error:', error);
-      res.status(500).render('error', {
-        title: 'Server Fout',
-        status: 500,
-        message: 'Er is een fout opgetreden bij de autorisatie'
-      });
-    }
-  };
-
-  /**
-   * Require owner access
-   */
-  requireOwner = async (req, res, next) => {
-    try {
-      const sessionId = req.session?.sessionId;
-      
-      if (!sessionId) {
-        return res.status(403).render('error', {
-          title: 'Toegang Geweigerd',
-          status: 403,
-          message: 'U moet ingelogd zijn als eigenaar om deze pagina te bekijken'
-        });
-      }
-
-      const user = await this.authService.getSession(sessionId);
-      
-      if (!user || user.type !== 'owner') {
-        return res.status(403).render('error', {
-          title: 'Toegang Geweigerd',
-          status: 403,
-          message: 'U heeft geen eigenaar toegang tot deze pagina'
-        });
-      }
-
-      req.user = user;
-      res.locals.user = user;
-      next();
-    } catch (error) {
-      console.error('Owner auth middleware error:', error);
-      res.status(500).render('error', {
-        title: 'Server Fout',
-        status: 500,
-        message: 'Er is een fout opgetreden bij de autorisatie'
-      });
-    }
-  };
-
-  /**
-   * Optional authentication
-   */
-  optionalAuth = async (req, res, next) => {
-    try {
-      const sessionId = req.session?.sessionId;
-      
-      if (sessionId) {
-        const user = await this.authService.getSession(sessionId);
-        if (user) {
-          req.user = user;
-          res.locals.user = user;
+        // Check for token in Authorization header (Bearer token)
+        const authHeader = req.headers['authorization'];
+        const bearerToken = authHeader && authHeader.split(' ')[1];
+        
+        // Check for token in cookies as fallback
+        const cookieToken = req.cookies?.token;
+        
+        const token = bearerToken || cookieToken;
+        
+        if (!token) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Access token is required' 
+            });
         }
-      }
-      
-      next();
-    } catch (error) {
-      console.error('Optional auth middleware error:', error);
-      next();
-    }
-  };
 
-  /**
-   * Require customer access
-   */
-  requireCustomer = async (req, res, next) => {
+        const decoded = jwtService.verifyToken(token);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        console.error('Token verification failed:', error.message);
+        
+        if (error.message === 'Token expired') {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Token expired',
+                expired: true 
+            });
+        }
+        
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Invalid token' 
+        });
+    }
+};
+
+/**
+ * Customer Role Authorization
+ */
+const requireCustomer = (req, res, next) => {
+    authenticateToken(req, res, (err) => {
+        if (err) return;
+        
+        if (!req.user || req.user.role !== 'customer') {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Customer access required' 
+            });
+        }
+        
+        next();
+    });
+};
+
+/**
+ * Staff Role Authorization
+ */
+const requireStaff = (req, res, next) => {
+    authenticateToken(req, res, (err) => {
+        if (err) return;
+        
+        if (!req.user || req.user.role !== 'staff') {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Staff access required' 
+            });
+        }
+        
+        next();
+    });
+};
+
+/**
+ * Admin Role Authorization
+ */
+const requireAdmin = (req, res, next) => {
+    authenticateToken(req, res, (err) => {
+        if (err) return;
+        
+        if (!req.user || req.user.role !== 'admin') {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Admin access required' 
+            });
+        }
+        
+        next();
+    });
+};
+
+/**
+ * Web Authentication for pages (redirects to login instead of JSON)
+ */
+const requireAuthWeb = (req, res, next) => {
     try {
-      const sessionId = req.session?.sessionId;
-      
-      if (!sessionId) {
+        // Check for token in cookies
+        const token = req.cookies?.token;
+        
+        if (!token) {
+            return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
+        }
+
+        const decoded = jwtService.verifyToken(token);
+        
+        // Ensure role is set
+        if (!decoded.role) {
+            if (decoded.user_type === 'customer') decoded.role = 'customer';
+            else if (decoded.user_type === 'staff') decoded.role = 'staff';
+            else if (decoded.user_type === 'admin' || decoded.user_type === 'owner') decoded.role = 'admin';
+        }
+        
+        req.user = decoded;
+        res.locals.user = decoded;
+        next();
+    } catch (error) {
+        console.error('Web auth failed:', error.message);
+        
+        // Clear invalid token
+        res.clearCookie('token');
+        
         return res.redirect('/login?redirect=' + encodeURIComponent(req.originalUrl));
-      }
-
-      const user = await this.authService.getSession(sessionId);
-      
-      if (!user || user.type !== 'customer') {
-        return res.status(403).render('error', {
-          title: 'Toegang Geweigerd',
-          status: 403,
-          message: 'U moet ingelogd zijn als klant om films te kunnen huren'
-        });
-      }
-
-      req.user = user;
-      res.locals.user = user;
-      next();
-    } catch (error) {
-      console.error('Customer auth middleware error:', error);
-      res.status(500).render('error', {
-        title: 'Server Fout',
-        status: 500,
-        message: 'Er is een fout opgetreden bij de autorisatie'
-      });
     }
-  };
+};
 
-  /**
-   * Require admin access (staff or owner)
-   */
-  requireAdmin = async (req, res, next) => {
+/**
+ * Customer Web Authorization
+ */
+const requireCustomerWeb = (req, res, next) => {
+    requireAuthWeb(req, res, (err) => {
+        if (err) return;
+        
+        if (!req.user || req.user.role !== 'customer') {
+            return res.status(403).render('error', {
+                title: 'Toegang Geweigerd',
+                status: 403,
+                message: 'Je hebt geen toegang tot deze pagina. Klant toegang vereist.'
+            });
+        }
+        
+        next();
+    });
+};
+
+/**
+ * Staff Web Authorization
+ */
+const requireStaffWeb = (req, res, next) => {
+    requireAuthWeb(req, res, (err) => {
+        if (err) return;
+        
+        if (!req.user || req.user.role !== 'staff') {
+            return res.status(403).render('error', {
+                title: 'Toegang Geweigerd',
+                status: 403,
+                message: 'Je hebt geen toegang tot deze pagina. Staff toegang vereist.'
+            });
+        }
+        
+        next();
+    });
+};
+
+/**
+ * Admin Web Authorization
+ */
+const requireAdminWeb = (req, res, next) => {
+    requireAuthWeb(req, res, (err) => {
+        if (err) return;
+        
+        if (!req.user || req.user.role !== 'admin') {
+            return res.status(403).render('error', {
+                title: 'Toegang Geweigerd',
+                status: 403,
+                message: 'Je hebt geen toegang tot deze pagina. Admin toegang vereist.'
+            });
+        }
+        
+        next();
+    });
+};
+
+/**
+ * Optional authentication (doesn't redirect, just sets user if token exists)
+ */
+const optionalAuth = (req, res, next) => {
     try {
-      const sessionId = req.session?.sessionId;
-      
-      if (!sessionId) {
-        return res.status(403).render('error', {
-          title: 'Toegang Geweigerd',
-          status: 403,
-          message: 'U moet ingelogd zijn als beheerder om deze pagina te bekijken'
-        });
-      }
-
-      const user = await this.authService.getSession(sessionId);
-      
-      if (!user || (user.type !== 'staff' && user.type !== 'owner')) {
-        return res.status(403).render('error', {
-          title: 'Toegang Geweigerd',
-          status: 403,
-          message: 'U heeft geen beheerder toegang tot deze pagina'
-        });
-      }
-
-      req.user = user;
-      res.locals.user = user;
-      next();
+        const token = req.cookies?.token;
+        
+        if (token) {
+            const decoded = jwtService.verifyToken(token);
+            
+            // Ensure role is set
+            if (!decoded.role) {
+                if (decoded.user_type === 'customer') decoded.role = 'customer';
+                else if (decoded.user_type === 'staff') decoded.role = 'staff';
+                else if (decoded.user_type === 'admin' || decoded.user_type === 'owner') decoded.role = 'admin';
+            }
+            
+            req.user = decoded;
+            res.locals.user = decoded; // Crucial: set for views!
+        }
+        
+        // Fallback to session user
+        if (!req.user && req.session?.user) {
+            req.user = req.session.user;
+            res.locals.user = req.session.user;
+        }
     } catch (error) {
-      console.error('Admin auth middleware error:', error);
-      res.status(500).render('error', {
-        title: 'Server Fout',
-        status: 500,
-        message: 'Er is een fout opgetreden bij de autorisatie'
-      });
+        // Ignore token errors for optional auth
+        res.clearCookie('token');
     }
-  };
-}
-
-// Create instance and export the methods
-const authMiddleware = new AuthMiddleware();
+    
+    next();
+};
 
 module.exports = {
-  requireAuth: authMiddleware.requireAuth,
-  requireStaff: authMiddleware.requireStaff,
-  requireOwner: authMiddleware.requireOwner,
-  optionalAuth: authMiddleware.optionalAuth,
-  requireCustomer: authMiddleware.requireCustomer,
-  requireAdmin: authMiddleware.requireAdmin
+    authenticateToken,
+    requireCustomer,
+    requireStaff,
+    requireAdmin,
+    requireAuthWeb,
+    requireCustomerWeb,
+    requireStaffWeb,
+    requireAdminWeb,
+    optionalAuth
 };

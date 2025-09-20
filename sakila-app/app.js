@@ -1,107 +1,152 @@
+// Load environment variables first
+require('dotenv').config();
+
 const express = require('express');
-const http = require('node:http');
 const path = require('path');
 const session = require('express-session');
+const cookieParser = require('cookie-parser');
 
 // Initialize database connection
 const databaseConfig = require('./src/config/database');
 
-// Import middleware from src structure
-const { errorHandler, notFound } = require('./src/middleware/error');
-const { optionalAuth } = require('./src/middleware/auth');
+// Import middleware
+const authMiddleware = require('./src/middleware/auth');
+const errorMiddleware = require('./src/middleware/error');
 
-// Import routes from src structure
-const customerRoutes = require('./src/routes/customers');
-const filmRoutes = require('./src/routes/films');
-const adminRoutes = require('./src/routes/admin');
-
-// Import controllers from src structure
+// Import controllers
 const HomeController = require('./src/controllers/HomeController');
 const AuthController = require('./src/controllers/AuthController');
+const CustomerController = require('./src/controllers/CustomerController');
 
+// Import routes
+const filmRoutes = require('./src/routes/films');
+const customerRoutes = require('./src/routes/customer');
+const adminRoutes = require('./src/routes/admin');
+const staffRoutes = require('./src/routes/staff');
+
+// Initialize Express app
 const app = express();
-const port = 3001;
-const hostname = '127.0.0.1';
+const port = process.env.PORT || 3000;
 
-// Initialize database connection pool
-databaseConfig.createPool().catch(console.error);
+// ===== MIDDLEWARE SETUP =====
+
+// Body parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Session configuration
 app.use(session({
-  secret: 'sakila-secret-key-change-in-production',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: false, // Set to true in production with HTTPS
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
+    secret: process.env.SESSION_SECRET || 'sakila-app-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { 
+        secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+        maxAge: 15 * 60 * 1000 // 15 minutes
+    }
 }));
 
-// Middleware voor parsing van request bodies
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Static files (CSS, JS, images)
-app.use(express.static(path.join(__dirname, 'public')));
-
-// View engine instellen (EJS)
+// View engine setup (EJS templates)
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+app.set('views', path.join(__dirname, 'src', 'views'));
 
-// Create controller instances
+// Static files serving
+app.use(express.static(path.join(__dirname, 'src', 'public')));
+
+// ===== CONTROLLER INSTANCES =====
+
 const homeController = new HomeController();
 const authController = new AuthController();
+const customerController = new CustomerController();
+
+// ===== UTILITY ROUTES =====
+
+// Favicon route (prevent 404 errors)
+app.get('/favicon.ico', (req, res) => {
+  res.status(204).end();
+});
+
+// ===== MAIN APPLICATION ROUTES =====
+
+// Home routes
+app.get('/', authMiddleware.optionalAuth, homeController.index.bind(homeController));
+app.get('/home', authMiddleware.optionalAuth, homeController.index.bind(homeController));
 
 // Authentication routes
-app.get('/login', (req, res) => authController.showLogin(req, res));
-app.post('/login', (req, res) => authController.login(req, res));
-app.get('/register', (req, res) => authController.showRegister(req, res));
-app.post('/register', (req, res) => authController.register(req, res));
-app.post('/logout', (req, res) => authController.logout(req, res));
-app.get('/dashboard', (req, res) => authController.showDashboard(req, res));
+app.get('/login', authController.showLogin.bind(authController));
+app.post('/login', authController.login.bind(authController));
+app.get('/register', authController.showRegister.bind(authController));
+app.post('/register', authController.register.bind(authController));
+app.post('/logout', authController.logout.bind(authController));
 
-// Routes
-// Favicon route to prevent 404
-app.get('/favicon.ico', (req, res) => res.status(204).end());
+// Dashboard route (redirects based on user type)
+app.get('/dashboard', authMiddleware.requireAuthWeb, homeController.dashboard.bind(homeController));
 
-// Home route via controller with optional auth
-app.get('/', optionalAuth, (req, res) => homeController.index(req, res));
+// ===== API ROUTES =====
 
-// Feature routes using src structure
-app.use('/customers', customerRoutes);
+// Cities API endpoint for forms
+app.get('/api/cities', async (req, res) => {
+  try {
+    const BaseDAO = require('./src/dao/BaseDAO');
+    const baseDAO = new BaseDAO();
+    
+    const cities = await baseDAO.query('SELECT city_id, city FROM city ORDER BY city');
+    
+    res.json({
+      success: true,
+      cities: cities
+    });
+  } catch (error) {
+    console.error('Error fetching cities:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch cities'
+    });
+  }
+});
+
+// ===== FEATURE ROUTES =====
+
+// Film management routes
 app.use('/films', filmRoutes);
-app.use('/admin', adminRoutes);
 
-// Error handling middleware (must be last)
-app.use(notFound);
-app.use(errorHandler);
+// Customer management routes (both staff and customer functionality)
+app.use('/customer', customerRoutes);
 
-// Create HTTP server
-const server = http.createServer(app);
+// Staff routes (protected for staff/admin)
+app.use('/staff', staffRoutes);
 
-// Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  await databaseConfig.close();
-  server.close(() => {
-    console.log('HTTP server closed');
-    process.exit(0);
-  });
+// Admin panel routes (protected)
+app.use('/admin', authMiddleware.requireAdminWeb, adminRoutes);
+
+// ===== ERROR HANDLING =====
+
+// 404 handler (must be after all routes)
+app.use(errorMiddleware.notFound);
+
+// Global error handler (must be last)
+app.use(errorMiddleware.errorHandler);
+
+// ===== SERVER STARTUP =====
+
+const server = app.listen(port, () => {
+    console.log(`Sakila App server is running on http://localhost:${port}`);
+    console.log(`Views directory: ${path.join(__dirname, 'src', 'views')}`);
+    console.log(`Static files: ${path.join(__dirname, 'src', 'public')}`);
 });
 
-process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully');
-  await databaseConfig.close();
-  server.close(() => {
-    console.log('HTTP server closed');
-    process.exit(0);
-  });
+// ===== GRACEFUL SHUTDOWN =====
+
+process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully');
+    server.close(() => {
+        console.log('Process terminated');
+    });
 });
 
-server.listen(port, hostname, () => {
-  console.log(`Sakila App server draait op http://${hostname}:${port}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log('Architecture: DAO -> Services -> Controllers -> Views added to the project structure');
+process.on('SIGINT', () => {
+    console.log('SIGINT received, shutting down gracefully');
+    server.close(() => {
+        console.log('Process terminated');
+    });
 });
-
-module.exports = app;

@@ -64,17 +64,17 @@ class CustomerDAO extends BaseDAO {
   }
 
   /**
-   * Get customers with rental statistics for staff dashboard
+   * Get customers with detailed information and statistics
    */
   async getCustomersWithStats(search = '', page = 1, limit = 20) {
     const offset = (page - 1) * limit;
     let whereClause = 'WHERE c.active = 1';
-    let searchParams = [];
+    let params = [];
 
     if (search) {
       whereClause += ` AND (c.first_name LIKE ? OR c.last_name LIKE ? OR c.email LIKE ?)`;
       const searchPattern = `%${search}%`;
-      searchParams = [searchPattern, searchPattern, searchPattern];
+      params.push(searchPattern, searchPattern, searchPattern);
     }
 
     const sql = `
@@ -83,23 +83,59 @@ class CustomerDAO extends BaseDAO {
         c.first_name,
         c.last_name,
         c.email,
-        c.store_id,
-        c.active,
+        c.username,
         c.create_date,
-        COUNT(r.rental_id) as total_rentals,
-        COUNT(CASE WHEN r.return_date IS NULL THEN 1 END) as active_rentals,
-        MAX(r.rental_date) as last_rental,
-        SUM(p.amount) as total_spent
+        c.last_update,
+        c.active,
+        a.address,
+        a.district,
+        a.phone,
+        ci.city,
+        co.country,
+        s.store_id,
+        COUNT(DISTINCT r.rental_id) as total_rentals,
+        COUNT(DISTINCT CASE WHEN r.return_date IS NULL THEN r.rental_id END) as active_rentals,
+        COALESCE(SUM(p.amount), 0) as total_payments
       FROM customer c
+      LEFT JOIN address a ON c.address_id = a.address_id
+      LEFT JOIN city ci ON a.city_id = ci.city_id
+      LEFT JOIN country co ON ci.country_id = co.country_id
+      LEFT JOIN store s ON c.store_id = s.store_id
       LEFT JOIN rental r ON c.customer_id = r.customer_id
       LEFT JOIN payment p ON r.rental_id = p.rental_id
       ${whereClause}
-      GROUP BY c.customer_id
+      GROUP BY c.customer_id, c.first_name, c.last_name, c.email, c.username, 
+               c.create_date, c.last_update, c.active, a.address, a.district, 
+               a.phone, ci.city, co.country, s.store_id
       ORDER BY c.last_name, c.first_name
       LIMIT ? OFFSET ?
     `;
 
-    return await this.query(sql, [...searchParams, limit, offset]);
+    return await this.query(sql, [...params, limit, offset]);
+  }
+
+  /**
+   * Get customer count for pagination
+   */
+  async getSearchCustomersCount(search = '') {
+    let whereClause = 'WHERE c.active = 1';
+    let params = [];
+
+    if (search) {
+      whereClause += ` AND (c.first_name LIKE ? OR c.last_name LIKE ? OR c.email LIKE ?)`;
+      const searchPattern = `%${search}%`;
+      params.push(searchPattern, searchPattern, searchPattern);
+    }
+
+    const sql = `
+      SELECT COUNT(DISTINCT c.customer_id) as count
+      FROM customer c
+      LEFT JOIN address a ON c.address_id = a.address_id
+      ${whereClause}
+    `;
+
+    const results = await this.query(sql, params);
+    return results[0].count;
   }
 
   /**
@@ -109,54 +145,425 @@ class CustomerDAO extends BaseDAO {
     const sql = `
       SELECT 
         COUNT(*) as total_customers,
-        COUNT(CASE WHEN active = 1 THEN 1 END) as active_customers,
-        COUNT(CASE WHEN active = 0 THEN 1 END) as inactive_customers
-      FROM customer
+        COUNT(CASE WHEN c.active = 1 THEN 1 END) as active_customers,
+        COUNT(CASE WHEN c.active = 0 THEN 1 END) as inactive_customers,
+        COUNT(CASE WHEN c.create_date >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 END) as new_customers_30_days
+      FROM customer c
     `;
-    
-    const result = await this.query(sql);
-    return result[0];
+
+    const results = await this.query(sql);
+    return results[0];
   }
 
   /**
-   * Search customers count for pagination
+   * Get customer details with rental history
    */
-  async getSearchCustomersCount(search = '') {
-    let whereClause = 'WHERE active = 1';
-    let searchParams = [];
-
-    if (search) {
-      whereClause += ` AND (first_name LIKE ? OR last_name LIKE ? OR email LIKE ?)`;
-      const searchPattern = `%${search}%`;
-      searchParams = [searchPattern, searchPattern, searchPattern];
-    }
-
-    const sql = `SELECT COUNT(*) as count FROM customer ${whereClause}`;
-    const result = await this.query(sql, searchParams);
-    return result[0].count;
-  }
-
-  /**
-   * Get customer with address details
-   */
-  async getCustomerWithAddress(customerId) {
-    const sql = `
+  async getCustomerWithRentalHistory(customerId) {
+    const customerSql = `
       SELECT 
         c.*,
         a.address,
         a.district,
         a.phone,
         ci.city,
-        co.country
+        co.country,
+        s.store_id
       FROM customer c
       LEFT JOIN address a ON c.address_id = a.address_id
       LEFT JOIN city ci ON a.city_id = ci.city_id
       LEFT JOIN country co ON ci.country_id = co.country_id
+      LEFT JOIN store s ON c.store_id = s.store_id
       WHERE c.customer_id = ?
     `;
+
+    const rentalsSql = `
+      SELECT 
+        r.rental_id,
+        r.rental_date,
+        r.return_date,
+        f.title as film_title,
+        f.rating,
+        p.amount as payment_amount,
+        p.payment_date,
+        s.first_name as staff_first_name,
+        s.last_name as staff_last_name
+      FROM rental r
+      JOIN inventory i ON r.inventory_id = i.inventory_id
+      JOIN film f ON i.film_id = f.film_id
+      LEFT JOIN payment p ON r.rental_id = p.rental_id
+      LEFT JOIN staff s ON r.staff_id = s.staff_id
+      WHERE r.customer_id = ?
+      ORDER BY r.rental_date DESC
+      LIMIT 20
+    `;
+
+    const [customer, rentals] = await Promise.all([
+      this.query(customerSql, [customerId]).then(results => results[0] || null),
+      this.query(rentalsSql, [customerId])
+    ]);
+
+    return {
+      customer,
+      rentals
+    };
+  }
+
+  /**
+   * Update customer information
+   */
+  async updateCustomer(customerId, customerData) {
+    try {
+      console.log('CustomerDAO updateCustomer - ID:', customerId, 'Data:', customerData);
+      
+      const fields = [];
+      const values = [];
+
+      // Define valid customer table columns (only fields that actually exist in Sakila customer table)
+      const validColumns = ['first_name', 'last_name', 'email', 'username', 'password', 'active'];
+
+      for (const [key, value] of Object.entries(customerData)) {
+        if (value !== undefined && validColumns.includes(key)) {
+          // Convert boolean to 0/1 for MySQL
+          let dbValue = value;
+          if (typeof value === 'boolean') {
+            dbValue = value ? 1 : 0;
+          }
+          
+          fields.push(`${key} = ?`);
+          values.push(dbValue);
+        } else if (value !== undefined && !validColumns.includes(key)) {
+          console.log(`CustomerDAO updateCustomer - Skipping invalid column: ${key}`);
+        }
+      }
+
+      if (fields.length === 0) {
+        console.log('CustomerDAO updateCustomer - No valid fields to update');
+        return {
+          success: false,
+          message: 'No valid fields to update'
+        };
+      }
+
+      fields.push('last_update = NOW()');
+      values.push(customerId);
+
+      const sql = `
+        UPDATE customer 
+        SET ${fields.join(', ')}
+        WHERE customer_id = ?
+      `;
+
+      console.log('CustomerDAO updateCustomer - SQL:', sql);
+      console.log('CustomerDAO updateCustomer - Values:', values);
+
+      const result = await this.query(sql, values);
+      console.log('CustomerDAO updateCustomer - Result:', result);
+      
+      const success = result.affectedRows > 0;
+      const message = success ? 'Customer updated successfully' : 'No customer updated - customer not found or no changes made';
+      
+      console.log('CustomerDAO updateCustomer - Final result:', { success, message });
+      
+      return { success, message };
+    } catch (error) {
+      console.error('CustomerDAO updateCustomer error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to update customer'
+      };
+    }
+  }
+
+  /**
+   * Update customer and address information together
+   */
+  async updateCustomerAndAddress(customerId, customerData, addressData) {
+    const connection = await this.db.getConnection();
     
-    const results = await this.query(sql, [customerId]);
-    return results.length > 0 ? results[0] : null;
+    try {
+      await connection.beginTransaction();
+
+      // First get the customer's address_id
+      const getAddressIdSql = 'SELECT address_id FROM customer WHERE customer_id = ?';
+      const [customerResult] = await connection.execute(getAddressIdSql, [customerId]);
+      
+      if (!customerResult.length) {
+        throw new Error('Customer not found');
+      }
+      
+      const addressId = customerResult[0].address_id;
+
+      // Update customer table if customerData provided
+      if (customerData && Object.keys(customerData).length > 0) {
+        const customerFields = [];
+        const customerValues = [];
+
+        for (const [key, value] of Object.entries(customerData)) {
+          if (value !== undefined) {
+            customerFields.push(`${key} = ?`);
+            customerValues.push(value);
+          }
+        }
+
+        if (customerFields.length > 0) {
+          customerFields.push('last_update = NOW()');
+          customerValues.push(customerId);
+
+          const customerSql = `
+            UPDATE customer 
+            SET ${customerFields.join(', ')}
+            WHERE customer_id = ?
+          `;
+
+          await connection.execute(customerSql, customerValues);
+        }
+      }
+
+      // Update address table if addressData provided
+      if (addressData && Object.keys(addressData).length > 0) {
+        const addressFields = [];
+        const addressValues = [];
+
+        for (const [key, value] of Object.entries(addressData)) {
+          if (value !== undefined) {
+            addressFields.push(`${key} = ?`);
+            addressValues.push(value);
+          }
+        }
+
+        if (addressFields.length > 0) {
+          addressFields.push('last_update = NOW()');
+          addressValues.push(addressId);
+
+          const addressSql = `
+            UPDATE address 
+            SET ${addressFields.join(', ')}
+            WHERE address_id = ?
+          `;
+
+          await connection.execute(addressSql, addressValues);
+        }
+      }
+
+      await connection.commit();
+      
+      return { affectedRows: 1 };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Get customers by store
+   */
+  async getCustomersByStore(storeId) {
+    const sql = `
+      SELECT 
+        c.customer_id,
+        c.first_name,
+        c.last_name,
+        c.email,
+        c.active,
+        COUNT(r.rental_id) as total_rentals
+      FROM customer c
+      LEFT JOIN rental r ON c.customer_id = r.customer_id
+      WHERE c.store_id = ?
+      GROUP BY c.customer_id, c.first_name, c.last_name, c.email, c.active
+      ORDER BY c.last_name, c.first_name
+    `;
+
+    return await this.query(sql, [storeId]);
+  }
+
+  /**
+   * Get top customers by rental count
+   */
+  async getTopCustomers(limit = 10) {
+    const sql = `
+      SELECT 
+        c.customer_id,
+        c.first_name,
+        c.last_name,
+        c.email,
+        COUNT(r.rental_id) as total_rentals,
+        COALESCE(SUM(p.amount), 0) as total_spent
+      FROM customer c
+      LEFT JOIN rental r ON c.customer_id = r.customer_id
+      LEFT JOIN payment p ON r.rental_id = p.rental_id
+      WHERE c.active = 1
+      GROUP BY c.customer_id, c.first_name, c.last_name, c.email
+      ORDER BY total_rentals DESC, total_spent DESC
+      LIMIT ?
+    `;
+
+    return await this.query(sql, [limit]);
+  }
+
+  /**
+   * Get customer with detailed information by ID
+   */
+  async getCustomerWithDetails(customerId) {
+    const sql = `
+      SELECT 
+        c.customer_id,
+        c.store_id,
+        c.first_name,
+        c.last_name,
+        c.email,
+        c.username,
+        c.create_date,
+        c.last_update,
+        c.active,
+        a.address,
+        a.district,
+        a.postal_code,
+        a.phone,
+        ci.city,
+        co.country,
+        COUNT(DISTINCT r.rental_id) as total_rentals,
+        COUNT(DISTINCT CASE WHEN r.return_date IS NULL THEN r.rental_id END) as active_rentals,
+        COALESCE(SUM(p.amount), 0) as total_payments
+      FROM customer c
+      LEFT JOIN address a ON c.address_id = a.address_id
+      LEFT JOIN city ci ON a.city_id = ci.city_id
+      LEFT JOIN country co ON ci.country_id = co.country_id
+      LEFT JOIN rental r ON c.customer_id = r.customer_id
+      LEFT JOIN payment p ON r.rental_id = p.rental_id
+      WHERE c.customer_id = ?
+      GROUP BY c.customer_id
+    `;
+
+    const rows = await this.query(sql, [customerId]);
+    return rows.length > 0 ? rows[0] : null;
+  }
+
+  /**
+   * Check if username exists for a different customer
+   */
+  async findByUsername(username, excludeCustomerId = null) {
+    let sql = 'SELECT customer_id, username FROM customer WHERE username = ?';
+    let params = [username];
+    
+    if (excludeCustomerId) {
+      sql += ' AND customer_id != ?';
+      params.push(excludeCustomerId);
+    }
+    
+    const result = await this.query(sql, params);
+    return result[0] || null;
+  }
+
+  /**
+   * Search customers (basic - voor staff interface)
+   */
+  async searchCustomersBasic(query) {
+    try {
+      const sql = `
+        SELECT 
+          customer_id,
+          first_name,
+          last_name,
+          email,
+          active,
+          create_date,
+          CONCAT(first_name, ' ', last_name) as full_name
+        FROM customer
+        WHERE active = 1
+          AND (
+            first_name LIKE ? OR 
+            last_name LIKE ? OR 
+            email LIKE ? OR
+            CONCAT(first_name, ' ', last_name) LIKE ?
+          )
+        ORDER BY last_name, first_name
+        LIMIT 20
+      `;
+      
+      const searchTerm = `%${query}%`;
+      return await this.query(sql, [searchTerm, searchTerm, searchTerm, searchTerm]);
+    } catch (error) {
+      console.error('CustomerDAO searchCustomersBasic error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all active customers (voor staff interface)
+   */
+  async getAllActiveCustomers() {
+    try {
+      const sql = `
+        SELECT 
+          customer_id,
+          first_name,
+          last_name,
+          email,
+          active,
+          create_date,
+          last_update,
+          CONCAT(first_name, ' ', last_name) as full_name
+        FROM customer
+        WHERE active = 1
+        ORDER BY last_name, first_name
+        LIMIT 500
+      `;
+      
+      return await this.query(sql);
+    } catch (error) {
+      console.error('CustomerDAO getAllActiveCustomers error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get active rentals for a customer
+   */
+  async getActiveRentals(customerId) {
+    try {
+      const sql = `
+        SELECT 
+          r.rental_id,
+          r.rental_date,
+          r.return_date,
+          r.return_date,
+          f.film_id,
+          f.title,
+          i.inventory_id
+        FROM rental r
+        JOIN inventory i ON r.inventory_id = i.inventory_id
+        JOIN film f ON i.film_id = f.film_id
+        WHERE r.customer_id = ? AND r.return_date IS NULL
+        ORDER BY r.rental_date DESC
+      `;
+      
+      return await this.query(sql, [customerId]);
+    } catch (error) {
+      console.error('CustomerDAO getActiveRentals error:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Delete customer (soft delete by setting active = 0)
+   */
+  async deleteCustomer(customerId) {
+    try {
+      // In Sakila, we typically don't hard delete customers due to rental history
+      // Instead, we set them as inactive
+      const sql = `
+        UPDATE customer 
+        SET active = 0, last_update = NOW()
+        WHERE customer_id = ?
+      `;
+      
+      return await this.query(sql, [customerId]);
+    } catch (error) {
+      console.error('CustomerDAO deleteCustomer error:', error);
+      throw error;
+    }
   }
 }
 

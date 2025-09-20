@@ -1,0 +1,113 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <i class="bi bi-film"></i>
+            <strong>Sakila App</strong>
+        </a>
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/">
+                        <i class="bi bi-house"></i> Home
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/films">
+                        <i class="bi bi-collection-play"></i> Films
+                    </a>
+                </li>
+                <% if (typeof user !== 'undefined' && user) { %>
+                    <% if (user.userType === 'staff' || user.userType === 'owner') { %>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/customer">
+                                <i class="bi bi-people"></i> Klanten
+                            </a>
+                        </li>
+                    <% } %>
+                    <% if (user.userType === 'owner') { %>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-gear"></i> Beheer
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="/admin/staff">
+                                    <i class="bi bi-person-badge"></i> Personeel
+                                </a></li>
+                                <li><a class="dropdown-item" href="/admin/reports">
+                                    <i class="bi bi-graph-up"></i> Rapporten
+                                </a></li>
+                                <li><a class="dropdown-item" href="/admin/inventory">
+                                    <i class="bi bi-box"></i> Voorraad
+                                </a></li>
+                            </ul>
+                        </li>
+                    <% } %>
+                <% } %>
+            </ul>
+            
+            <ul class="navbar-nav">
+                <% if (typeof user !== 'undefined' && user) { %>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-person-circle"></i>
+                            <%= user.first_name || user.fullName || user.full_name || user.username %>
+                            <% if (user.userType) { %>
+                                <span class="badge bg-secondary ms-1"><%= user.userType %></span>
+                            <% } %>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <% if (user.role === 'customer') { %>
+                                <li><a class="dropdown-item" href="/dashboard">
+                                    <i class="bi bi-speedometer2"></i> Dashboard
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dashboard#profile">
+                                    <i class="bi bi-person-gear"></i> Profiel
+                                </a></li>
+                            <% } else if (user.role === 'staff' || user.role === 'admin') { %>
+                                <li><a class="dropdown-item" href="/staff/dashboard">
+                                    <i class="bi bi-speedometer2"></i> Staff Dashboard
+                                </a></li>
+                                <li><a class="dropdown-item" href="/staff/customers">
+                                    <i class="bi bi-people"></i> Klanten Beheer
+                                </a></li>
+                                <li><a class="dropdown-item" href="/staff/rental-management">
+                                    <i class="bi bi-box-arrow-right"></i> Verhuur Beheer
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <% if (user.role === 'admin') { %>
+                                    <li><a class="dropdown-item" href="/admin/dashboard">
+                                        <i class="bi bi-shield-check"></i> Admin Panel
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                <% } %>
+                            <% } %>
+                            <li>
+                                <form method="POST" action="/logout" class="d-inline">
+                                    <button type="submit" class="dropdown-item text-danger">
+                                        <i class="bi bi-box-arrow-right"></i> Uitloggen
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                <% } else { %>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/login">
+                            <i class="bi bi-box-arrow-in-right"></i> Inloggen
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/register">
+                            <i class="bi bi-person-plus"></i> Registreren
+                        </a>
+                    </li>
+                <% } %>
+            </ul>
+        </div>
+    </div>
+</nav>

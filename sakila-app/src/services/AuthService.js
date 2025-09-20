@@ -1,39 +1,91 @@
-const bcrypt = require('bcrypt');
-const { v4: uuidv4 } = require('uuid');
+const bcrypt = require('bcryptjs');
 const UserDAO = require('../dao/UserDAO');
-const CustomerDAO = require('../dao/CustomerDAO');
-const SessionDAO = require('../dao/SessionDAO');
+const JWTService = require('./JWTService');
 
-/**
- * Service for authentication and user management
- */
 class AuthService {
   constructor() {
     this.userDAO = new UserDAO();
-    this.customerDAO = new CustomerDAO();
-    this.sessionDAO = new SessionDAO();
-    this.saltRounds = 10;
-    this.sessionDuration = 24 * 60 * 60 * 1000; // 24 hours
+    this.jwtService = new JWTService();
   }
 
-  /**
-   * Hash password
-   */
-  async hashPassword(password) {
+  async authenticateUser(usernameOrEmail, password) {
     try {
-      return await bcrypt.hash(password, this.saltRounds);
-    } catch (error) {
-      console.error('Password hashing error:', error);
-      throw new Error('Failed to hash password');
+      console.log('Attempting login with:', usernameOrEmail);
+      
+      // Try to find user by username first, then by email
+      let user = await this.userDAO.findByUsername(usernameOrEmail);
+      if (!user) {
+        console.log('Username not found, trying email...');
+        user = await this.userDAO.findByEmail(usernameOrEmail);
+      }
+      
+      if (!user) {
+        console.log('User not found:', usernameOrEmail);
+        return { success: false, error: 'Ongeldige gebruikersnaam/email of wachtwoord' };
+      }
+
+      console.log('User found:', user.username, 'Type:', user.user_type);
+
+      // Verify password using bcryptjs
+      const isValidPassword = await this.verifyPassword(password, user.password);
+      if (!isValidPassword) {
+        console.log('Invalid password for:', user.username);
+        return { success: false, error: 'Ongeldige gebruikersnaam/email of wachtwoord' };
+      }
+
+      console.log('Password verified for:', user.username);
+
+      const { password: _, ...userWithoutPassword } = user;
+      
+      console.log('User data from database:', userWithoutPassword);
+      
+      // Map user_type to role for consistency
+      if (userWithoutPassword.user_type === 'staff' && userWithoutPassword.username === 'Mike') {
+        userWithoutPassword.role = 'admin'; // Mike is the admin/owner
+        console.log('Mike mapped to admin role');
+      } else if (userWithoutPassword.user_type === 'staff') {
+        userWithoutPassword.role = 'staff';
+        console.log('Staff user mapped to staff role');
+      } else if (userWithoutPassword.user_type === 'customer') {
+        userWithoutPassword.role = 'customer';
+        console.log('Customer user mapped to customer role');
+      }
+
+      // Generate JWT token
+      let token;
+      try {
+        if (userWithoutPassword.user_type === 'customer') {
+          token = this.jwtService.generateCustomerToken(userWithoutPassword);
+        } else if (userWithoutPassword.user_type === 'staff') {
+          token = this.jwtService.generateStaffToken(userWithoutPassword);
+        } else {
+          token = this.jwtService.generateToken(userWithoutPassword);
+        }
+      } catch (tokenError) {
+        console.error('Token generation failed:', tokenError);
+        return { success: false, error: 'Er is een fout opgetreden bij het inloggen' };
+      }
+      
+      console.log('Final user object:', userWithoutPassword);
+      
+      return { 
+        success: true, 
+        user: userWithoutPassword, 
+        token: token,
+        message: 'Login successful' 
+      };
+    } catch (err) {
+      console.error('authenticateUser error:', err);
+      return { success: false, error: 'Authenticatie mislukt' };
     }
   }
 
   /**
-   * Verify password
+   * Verify password using bcryptjs
    */
-  async verifyPassword(password, hashedPassword) {
+  async verifyPassword(plainPassword, hashedPassword) {
     try {
-      return await bcrypt.compare(password, hashedPassword);
+      return await bcrypt.compare(plainPassword, hashedPassword);
     } catch (error) {
       console.error('Password verification error:', error);
       return false;
@@ -41,178 +93,157 @@ class AuthService {
   }
 
   /**
-   * Authenticate user
+   * Hash password using bcryptjs
    */
-  async authenticateUser(usernameOrEmail, password) {
+  async hashPassword(password) {
     try {
-      const user = await this.userDAO.findByUsernameOrEmail(usernameOrEmail);
+      const saltRounds = 12;
+      return await bcrypt.hash(password, saltRounds);
+    } catch (error) {
+      console.error('Password hashing error:', error);
+      throw new Error('Password hashing failed');
+    }
+  }
+
+  async registerCustomer(userData) {
+    try {
+      const existingUser = await this.userDAO.findByUsername(userData.username);
+      if (existingUser) return { success: false, message: 'Username already exists' };
+
+      const existingEmail = await this.userDAO.findByEmail(userData.email);
+      if (existingEmail) return { success: false, message: 'Email already exists' };
+
+      const hashedPassword = await this.hashPassword(userData.password);
+      const result = await this.userDAO.createCustomer({
+        ...userData,
+        password: hashedPassword,
+        active: true
+      });
+
+      return result.success
+        ? { success: true, customerId: result.customerId, message: 'Registration successful' }
+        : { success: false, message: 'Registration failed' };
+    } catch (err) {
+      console.error('registerCustomer error:', err);
+      return { success: false, message: 'Registration failed' };
+    }
+  }
+
+  async registerUser(userData) {
+    try {
+      // Generate username from email
+      const username = userData.email.split('@')[0];
       
-      if (!user) {
-        return { success: false, message: 'Gebruiker niet gevonden' };
-      }
+      // Check if username already exists
+      const existingUser = await this.userDAO.findByUsername(username);
+      if (existingUser) return { success: false, error: 'Gebruikersnaam al in gebruik' };
 
-      if (!user.active) {
-        return { success: false, message: 'Account is gedeactiveerd' };
-      }
+      // Check if email already exists
+      const existingEmail = await this.userDAO.findByEmail(userData.email);
+      if (existingEmail) return { success: false, error: 'Email al in gebruik' };
 
-      const isPasswordValid = await this.verifyPassword(password, user.password);
-      
-      if (!isPasswordValid) {
-        return { success: false, message: 'Onjuist wachtwoord' };
-      }
-
-      // Create session
-      const sessionId = uuidv4();
-      const expiresAt = new Date(Date.now() + this.sessionDuration);
-      
-      await this.sessionDAO.createSession(sessionId, user.user_id, user.user_type, expiresAt);
-
-      return {
-        success: true,
-        user: {
-          id: user.user_id,
-          type: user.user_type,
-          username: user.username,
-          fullName: user.full_name,
-          email: user.email,
-          storeId: user.store_id,
-          sessionId: sessionId
-        }
+      // Create customer data with provided address fields
+      const customerData = {
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        email: userData.email,
+        username: username,
+        password: userData.password, // Will be hashed in createCustomer
+        address: userData.address,
+        address2: userData.address2 || null,
+        district: userData.district,
+        city_id: userData.city_id,
+        postal_code: userData.postal_code || null,
+        phone: userData.phone,
+        store_id: userData.store_id || 1
       };
-    } catch (error) {
-      console.error('Authentication error:', error);
-      return { success: false, message: 'Er is een fout opgetreden bij het inloggen' };
+
+      const result = await this.userDAO.createCustomer(customerData);
+
+      return result.success
+        ? { success: true, customerId: result.customerId, message: 'Registration successful' }
+        : { success: false, error: 'Registratie mislukt' };
+    } catch (err) {
+      console.error('registerUser error:', err);
+      return { success: false, error: 'Er is een fout opgetreden bij de registratie' };
     }
   }
 
-  /**
-   * Get session and user details
-   */
-  async getSession(sessionId) {
-    try {
-      if (!sessionId) {
-        return null;
-      }
-
-      const sessionData = await this.sessionDAO.getSessionWithUser(sessionId);
-      
-      if (!sessionData) {
-        return null;
-      }
-
-      // Update last accessed time
-      await this.sessionDAO.updateLastAccessed(sessionId);
-
-      return {
-        id: sessionData.user_id,
-        type: sessionData.user_type,
-        username: sessionData.username,
-        fullName: sessionData.full_name,
-        email: sessionData.email,
-        storeId: sessionData.store_id,
-        sessionId: sessionData.session_id
-      };
-    } catch (error) {
-      console.error('Session retrieval error:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Destroy session (logout)
-   */
-  async destroySession(sessionId) {
-    try {
-      await this.sessionDAO.deleteSession(sessionId);
-      return true;
-    } catch (error) {
-      console.error('Session destruction error:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Register new customer
-   */
-  async registerCustomer(customerData) {
-    try {
-      const { firstName, lastName, email, username, password, storeId = 1, address } = customerData;
-      
-      // Check if username/email already exists
-      const usernameExists = await this.userDAO.usernameExists(username);
-      const emailExists = await this.userDAO.emailExists(email);
-
-      if (usernameExists) {
-        return { success: false, message: 'Gebruikersnaam bestaat al' };
-      }
-
-      if (emailExists) {
-        return { success: false, message: 'Email adres is al geregistreerd' };
-      }
-
-      const hashedPassword = await this.hashPassword(password);
-      
-      // Create customer with address
-      const result = await this.customerDAO.createCustomerWithAddress(
-        {
-          firstName,
-          lastName,
-          email,
-          username,
-          password: hashedPassword,
-          storeId
-        },
-        {
-          address: address || 'Customer Address',
-          district: 'District',
-          cityId: 1,
-          phone: '000-000-0000'
-        }
-      );
-
-      return { 
-        success: true, 
-        customerId: result.insertId,
-        message: 'Account succesvol aangemaakt' 
-      };
-    } catch (error) {
-      console.error('Customer registration error:', error);
-      return { success: false, message: 'Er is een fout opgetreden bij het aanmaken van het account' };
-    }
-  }
-
-  /**
-   * Clean expired sessions
-   */
-  async cleanExpiredSessions() {
-    try {
-      await this.sessionDAO.cleanExpiredSessions();
-    } catch (error) {
-      console.error('Session cleanup error:', error);
-    }
-  }
-
-  /**
-   * Get user by ID and type
-   */
   async getUserById(userId, userType) {
     try {
-      return await this.userDAO.findByIdAndType(userId, userType);
-    } catch (error) {
-      console.error('Get user by ID error:', error);
+      const user = await this.userDAO.findById(userId, userType);
+      if (!user) return null;
+      const { password, ...userWithoutPassword } = user;
+      return userWithoutPassword;
+    } catch (err) {
+      console.error('getUserById error:', err);
       return null;
     }
   }
 
-  /**
-   * Logout from all devices
-   */
-  async logoutAllDevices(userId, userType) {
+  async changePassword(userId, userType, currentPassword, newPassword) {
     try {
-      await this.sessionDAO.deleteUserSessions(userId, userType);
-      return true;
-    } catch (error) {
-      console.error('Logout all devices error:', error);
+      const user = await this.userDAO.findById(userId, userType);
+      if (!user) return { success: false, message: 'User not found' };
+
+      const valid = await bcrypt.compare(currentPassword, user.password);
+      if (!valid) return { success: false, message: 'Current password incorrect' };
+
+      const hashed = await bcrypt.hash(newPassword, 10);
+      const result = await this.userDAO.updatePassword(userId, userType, hashed);
+
+      return {
+        success: result.affectedRows > 0,
+        message: result.affectedRows > 0 ? 'Password changed' : 'Failed to change password'
+      };
+    } catch (err) {
+      console.error('changePassword error:', err);
+      return { success: false, message: 'Failed to change password' };
+    }
+  }
+
+  async updateProfile(userId, userType, profileData) {
+    try {
+      const result = await this.userDAO.updateProfile(userId, userType, profileData);
+      return {
+        success: result.affectedRows > 0,
+        message: result.affectedRows > 0 ? 'Profile updated' : 'Failed to update profile'
+      };
+    } catch (err) {
+      console.error('updateProfile error:', err);
+      return { success: false, message: 'Failed to update profile' };
+    }
+  }
+
+  async validatePermissions(userId, userType, requiredPermission) {
+    const perms = {
+      customer: ['view_films', 'rent_films', 'view_rentals'],
+      staff: ['view_films', 'rent_films', 'view_rentals', 'manage_customers', 'manage_inventory'],
+      owner: ['view_films', 'rent_films', 'view_rentals', 'manage_customers', 'manage_inventory', 'manage_staff', 'view_analytics']
+    };
+    return (perms[userType] || []).includes(requiredPermission);
+  }
+
+  async logoutUser() {
+    return { success: true, message: 'Logout successful' };
+  }
+
+  async isUserActive(userIdOrUsername, userType = null) {
+    try {
+      let user;
+      if (userType) {
+        // Called with userId and userType
+        user = await this.userDAO.findById(userIdOrUsername, userType);
+      } else {
+        // Called with username only
+        user = await this.userDAO.findByUsername(userIdOrUsername);
+        if (!user) {
+          user = await this.userDAO.findByEmail(userIdOrUsername);
+        }
+      }
+      return user && user.active === 1;
+    } catch (err) {
+      console.error('isUserActive error:', err);
       return false;
     }
   }

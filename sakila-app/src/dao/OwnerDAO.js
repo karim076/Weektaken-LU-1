@@ -1,7 +1,7 @@
 const BaseDAO = require('./BaseDAO');
 
 /**
- * DAO for owner operations
+ * DAO for owner/admin operations
  */
 class OwnerDAO extends BaseDAO {
   constructor() {
@@ -9,7 +9,25 @@ class OwnerDAO extends BaseDAO {
   }
 
   /**
-   * Get all staff members with store assignments
+   * Get dashboard statistics for owners
+   */
+  async getDashboardStats() {
+    const sql = `
+      SELECT 
+        (SELECT COUNT(*) FROM customer WHERE active = 1) as total_customers,
+        (SELECT COUNT(*) FROM staff WHERE active = 1) as total_staff,
+        (SELECT COUNT(*) FROM film) as total_films,
+        (SELECT COUNT(*) FROM store) as total_stores,
+        (SELECT COUNT(*) FROM rental WHERE return_date IS NULL) as active_rentals,
+        (SELECT COALESCE(SUM(amount), 0) FROM payment WHERE payment_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)) as revenue_30_days
+    `;
+
+    const results = await this.query(sql);
+    return results[0];
+  }
+
+  /**
+   * Get all staff with store assignments
    */
   async getStaffWithStoreAssignments() {
     const sql = `
@@ -20,11 +38,16 @@ class OwnerDAO extends BaseDAO {
         s.email,
         s.username,
         s.active,
-        s.store_id as primary_store_id,
-        GROUP_CONCAT(ss.store_id ORDER BY ss.store_id) as assigned_stores
+        s.store_id,
+        st.store_id as assigned_store,
+        a.address as staff_address,
+        a.phone as staff_phone,
+        ss.assigned_at,
+        ss.active as assignment_active
       FROM staff s
-      LEFT JOIN store_staff ss ON s.staff_id = ss.staff_id AND ss.active = 1
-      GROUP BY s.staff_id
+      LEFT JOIN address a ON s.address_id = a.address_id
+      LEFT JOIN store st ON s.store_id = st.store_id
+      LEFT JOIN store_staff ss ON s.staff_id = ss.staff_id
       ORDER BY s.last_name, s.first_name
     `;
 
@@ -32,17 +55,27 @@ class OwnerDAO extends BaseDAO {
   }
 
   /**
-   * Get staff member by ID with store assignments
+   * Get staff member with assignments
    */
   async getStaffWithAssignments(staffId) {
     const sql = `
       SELECT 
         s.*,
-        GROUP_CONCAT(ss.store_id ORDER BY ss.store_id) as assigned_stores
+        a.address,
+        a.district,
+        a.phone,
+        ci.city,
+        co.country,
+        GROUP_CONCAT(DISTINCT st.store_id) as assigned_stores
       FROM staff s
+      LEFT JOIN address a ON s.address_id = a.address_id
+      LEFT JOIN city ci ON a.city_id = ci.city_id
+      LEFT JOIN country co ON ci.country_id = co.country_id
       LEFT JOIN store_staff ss ON s.staff_id = ss.staff_id AND ss.active = 1
+      LEFT JOIN store st ON ss.store_id = st.store_id
       WHERE s.staff_id = ?
-      GROUP BY s.staff_id
+      GROUP BY s.staff_id, s.first_name, s.last_name, s.email, s.username, 
+               s.active, a.address, a.district, a.phone, ci.city, co.country
     `;
 
     const results = await this.query(sql, [staffId]);
@@ -53,20 +86,56 @@ class OwnerDAO extends BaseDAO {
    * Create new staff member
    */
   async createStaff(staffData) {
-    const sql = `
-      INSERT INTO staff (first_name, last_name, email, username, password, store_id, active)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `;
+    const connection = await this.db.getConnection();
+    
+    try {
+      await connection.beginTransaction();
 
-    return await this.query(sql, [
-      staffData.firstName,
-      staffData.lastName,
-      staffData.email,
-      staffData.username,
-      staffData.password,
-      staffData.storeId,
-      staffData.active ?? true
-    ]);
+      // Create address first (using default address for simplicity)
+      const addressSql = `
+        INSERT INTO address (address, district, city_id, phone, location)
+        VALUES (?, ?, ?, ?, POINT(0, 0))
+      `;
+      
+      const [addressResult] = await connection.execute(addressSql, [
+        'Staff Address',
+        'Staff District',
+        1, // Default city
+        staffData.phone || '000-000-0000'
+      ]);
+
+      const addressId = addressResult.insertId;
+
+      // Create staff member
+      const staffSql = `
+        INSERT INTO staff (first_name, last_name, email, username, password, address_id, store_id, active)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      const [staffResult] = await connection.execute(staffSql, [
+        staffData.firstName,
+        staffData.lastName,
+        staffData.email,
+        staffData.username,
+        staffData.password,
+        addressId,
+        staffData.storeId,
+        staffData.active
+      ]);
+
+      await connection.commit();
+      
+      return {
+        insertId: staffResult.insertId,
+        addressId: addressId,
+        affectedRows: staffResult.affectedRows
+      };
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 
   /**
@@ -76,42 +145,26 @@ class OwnerDAO extends BaseDAO {
     const fields = [];
     const values = [];
 
-    if (staffData.firstName) {
-      fields.push('first_name = ?');
-      values.push(staffData.firstName);
-    }
-    if (staffData.lastName) {
-      fields.push('last_name = ?');
-      values.push(staffData.lastName);
-    }
-    if (staffData.email) {
-      fields.push('email = ?');
-      values.push(staffData.email);
-    }
-    if (staffData.username) {
-      fields.push('username = ?');
-      values.push(staffData.username);
-    }
-    if (staffData.password) {
-      fields.push('password = ?');
-      values.push(staffData.password);
-    }
-    if (staffData.storeId) {
-      fields.push('store_id = ?');
-      values.push(staffData.storeId);
-    }
-    if (staffData.active !== undefined) {
-      fields.push('active = ?');
-      values.push(staffData.active);
+    for (const [key, value] of Object.entries(staffData)) {
+      if (value !== undefined) {
+        fields.push(`${key} = ?`);
+        values.push(value);
+      }
     }
 
     if (fields.length === 0) {
       throw new Error('No fields to update');
     }
 
+    fields.push('last_update = NOW()');
     values.push(staffId);
-    const sql = `UPDATE staff SET ${fields.join(', ')} WHERE staff_id = ?`;
-    
+
+    const sql = `
+      UPDATE staff 
+      SET ${fields.join(', ')}
+      WHERE staff_id = ?
+    `;
+
     return await this.query(sql, values);
   }
 
@@ -120,8 +173,8 @@ class OwnerDAO extends BaseDAO {
    */
   async assignStaffToStore(staffId, storeId, assignedBy) {
     const sql = `
-      INSERT INTO store_staff (store_id, staff_id, assigned_by, active)
-      VALUES (?, ?, ?, 1)
+      INSERT INTO store_staff (store_id, staff_id, assigned_by, assigned_at, active)
+      VALUES (?, ?, ?, NOW(), 1)
       ON DUPLICATE KEY UPDATE active = 1, assigned_at = NOW()
     `;
 
@@ -147,17 +200,18 @@ class OwnerDAO extends BaseDAO {
   async getAllStores() {
     const sql = `
       SELECT 
-        s.store_id,
-        s.manager_staff_id,
-        CONCAT(st.first_name, ' ', st.last_name) as manager_name,
+        s.*,
         a.address,
-        c.city,
-        co.country
+        a.district,
+        a.phone,
+        ci.city,
+        co.country,
+        CONCAT(staff.first_name, ' ', staff.last_name) as manager_name
       FROM store s
-      LEFT JOIN staff st ON s.manager_staff_id = st.staff_id
       LEFT JOIN address a ON s.address_id = a.address_id
-      LEFT JOIN city c ON a.city_id = c.city_id
-      LEFT JOIN country co ON c.country_id = co.country_id
+      LEFT JOIN city ci ON a.city_id = ci.city_id
+      LEFT JOIN country co ON ci.country_id = co.country_id
+      LEFT JOIN staff ON s.manager_staff_id = staff.staff_id
       ORDER BY s.store_id
     `;
 
@@ -174,6 +228,7 @@ class OwnerDAO extends BaseDAO {
         s.first_name,
         s.last_name,
         s.email,
+        s.active as staff_active,
         CONCAT(o.first_name, ' ', o.last_name) as assigned_by_name
       FROM store_staff ss
       JOIN staff s ON ss.staff_id = s.staff_id
@@ -186,20 +241,69 @@ class OwnerDAO extends BaseDAO {
   }
 
   /**
-   * Get dashboard statistics for owner
+   * Get rental statistics
    */
-  async getDashboardStats() {
+  async getRentalStats(days = 30) {
     const sql = `
       SELECT 
-        (SELECT COUNT(*) FROM staff WHERE active = 1) as total_staff,
-        (SELECT COUNT(*) FROM store) as total_stores,
-        (SELECT COUNT(*) FROM customer WHERE active = 1) as total_customers,
-        (SELECT COUNT(*) FROM rental WHERE return_date IS NULL) as active_rentals,
-        (SELECT SUM(amount) FROM payment WHERE payment_date >= CURDATE()) as today_revenue
+        DATE(r.rental_date) as rental_date,
+        COUNT(*) as daily_rentals,
+        COALESCE(SUM(p.amount), 0) as daily_revenue
+      FROM rental r
+      LEFT JOIN payment p ON r.rental_id = p.rental_id
+      WHERE r.rental_date >= DATE_SUB(NOW(), INTERVAL ? DAY)
+      GROUP BY DATE(r.rental_date)
+      ORDER BY rental_date DESC
     `;
 
-    const result = await this.query(sql);
-    return result[0];
+    return await this.query(sql, [days]);
+  }
+
+  /**
+   * Get top performing films
+   */
+  async getTopFilms(limit = 10) {
+    const sql = `
+      SELECT 
+        f.film_id,
+        f.title,
+        f.rating,
+        f.rental_rate,
+        COUNT(r.rental_id) as rental_count,
+        COALESCE(SUM(p.amount), 0) as total_revenue
+      FROM film f
+      LEFT JOIN inventory i ON f.film_id = i.film_id
+      LEFT JOIN rental r ON i.inventory_id = r.inventory_id
+      LEFT JOIN payment p ON r.rental_id = p.rental_id
+      GROUP BY f.film_id, f.title, f.rating, f.rental_rate
+      ORDER BY rental_count DESC, total_revenue DESC
+      LIMIT ?
+    `;
+
+    return await this.query(sql, [limit]);
+  }
+
+  /**
+   * Get inventory summary
+   */
+  async getInventorySummary() {
+    const sql = `
+      SELECT 
+        s.store_id,
+        COUNT(DISTINCT i.film_id) as unique_films,
+        COUNT(i.inventory_id) as total_copies,
+        COUNT(CASE WHEN r.rental_id IS NOT NULL AND r.return_date IS NULL 
+              THEN i.inventory_id END) as rented_copies,
+        COUNT(CASE WHEN r.rental_id IS NULL OR r.return_date IS NOT NULL 
+              THEN i.inventory_id END) as available_copies
+      FROM store s
+      LEFT JOIN inventory i ON s.store_id = i.store_id
+      LEFT JOIN rental r ON i.inventory_id = r.inventory_id AND r.return_date IS NULL
+      GROUP BY s.store_id
+      ORDER BY s.store_id
+    `;
+
+    return await this.query(sql);
   }
 }
 
