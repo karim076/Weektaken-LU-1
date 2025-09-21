@@ -68,6 +68,9 @@ app.get('/favicon.ico', (req, res) => {
 
 // ===== MAIN APPLICATION ROUTES =====
 
+app.get('/index.html', (req, res) => {
+  res.redirect('/');
+});
 // Home routes
 app.get('/', authMiddleware.optionalAuth, homeController.index.bind(homeController));
 app.get('/home', authMiddleware.optionalAuth, homeController.index.bind(homeController));
