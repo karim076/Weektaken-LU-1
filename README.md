@@ -153,7 +153,7 @@ Als medewerker wil ik gedetailleerde klantinformatie kunnen bekijken, zodat ik k
 - Huidige status en openstaande verhuren
 - Snelle acties: nieuwe verhuur, profiel bewerken
 
-**US3.4 - Klant Aanmaken (Must)**  
+**US3.4 - Klant Aanmaken (Should)**  
 Als medewerker wil ik nieuwe klanten kunnen registreren, zodat zij gebruik kunnen maken van onze diensten.  
 **Acceptatiecriteria:**  
 - Uitgebreid registratieformulier met validatie
