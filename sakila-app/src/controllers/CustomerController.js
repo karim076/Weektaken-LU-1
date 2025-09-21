@@ -212,65 +212,95 @@ class CustomerController {
    * Update customer (US3E1)
    */
   update = (req, res) => {
-    try {
-      const customerId = req.params.id;
-      const { firstName, lastName, email, phone } = req.body;
+    const customerId = req.params.id;
+    const { firstName, lastName, email, phone } = req.body;
 
-      // Validation
-      if (!firstName || !lastName || !email) {
-        const customerResult = await this.customerService.getCustomerDetails(customerId);
+    // Validation
+    if (!firstName || !lastName || !email) {
+      this.customerService.getCustomerDetails(customerId, (error, customerResult) => {
+        if (error) {
+          console.error('Customer update validation error:', error);
+          return res.status(500).render('error', {
+            title: 'Server Fout',
+            status: 500,
+            message: 'Er is een fout opgetreden'
+          });
+        }
+        
         return res.render('staff/customer-edit', {
           title: 'Klant Bewerken',
           customer: customerResult.data,
           error: 'Verplichte velden: voornaam, achternaam en email',
           success: null
         });
-      }
-
-      const result = await this.customerService.updateCustomer(customerId, {
-        first_name: firstName,
-        last_name: lastName,
-        email,
-        phone
       });
+      return;
+    }
 
-      const customerResult = await this.customerService.getCustomerDetails(customerId);
+    const updateData = {
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      phone
+    };
 
-      if (!result.success) {
-        return res.render('staff/customer-edit', {
-          title: 'Klant Bewerken',
-          customer: customerResult.data,
-          error: result.message,
-          success: null
+    this.customerService.updateCustomer(customerId, updateData, (updateError, result) => {
+      if (updateError) {
+        console.error('Customer update error:', updateError);
+        return this.customerService.getCustomerDetails(customerId, (detailError, customerResult) => {
+          res.render('staff/customer-edit', {
+            title: 'Klant Bewerken',
+            customer: customerResult ? customerResult.data : {},
+            error: 'Er is een fout opgetreden bij het bijwerken van de klant',
+            success: null
+          });
         });
       }
 
-      res.render('staff/customer-edit', {
-        title: 'Klant Bewerken',
-        customer: customerResult.data,
-        error: null,
-        success: 'Klant succesvol bijgewerkt!'
+      this.customerService.getCustomerDetails(customerId, (detailError, customerResult) => {
+        if (detailError) {
+          console.error('Customer detail fetch error:', detailError);
+          return res.render('staff/customer-edit', {
+            title: 'Klant Bewerken',
+            customer: {},
+            error: 'Er is een fout opgetreden',
+            success: null
+          });
+        }
+
+        if (!result.success) {
+          return res.render('staff/customer-edit', {
+            title: 'Klant Bewerken',
+            customer: customerResult.data,
+            error: result.message,
+            success: null
+          });
+        }
+
+        res.render('staff/customer-edit', {
+          title: 'Klant Bewerken',
+          customer: customerResult.data,
+          error: null,
+          success: 'Klant succesvol bijgewerkt!'
+        });
       });
-    } catch (error) {
-      console.error('Customer update error:', error);
-      const customerResult = await this.customerService.getCustomerDetails(req.params.id);
-      res.render('staff/customer-edit', {
-        title: 'Klant Bewerken',
-        customer: customerResult.data || {},
-        error: 'Er is een fout opgetreden bij het bijwerken van de klant',
-        success: null
-      });
-    }
+    });
   };
 
   /**
    * Delete customer (US4E1)
    */
   delete = (req, res) => {
-    try {
-      const customerId = req.params.id;
+    const customerId = req.params.id;
 
-      const result = await this.customerService.deactivateCustomer(customerId);
+    this.customerService.deactivateCustomer(customerId, (error, result) => {
+      if (error) {
+        console.error('Customer delete error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Er is een fout opgetreden bij het verwijderen van de klant'
+        });
+      }
 
       if (!result.success) {
         return res.status(400).json({
@@ -283,23 +313,23 @@ class CustomerController {
         success: true,
         message: 'Klant succesvol gedeactiveerd'
       });
-    } catch (error) {
-      console.error('Customer delete error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Er is een fout opgetreden bij het verwijderen van de klant'
-      });
-    }
+    });
   };
 
   /**
    * Search customers (AJAX endpoint)
    */
   search = (req, res) => {
-    try {
-      const { q: searchTerm, page = 1 } = req.query;
+    const { q: searchTerm, page = 1 } = req.query;
 
-      const result = await this.customerService.searchCustomers(searchTerm, page, 20);
+    this.customerService.searchCustomers(searchTerm, page, 20, (error, result) => {
+      if (error) {
+        console.error('Customer search error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Er is een fout opgetreden bij het zoeken'
+        });
+      }
 
       if (!result.success) {
         return res.status(500).json({
@@ -312,13 +342,7 @@ class CustomerController {
         success: true,
         data: result.data
       });
-    } catch (error) {
-      console.error('Customer search error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Er is een fout opgetreden bij het zoeken'
-      });
-    }
+    });
   };
 
   /**
@@ -342,30 +366,40 @@ class CustomerController {
       }
       
       console.log('  Calling customerService.getCustomerById with ID:', customerId);
-      const customer = await this.customerService.getCustomerById(customerId);
-      console.log('  Customer service returned:', customer);
-      
-      if (!customer) {
-        console.log('  No customer found with ID:', customerId);
-        return res.status(404).render('error', {
-          title: 'Customer Not Found',
-          status: 404,
-          message: `Customer data could not be loaded for ID: ${customerId}`
-        });
-      }
+      this.customerService.getCustomerById(customerId, (error, customer) => {
+        if (error) {
+          console.error('  Customer service error:', error);
+          return res.status(500).render('error', {
+            title: 'Server Error',
+            status: 500,
+            message: 'Unable to load customer data'
+          });
+        }
 
-      console.log('  Rendering profile page with customer:', customer.first_name, customer.last_name);
-      console.log('  About to call res.render with template: profile-simple');
-      
-      res.render('profile-simple', {
-        title: 'My Profile - Sakila',
-        user: req.user,
-        customer,
-        success: req.query.success,
-        error: req.query.error
+        console.log('  Customer service returned:', customer);
+        
+        if (!customer) {
+          console.log('  No customer found with ID:', customerId);
+          return res.status(404).render('error', {
+            title: 'Customer Not Found',
+            status: 404,
+            message: `Customer data could not be loaded for ID: ${customerId}`
+          });
+        }
+
+        console.log('  Rendering profile page with customer:', customer.first_name, customer.last_name);
+        console.log('  About to call res.render with template: profile-simple');
+        
+        res.render('profile-simple', {
+          title: 'My Profile - Sakila',
+          user: req.user,
+          customer,
+          success: req.query.success,
+          error: req.query.error
+        });
+        
+        console.log('  res.render called successfully');
       });
-      
-      console.log('  res.render called successfully');
     } catch (error) {
       console.error('Show profile error:', error);
       res.status(500).render('error', {
@@ -453,33 +487,52 @@ class CustomerController {
         const authService = new AuthService();
         
         // Get current customer data to verify password
-        const customerResult = await this.customerService.getCustomerById(customerId);
-        if (!customerResult.success) {
-          return res.redirect('/profile?error=' + encodeURIComponent('Kon huidige klantgegevens niet ophalen'));
-        }
+        this.customerService.getCustomerById(customerId, (customerError, customerResult) => {
+          if (customerError || !customerResult.success) {
+            return res.redirect('/profile?error=' + encodeURIComponent('Kon huidige klantgegevens niet ophalen'));
+          }
 
-        // Verify current password
-        const bcrypt = require('bcryptjs');
-        const isValidPassword = await bcrypt.compare(current_password, customerResult.data.password || '');
-        
-        if (!isValidPassword) {
-          return res.redirect('/profile?error=' + encodeURIComponent('Huidig wachtwoord is incorrect'));
-        }
+          // Verify current password
+          const bcrypt = require('bcryptjs');
+          bcrypt.compare(current_password, customerResult.data.password || '', (compareError, isValidPassword) => {
+            if (compareError) {
+              return res.redirect('/profile?error=' + encodeURIComponent('Fout bij wachtwoord verificatie'));
+            }
+            
+            if (!isValidPassword) {
+              return res.redirect('/profile?error=' + encodeURIComponent('Huidig wachtwoord is incorrect'));
+            }
 
-        // Hash new password
-        const hashedPassword = await bcrypt.hash(new_password, 10);
-        updateData.password = hashedPassword;
-      }
+            // Hash new password
+            bcrypt.hash(new_password, 10, (hashError, hashedPassword) => {
+              if (hashError) {
+                return res.redirect('/profile?error=' + encodeURIComponent('Fout bij wachtwoord versleuteling'));
+              }
+              
+              updateData.password = hashedPassword;
+              
+              // Update customer with new password
+              this.customerService.updateCustomer(customerId, updateData, (updateError, result) => {
+                if (updateError || !result.success) {
+                  return res.redirect('/profile?error=' + encodeURIComponent(result?.message || 'Fout bij bijwerken profiel'));
+                }
 
-      const result = await this.customerService.updateCustomer(customerId, updateData);
-
-      if (result.success) {
-        const successMessage = new_password ? 
-          'Profiel en wachtwoord succesvol bijgewerkt' : 
-          'Profiel succesvol bijgewerkt';
-        res.redirect('/profile?success=' + encodeURIComponent(successMessage));
+                const successMessage = 'Profiel en wachtwoord succesvol bijgewerkt';
+                res.redirect('/profile?success=' + encodeURIComponent(successMessage));
+              });
+            });
+          });
+        });
       } else {
-        res.redirect('/profile?error=' + encodeURIComponent(result.message));
+        // No password change, just update profile
+        this.customerService.updateCustomer(customerId, updateData, (updateError, result) => {
+          if (updateError || !result.success) {
+            return res.redirect('/profile?error=' + encodeURIComponent(result?.message || 'Fout bij bijwerken profiel'));
+          }
+
+          const successMessage = 'Profiel succesvol bijgewerkt';
+          res.redirect('/profile?success=' + encodeURIComponent(successMessage));
+        });
       }
     } catch (error) {
       console.error('Update profile error:', error);
@@ -496,28 +549,37 @@ class CustomerController {
       const page = parseInt(req.query.page) || 1;
       
       console.log('Getting rentals for customer:', customerId);
-      const result = await this.rentalService.getCustomerRentals(customerId, page, 10);
-      
-      console.log('First rental result:', result.rentals?.[0]);
-      console.log('Stats result:', result.stats);
-      
-      if (!result.success) {
-        return res.status(500).render('error', {
-          title: 'Server Fout',
-          status: 500,
-          message: result.message
+      this.rentalService.getCustomerRentals(customerId, page, 10, (error, result) => {
+        if (error) {
+          console.error('Get rentals error:', error);
+          return res.status(500).render('error', {
+            title: 'Server Fout',
+            status: 500,
+            message: 'Er is een fout opgetreden bij het laden van uw verhuur'
+          });
+        }
+        
+        console.log('First rental result:', result.rentals?.[0]);
+        console.log('Stats result:', result.stats);
+        
+        if (!result.success) {
+          return res.status(500).render('error', {
+            title: 'Server Fout',
+            status: 500,
+            message: result.message
+          });
+        }
+        
+        res.render('customer/rentals', {
+          title: 'Mijn Verhuur - Sakila',
+          user: req.user,
+          rentals: result.rentals,
+          activeRentals: result.activeRentals,
+          stats: result.stats,
+          pagination: result.pagination,
+          success: req.query.success,
+          error: req.query.error
         });
-      }
-      
-      res.render('customer/rentals', {
-        title: 'Mijn Verhuur - Sakila',
-        user: req.user,
-        rentals: result.rentals,
-        activeRentals: result.activeRentals,
-        stats: result.stats,
-        pagination: result.pagination,
-        success: req.query.success,
-        error: req.query.error
       });
     } catch (error) {
       console.error('Get rentals error:', error);
@@ -537,29 +599,38 @@ class CustomerController {
       const customerId = req.user.user_id;
       const rentalId = req.params.id;
       
-      const result = await this.rentalService.getRentalDetails(rentalId);
-      
-      if (!result.success) {
-        return res.status(404).render('error', {
-          title: 'Verhuur Niet Gevonden',
-          status: 404,
-          message: result.message
-        });
-      }
+      this.rentalService.getRentalDetails(rentalId, (error, result) => {
+        if (error) {
+          console.error('Get rental details error:', error);
+          return res.status(500).render('error', {
+            title: 'Server Fout',
+            status: 500,
+            message: 'Er is een fout opgetreden'
+          });
+        }
+        
+        if (!result.success) {
+          return res.status(404).render('error', {
+            title: 'Verhuur Niet Gevonden',
+            status: 404,
+            message: result.message
+          });
+        }
 
-      // Verify this rental belongs to the logged-in customer
-      if (result.rental.customer_id !== customerId) {
-        return res.status(403).render('error', {
-          title: 'Toegang Geweigerd',
-          status: 403,
-          message: 'U mag alleen uw eigen verhuur bekijken'
+        // Verify this rental belongs to the logged-in customer
+        if (result.rental.customer_id !== customerId) {
+          return res.status(403).render('error', {
+            title: 'Toegang Geweigerd',
+            status: 403,
+            message: 'U mag alleen uw eigen verhuur bekijken'
+          });
+        }
+        
+        res.render('customer/rental-details', {
+          title: 'Verhuur Details - Sakila',
+          user: req.user,
+          rental: result.rental
         });
-      }
-      
-      res.render('customer/rental-details', {
-        title: 'Verhuur Details - Sakila',
-        user: req.user,
-        rental: result.rental
       });
     } catch (error) {
       console.error('Get rental details error:', error);
@@ -586,13 +657,21 @@ class CustomerController {
         });
       }
 
-      const result = await this.rentalService.createRental(customerId, inventory_id);
-      
-      if (!result.success) {
-        return res.status(400).json(result);
-      }
+      this.rentalService.createRental(customerId, inventory_id, (error, result) => {
+        if (error) {
+          console.error('Create rental error:', error);
+          return res.status(500).json({
+            success: false,
+            message: 'Er is een fout opgetreden bij het huren van de film'
+          });
+        }
+        
+        if (!result.success) {
+          return res.status(400).json(result);
+        }
 
-      res.json(result);
+        res.json(result);
+      });
     } catch (error) {
       console.error('Create rental error:', error);
       res.status(500).json({
@@ -610,13 +689,22 @@ class CustomerController {
       const customerId = req.user.user_id;
       const page = parseInt(req.query.page) || 1;
       
-      const result = await this.customerService.getPaymentHistory(customerId, page, 10);
-      
-      res.render('customer/payments', {
-        title: 'Mijn Betalingen - Sakila',
-        user: req.user,
-        payments: result.payments,
-        pagination: result.pagination
+      this.customerService.getPaymentHistory(customerId, page, 10, (error, result) => {
+        if (error) {
+          console.error('Get payments error:', error);
+          return res.status(500).render('error', {
+            title: 'Server Fout',
+            status: 500,
+            message: 'Er is een fout opgetreden bij het laden van uw betalingen'
+          });
+        }
+        
+        res.render('customer/payments', {
+          title: 'Mijn Betalingen - Sakila',
+          user: req.user,
+          payments: result.payments,
+          pagination: result.pagination
+        });
       });
     } catch (error) {
       console.error('Get payments error:', error);
@@ -631,146 +719,202 @@ class CustomerController {
   /**
    * Get customer rentals data for AJAX
    */
-  getCustomerRentalsData = (customerId) => {
+  getCustomerRentalsData = (customerId, callback) => {
     try {
       console.log('=== getCustomerRentalsData called for customer:', customerId);
       console.log('=== this.rentalService:', typeof this.rentalService);
       console.log('=== getCustomerRentals function:', typeof this.rentalService.getCustomerRentals);
       
       // Use RentalService directly for better data
-      const result = await this.rentalService.getCustomerRentals(customerId, 1, 100);
-      
-      console.log('RentalService result:', result);
-      
-      if (!result.success) {
-        return {
-          success: false,
-          message: 'Er is een fout opgetreden bij het laden van de verhuurgegevens'
-        };
-      }
-      
-      const rentals = result.rentals || [];
-      const stats = result.stats || {};
-      
-      console.log('Rentals data for customer', customerId, ':', rentals.length, 'rentals found');
-      console.log('Stats data:', stats);
-      
-      return {
-        success: true,
-        rentals: rentals,
-        stats: stats
-      };
+      this.rentalService.getCustomerRentals(customerId, 1, 100, (error, result) => {
+        if (error) {
+          console.error('Get customer rentals data error:', error);
+          return callback(null, {
+            success: false,
+            message: 'Er is een fout opgetreden bij het laden van de verhuurgegevens'
+          });
+        }
+        
+        console.log('RentalService result:', result);
+        
+        if (!result.success) {
+          return callback(null, {
+            success: false,
+            message: 'Er is een fout opgetreden bij het laden van de verhuurgegevens'
+          });
+        }
+        
+        const rentals = result.rentals || [];
+        const stats = result.stats || {};
+        
+        console.log('Rentals data for customer', customerId, ':', rentals.length, 'rentals found');
+        console.log('Stats data:', stats);
+        
+        callback(null, {
+          success: true,
+          rentals: rentals,
+          stats: stats
+        });
+      });
     } catch (error) {
       console.error('Get customer rentals data error:', error);
-      return {
+      callback(null, {
         success: false,
         message: 'Er is een fout opgetreden bij het laden van de verhuurgegevens'
-      };
+      });
     }
   };
 
   /**
    * Get customer profile data for AJAX
    */
-  getCustomerProfileData = (customerId) => {
+  getCustomerProfileData = (customerId, callback) => {
     try {
-      const customer = await this.customerService.getCustomerById(customerId);
-      
-      if (!customer) {
-        return {
-          success: false,
-          message: 'Klant niet gevonden'
-        };
-      }
-      
-      return {
-        success: true,
-        customer: customer
-      };
+      this.customerService.getCustomerById(customerId, (error, customer) => {
+        if (error) {
+          console.error('Get customer profile data error:', error);
+          return callback(null, {
+            success: false,
+            message: 'Er is een fout opgetreden bij het laden van de profielgegevens'
+          });
+        }
+        
+        if (!customer) {
+          return callback(null, {
+            success: false,
+            message: 'Klant niet gevonden'
+          });
+        }
+        
+        callback(null, {
+          success: true,
+          customer: customer
+        });
+      });
     } catch (error) {
       console.error('Get customer profile data error:', error);
-      return {
+      callback(null, {
         success: false,
         message: 'Er is een fout opgetreden bij het laden van de profielgegevens'
-      };
+      });
     }
   };
 
   /**
    * Update customer profile via AJAX
    */
-  updateCustomerProfile = (customerId, profileData) => {
+  updateCustomerProfile = (customerId, profileData, callback) => {
     try {
-      const result = await this.customerService.updateCustomer(customerId, profileData);
-      
-      if (result.success) {
-        return {
-          success: true,
-          message: 'Profiel succesvol bijgewerkt'
-        };
-      } else {
-        return {
-          success: false,
-          message: result.message
-        };
-      }
+      this.customerService.updateCustomer(customerId, profileData, (error, result) => {
+        if (error) {
+          console.error('Update customer profile error:', error);
+          return callback(null, {
+            success: false,
+            message: 'Er is een fout opgetreden bij het bijwerken van het profiel'
+          });
+        }
+        
+        if (result.success) {
+          callback(null, {
+            success: true,
+            message: 'Profiel succesvol bijgewerkt'
+          });
+        } else {
+          callback(null, {
+            success: false,
+            message: result.message
+          });
+        }
+      });
     } catch (error) {
       console.error('Update customer profile error:', error);
-      return {
+      callback(null, {
         success: false,
         message: 'Er is een fout opgetreden bij het bijwerken van het profiel'
-      };
+      });
     }
   };
 
   /**
    * Change customer password
    */
-  changeCustomerPassword = (customerId, currentPassword, newPassword) => {
+  changeCustomerPassword = (customerId, currentPassword, newPassword, callback) => {
     try {
       // Get customer password directly from database
       const CustomerDAO = require('../dao/CustomerDAO');
       const customerDAO = new CustomerDAO();
       
       const customerSql = 'SELECT password FROM customer WHERE customer_id = ?';
-      const customerResult = await customerDAO.query(customerSql, [customerId]);
-      
-      if (!customerResult.length) {
-        return {
-          success: false,
-          message: 'Klant niet gevonden'
-        };
-      }
+      customerDAO.query(customerSql, [customerId], (queryError, customerResult) => {
+        if (queryError) {
+          console.error('Change customer password error:', queryError);
+          return callback(null, {
+            success: false,
+            message: 'Er is een fout opgetreden bij het wijzigen van het wachtwoord'
+          });
+        }
+        
+        if (!customerResult.length) {
+          return callback(null, {
+            success: false,
+            message: 'Klant niet gevonden'
+          });
+        }
 
-      // Verify current password
-      const bcrypt = require('bcryptjs');
-      const isValidPassword = await bcrypt.compare(currentPassword, customerResult[0].password || '');
-      
-      if (!isValidPassword) {
-        return {
-          success: false,
-          message: 'Huidig wachtwoord is incorrect'
-        };
-      }
+        // Verify current password
+        const bcrypt = require('bcryptjs');
+        bcrypt.compare(currentPassword, customerResult[0].password || '', (compareError, isValidPassword) => {
+          if (compareError) {
+            console.error('Password comparison error:', compareError);
+            return callback(null, {
+              success: false,
+              message: 'Er is een fout opgetreden bij het wijzigen van het wachtwoord'
+            });
+          }
+          
+          if (!isValidPassword) {
+            return callback(null, {
+              success: false,
+              message: 'Huidig wachtwoord is incorrect'
+            });
+          }
 
-      // Hash new password
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      
-      // Update only the password
-      const result = await this.customerService.updateCustomer(customerId, {
-        password: hashedPassword
+          // Hash new password
+          bcrypt.hash(newPassword, 10, (hashError, hashedPassword) => {
+            if (hashError) {
+              console.error('Password hashing error:', hashError);
+              return callback(null, {
+                success: false,
+                message: 'Er is een fout opgetreden bij het wijzigen van het wachtwoord'
+              });
+            }
+            
+            // Update only the password
+            this.customerService.updateCustomer(customerId, {
+              password: hashedPassword
+            }, (updateError, result) => {
+              if (updateError) {
+                console.error('Customer update error:', updateError);
+                return callback(null, {
+                  success: false,
+                  message: 'Er is een fout opgetreden bij het wijzigen van het wachtwoord'
+                });
+              }
+
+              callback(null, {
+                success: result.success,
+                message: result.success ? 'Wachtwoord succesvol gewijzigd' : result.message
+              });
+            });
+          });
+        });
       });
-
-      return {
-        success: result.success,
-        message: result.success ? 'Wachtwoord succesvol gewijzigd' : result.message
-      };
     } catch (error) {
       console.error('Change customer password error:', error);
-      return {
+      callback(null, {
         success: false,
         message: 'Er is een fout opgetreden bij het wijzigen van het wachtwoord'
-      };
+      });
     }
   };
 }

@@ -518,30 +518,26 @@ class RentalService {
   }
 
   // Update verhuur status
-  async updateRentalStatus(rentalId, status) {
-    try {
-      const result = await this.rentalDAO.updateStatus(rentalId, status);
-      return {
+  updateRentalStatus(rentalId, status, callback) {
+    this.rentalDAO.updateStatus(rentalId, status, (error, result) => {
+      if (error) {
+        console.error('Update rental status error:', error);
+        return callback(null, {
+          success: false,
+          message: 'Fout bij bijwerken status'
+        });
+      }
+      
+      callback(null, {
         success: true,
         message: 'Status bijgewerkt'
-      };
-    } catch (error) {
-      console.error('Update rental status error:', error);
-      return {
-        success: false,
-        message: 'Fout bij bijwerken status'
-      };
-    }
+      });
+    });
   }
 
   // Haal verhuur op via ID
-  async getRentalById(rentalId) {
-    try {
-      return await this.rentalDAO.findById(rentalId);
-    } catch (error) {
-      console.error('Get rental by ID error:', error);
-      return null;
-    }
+  getRentalById(rentalId, callback) {
+    this.rentalDAO.findById(rentalId, callback);
   }
 
   // Staff statistieken
@@ -586,68 +582,86 @@ class RentalService {
   }
 
   // Combined stats for dashboard
-  async getRentalStats() {
-    try {
-      const [total, active, overdue, today] = await Promise.all([
-        this.getTotalRentals(),
-        this.getActiveRentals(),
-        this.getOverdueCount(),
-        this.getTodayRentals()
-      ]);
+  getRentalStats(callback) {
+    // Get all stats in parallel using nested callbacks
+    this.getTotalRentals((totalError, totalResult) => {
+      if (totalError) {
+        console.error('Get rental stats error (total):', totalError);
+        return callback(null, { total: 0, active: 0, overdue: 0, today: 0 });
+      }
 
-      return {
-        total: total.count || 0,
-        active: active.count || 0,
-        overdue: overdue.count || 0,
-        today: today.count || 0
-      };
-    } catch (error) {
-      console.error('Get rental stats error:', error);
-      return {
-        total: 0,
-        active: 0,
-        overdue: 0,
-        today: 0
-      };
-    }
+      this.getActiveRentals((activeError, activeResult) => {
+        if (activeError) {
+          console.error('Get rental stats error (active):', activeError);
+          return callback(null, { total: 0, active: 0, overdue: 0, today: 0 });
+        }
+
+        this.getOverdueCount((overdueError, overdueResult) => {
+          if (overdueError) {
+            console.error('Get rental stats error (overdue):', overdueError);
+            return callback(null, { total: 0, active: 0, overdue: 0, today: 0 });
+          }
+
+          this.getTodayRentals((todayError, todayResult) => {
+            if (todayError) {
+              console.error('Get rental stats error (today):', todayError);
+              return callback(null, { total: 0, active: 0, overdue: 0, today: 0 });
+            }
+
+            const stats = {
+              total: totalResult.count || 0,
+              active: activeResult.count || 0,
+              overdue: overdueResult.count || 0,
+              today: todayResult.count || 0
+            };
+
+            callback(null, stats);
+          });
+        });
+      });
+    });
   }
 
   // Get pending rentals (in behandeling/gereserveerd)
-  async getPendingRentals() {
-    try {
-      const rentals = await this.rentalDAO.getPendingRentals();
-      return {
+  getPendingRentals(callback) {
+    this.rentalDAO.getPendingRentals((error, rentals) => {
+      if (error) {
+        console.error('Get pending rentals error:', error);
+        return callback(null, {
+          success: false,
+          rentals: []
+        });
+      }
+
+      callback(null, {
         success: true,
         rentals: rentals || []
-      };
-    } catch (error) {
-      console.error('Get pending rentals error:', error);
-      return {
-        success: false,
-        rentals: []
-      };
-    }
+      });
+    });
   }
 
   // Get all rentals for staff interface
-  async getAllRentalsForStaff() {
-    try {
-      const rentals = await this.rentalDAO.getAllRentalsWithDetails();
-      return rentals || [];
-    } catch (error) {
-      console.error('Get all rentals for staff error:', error);
-      return [];
-    }
+  getAllRentalsForStaff(callback) {
+    this.rentalDAO.getAllRentalsWithDetails((error, rentals) => {
+      if (error) {
+        console.error('Get all rentals for staff error:', error);
+        return callback(null, []);
+      }
+      callback(null, rentals || []);
+    });
   }
 
   // Create rental (simplified for staff)
-  async createRental({ customer_id, film_id, staff_id }) {
-    try {
-      // Find available inventory for this film
-      const inventory = await this.rentalDAO.findAvailableInventory(film_id);
+  createRental({ customer_id, film_id, staff_id }, callback) {
+    // Find available inventory for this film
+    this.rentalDAO.findAvailableInventory(film_id, (inventoryError, inventory) => {
+      if (inventoryError) {
+        console.error('Create rental error (inventory):', inventoryError);
+        return callback(inventoryError);
+      }
       
       if (!inventory) {
-        throw new Error('Geen beschikbare kopieën van deze film');
+        return callback(new Error('Geen beschikbare kopieën van deze film'));
       }
 
       // Create the rental
@@ -655,44 +669,48 @@ class RentalService {
       const returnDate = new Date();
       returnDate.setDate(returnDate.getDate() + 7); // 7 dagen verhuurperiode
 
-      const rental = await this.rentalDAO.create({
+      const rentalData = {
         rental_date: rentalDate,
         inventory_id: inventory.inventory_id,
         customer_id: customer_id,
         return_date: returnDate,
         staff_id: staff_id || 1
-      });
-
-      return {
-        rental_id: rental.rental_id,
-        return_date: returnDate
       };
-    } catch (error) {
-      console.error('Create rental error:', error);
-      throw error;
-    }
+
+      this.rentalDAO.create(rentalData, (createError, rental) => {
+        if (createError) {
+          console.error('Create rental error:', createError);
+          return callback(createError);
+        }
+
+        callback(null, {
+          rental_id: rental.rental_id,
+          return_date: returnDate
+        });
+      });
+    });
   }
 
   // Get active rentals for a specific customer
-  async getCustomerActiveRentals(customerId) {
-    try {
-      const rentals = await this.rentalDAO.getCustomerActiveRentals(customerId);
-      return rentals || [];
-    } catch (error) {
-      console.error('Get customer active rentals error:', error);
-      return [];
-    }
+  getCustomerActiveRentals(customerId, callback) {
+    this.rentalDAO.getCustomerActiveRentals(customerId, (error, rentals) => {
+      if (error) {
+        console.error('Get customer active rentals error:', error);
+        return callback(null, []);
+      }
+      callback(null, rentals || []);
+    });
   }
 
   // Get all rentals for a specific customer (both active and returned)
-  async getCustomerAllRentals(customerId) {
-    try {
-      const rentals = await this.rentalDAO.getCustomerAllRentals(customerId);
-      return rentals || [];
-    } catch (error) {
-      console.error('Get customer all rentals error:', error);
-      return [];
-    }
+  getCustomerAllRentals(customerId, callback) {
+    this.rentalDAO.getCustomerAllRentals(customerId, (error, rentals) => {
+      if (error) {
+        console.error('Get customer all rentals error:', error);
+        return callback(null, []);
+      }
+      callback(null, rentals || []);
+    });
   }
 }
 

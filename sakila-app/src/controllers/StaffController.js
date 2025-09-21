@@ -562,50 +562,58 @@ class StaffController {
   }
 
   // API: Alle klanten (voor klantenbeheer)
-  async getAllCustomersAPI(req, res) {
-    try {
-      const customers = await this.customerService.getAllCustomersForStaff();
+  getAllCustomersAPI(req, res) {
+    this.customerService.getAllCustomersForStaff((error, customers) => {
+      if (error) {
+        console.error('Get all customers API error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Fout bij ophalen klanten: ' + error.message
+        });
+      }
       res.json(customers || []);
-    } catch (error) {
-      console.error('Get all customers API error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Fout bij ophalen klanten: ' + error.message
-      });
-    }
+    });
   }
 
   // API: Alle verhuur (voor verhuurbeheer)
-  async getAllRentalsAPI(req, res) {
-    try {
-      const rentals = await this.rentalService.getAllRentalsForStaff();
+  getAllRentalsAPI(req, res) {
+    this.rentalService.getAllRentalsForStaff((error, rentals) => {
+      if (error) {
+        console.error('Get all rentals API error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Fout bij ophalen verhuur'
+        });
+      }
       res.json(rentals || []);
-    } catch (error) {
-      console.error('Get all rentals API error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Fout bij ophalen verhuur'
-      });
-    }
+    });
   }
 
   // API: Nieuwe verhuur aanmaken (voor snelle verhuur)
-  async createRental(req, res) {
-    try {
-      const { customer_id, film_id } = req.body;
-      
-      if (!customer_id || !film_id) {
-        return res.status(400).json({
+  createRental(req, res) {
+    const { customer_id, film_id } = req.body;
+    
+    if (!customer_id || !film_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Klant ID en Film ID zijn verplicht'
+      });
+    }
+
+    const rentalData = {
+      customer_id: parseInt(customer_id),
+      film_id: parseInt(film_id),
+      staff_id: req.user.staff_id || req.user.user_id
+    };
+
+    this.rentalService.createRental(rentalData, (error, result) => {
+      if (error) {
+        console.error('Create rental error:', error);
+        return res.status(500).json({
           success: false,
-          message: 'Klant ID en Film ID zijn verplicht'
+          message: error.message || 'Fout bij aanmaken verhuur'
         });
       }
-
-      const result = await this.rentalService.createRental({
-        customer_id: parseInt(customer_id),
-        film_id: parseInt(film_id),
-        staff_id: req.user.staff_id || req.user.user_id
-      });
 
       res.json({
         success: true,
@@ -613,22 +621,23 @@ class StaffController {
         return_date: result.return_date,
         message: 'Verhuur succesvol aangemaakt'
       });
-    } catch (error) {
-      console.error('Create rental error:', error);
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Fout bij aanmaken verhuur'
-      });
-    }
+    });
   }
 
   // API: Klant details met verhuur geschiedenis
-  async getCustomerDetailsAPI(req, res) {
-    try {
-      const customerId = req.params.id;
-      console.log('Getting customer details for ID:', customerId);
+  getCustomerDetailsAPI(req, res) {
+    const customerId = req.params.id;
+    console.log('Getting customer details for ID:', customerId);
+    
+    this.customerService.getCustomerDetails(customerId, (customerError, customerResult) => {
+      if (customerError) {
+        console.error('Get customer details API error:', customerError);
+        return res.status(500).json({
+          success: false,
+          message: 'Fout bij ophalen klant details: ' + customerError.message
+        });
+      }
       
-      const customerResult = await this.customerService.getCustomerDetails(customerId);
       console.log('Customer result:', customerResult);
       
       if (!customerResult.success) {
@@ -638,32 +647,44 @@ class StaffController {
         });
       }
 
-      const rentals = await this.rentalService.getCustomerAllRentals(customerId);
-      console.log('Rentals for customer details:', rentals ? rentals.length : 0);
+      this.rentalService.getCustomerAllRentals(customerId, (rentalError, rentals) => {
+        if (rentalError) {
+          console.error('Get customer rentals error:', rentalError);
+          // Still return customer data even if rentals fail
+          return res.json({
+            success: true,
+            customer: customerResult.data,
+            rentals: []
+          });
+        }
 
-      res.json({
-        success: true,
-        customer: customerResult.data,
-        rentals: rentals || []
+        console.log('Rentals for customer details:', rentals ? rentals.length : 0);
+
+        res.json({
+          success: true,
+          customer: customerResult.data,
+          rentals: rentals || []
+        });
       });
-    } catch (error) {
-      console.error('Get customer details API error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Fout bij ophalen klant details: ' + error.message
-      });
-    }
+    });
   }
 
   // API: Klant gegevens bijwerken
-  async updateCustomerAPI(req, res) {
-    try {
-      const customerId = req.params.id;
-      const updates = req.body;
+  updateCustomerAPI(req, res) {
+    const customerId = req.params.id;
+    const updates = req.body;
+    
+    console.log('Updating customer', customerId, 'with data:', updates);
+    
+    this.customerService.updateCustomer(customerId, updates, (error, result) => {
+      if (error) {
+        console.error('Update customer API error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Fout bij bijwerken klant: ' + error.message
+        });
+      }
       
-      console.log('Updating customer', customerId, 'with data:', updates);
-      
-      const result = await this.customerService.updateCustomer(customerId, updates);
       console.log('Update result:', result);
       
       if (result.success) {
@@ -678,22 +699,23 @@ class StaffController {
           message: result.message
         });
       }
-    } catch (error) {
-      console.error('Update customer API error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Fout bij bijwerken klant: ' + error.message
-      });
-    }
+    });
   }
 
   // API: Klant verhuur (films die hij heeft gehuurd)
-  async getCustomerRentalsAPI(req, res) {
-    try {
-      const customerId = req.params.id;
-      console.log('Getting rentals for customer ID:', customerId);
+  getCustomerRentalsAPI(req, res) {
+    const customerId = req.params.id;
+    console.log('Getting rentals for customer ID:', customerId);
+    
+    this.rentalService.getCustomerAllRentals(customerId, (error, rentals) => {
+      if (error) {
+        console.error('Get customer rentals API error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Fout bij ophalen verhuur: ' + error.message
+        });
+      }
       
-      const rentals = await this.rentalService.getCustomerAllRentals(customerId);
       console.log('Rentals found:', rentals ? rentals.length : 0);
       console.log('Sample rental data:', rentals ? rentals.slice(0, 2) : 'No rentals');
       
@@ -701,21 +723,21 @@ class StaffController {
         success: true,
         rentals: rentals || []
       });
-    } catch (error) {
-      console.error('Get customer rentals API error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Fout bij ophalen verhuur: ' + error.message
-      });
-    }
+    });
   }
 
   // API: Klant verwijderen
-  async deleteCustomerAPI(req, res) {
-    try {
-      const customerId = req.params.id;
-      
-      const result = await this.customerService.deleteCustomer(customerId);
+  deleteCustomerAPI(req, res) {
+    const customerId = req.params.id;
+    
+    this.customerService.deleteCustomer(customerId, (error, result) => {
+      if (error) {
+        console.error('Delete customer API error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Fout bij verwijderen klant: ' + error.message
+        });
+      }
       
       if (result.success) {
         res.json({
@@ -729,30 +751,30 @@ class StaffController {
           message: result.message
         });
       }
-    } catch (error) {
-      console.error('Delete customer API error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Fout bij verwijderen klant: ' + error.message
-      });
-    }
+    });
   }
 
   // API: Verhuur status wijzigen (voor staff)
-  async updateRentalStatusAPI(req, res) {
-    try {
-      const rentalId = req.params.id;
-      const { status } = req.body;
-      const staffId = req.user.staff_id || req.user.user_id;
-      
-      if (!status) {
-        return res.status(400).json({
+  updateRentalStatusAPI(req, res) {
+    const rentalId = req.params.id;
+    const { status } = req.body;
+    const staffId = req.user.staff_id || req.user.user_id;
+    
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        message: 'Status is verplicht'
+      });
+    }
+
+    this.rentalService.updateRentalStatus(rentalId, status, staffId, (error, result) => {
+      if (error) {
+        console.error('Update rental status API error:', error);
+        return res.status(500).json({
           success: false,
-          message: 'Status is verplicht'
+          message: 'Fout bij bijwerken status: ' + error.message
         });
       }
-
-      const result = await this.rentalService.updateRentalStatus(rentalId, status, staffId);
       
       if (result.success) {
         res.json({
@@ -766,65 +788,59 @@ class StaffController {
           message: result.message
         });
       }
-    } catch (error) {
-      console.error('Update rental status API error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Fout bij bijwerken status: ' + error.message
-      });
-    }
+    });
   }
 
   // API: Update customer profile (staff version - can edit any customer)
-  async updateCustomerProfileAPI(req, res) {
-    try {
-      const customerId = req.params.id;
-      const profileData = req.body;
-      console.log(`[StaffController] Update customer profile API called for ID: ${customerId}`, profileData);
+  updateCustomerProfileAPI(req, res) {
+    const customerId = req.params.id;
+    const profileData = req.body;
+    console.log(`[StaffController] Update customer profile API called for ID: ${customerId}`, profileData);
+    
+    this.customerService.updateCustomer(customerId, profileData, (error, result) => {
+      if (error) {
+        console.error(`[StaffController] Error in update customer profile API:`, error);
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Fout bij het bijwerken van klantprofiel' 
+        });
+      }
       
-      const result = await this.customerService.updateCustomer(customerId, profileData);
       console.log(`[StaffController] Update customer profile result:`, result);
-      
       res.json(result);
-    } catch (error) {
-      console.error(`[StaffController] Error in update customer profile API:`, error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Fout bij het bijwerken van klantprofiel' 
-      });
-    }
+    });
   }
 
   // API: Change customer password (staff version - can change any customer password)
-  async changeCustomerPasswordAPI(req, res) {
-    try {
-      const customerId = req.params.id;
-      const { new_password, confirm_password } = req.body;
-      console.log(`[StaffController] Change customer password API called for ID: ${customerId}`);
-      
-      // Validation
-      if (!new_password) {
-        return res.json({ success: false, message: 'Nieuw wachtwoord is vereist.' });
-      }
-      if (new_password.length < 6) {
-        return res.json({ success: false, message: 'Nieuw wachtwoord moet minstens 6 tekens bevatten.' });
-      }
-      if (new_password !== confirm_password) {
-        return res.json({ success: false, message: 'Wachtwoorden komen niet overeen.' });
-      }
-
-      // Staff can change any customer password without knowing current password
-      const result = await this.customerService.changeCustomerPassword(customerId, new_password);
-      console.log(`[StaffController] Change customer password result:`, result);
-      
-      res.json(result);
-    } catch (error) {
-      console.error(`[StaffController] Error in change customer password API:`, error);
-      res.status(500).json({ 
-        success: false, 
-        message: 'Fout bij het wijzigen van wachtwoord' 
-      });
+  changeCustomerPasswordAPI(req, res) {
+    const customerId = req.params.id;
+    const { new_password, confirm_password } = req.body;
+    console.log(`[StaffController] Change customer password API called for ID: ${customerId}`);
+    
+    // Validation
+    if (!new_password) {
+      return res.json({ success: false, message: 'Nieuw wachtwoord is vereist.' });
     }
+    if (new_password.length < 6) {
+      return res.json({ success: false, message: 'Nieuw wachtwoord moet minstens 6 tekens bevatten.' });
+    }
+    if (new_password !== confirm_password) {
+      return res.json({ success: false, message: 'Wachtwoorden komen niet overeen.' });
+    }
+
+    // Staff can change any customer password without knowing current password
+    this.customerService.changeCustomerPassword(customerId, new_password, (error, result) => {
+      if (error) {
+        console.error(`[StaffController] Error in change customer password API:`, error);
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Fout bij het wijzigen van wachtwoord' 
+        });
+      }
+      
+      console.log(`[StaffController] Change customer password result:`, result);
+      res.json(result);
+    });
   }
 }
 

@@ -25,100 +25,100 @@ const staffOrAdminWeb = (req, res, next) => {
 };
 
 // Staff Dashboard
-router.get('/dashboard', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.dashboard(req, res);
-}));
+router.get('/dashboard', staffOrAdminWeb, (req, res) => {
+  staffController.dashboard(req, res);
+});
 
 // Klantenbeheer
-router.get('/customers', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.getAllCustomers(req, res);
-}));
-router.get('/customers/:id', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.getCustomerDetails(req, res);
-}));
-router.post('/customers/:id/edit', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.editCustomer(req, res);
-}));
+router.get('/customers', staffOrAdminWeb, (req, res) => {
+  staffController.getAllCustomers(req, res);
+});
+router.get('/customers/:id', staffOrAdminWeb, (req, res) => {
+  staffController.getCustomerDetails(req, res);
+});
+router.post('/customers/:id/edit', staffOrAdminWeb, (req, res) => {
+  staffController.editCustomer(req, res);
+});
 
 // Film uitgeven/innemen
-router.get('/rental-management', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.rentalManagement(req, res);
-}));
-router.post('/rental-management/checkout', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.checkoutFilm(req, res);
-}));
-router.post('/rental-management/checkin', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.checkinFilm(req, res);
-}));
+router.get('/rental-management', staffOrAdminWeb, (req, res) => {
+  staffController.rentalManagement(req, res);
+});
+router.post('/rental-management/checkout', staffOrAdminWeb, (req, res) => {
+  staffController.checkoutFilm(req, res);
+});
+router.post('/rental-management/checkin', staffOrAdminWeb, (req, res) => {
+  staffController.checkinFilm(req, res);
+});
 
 // Verhuur status updates
-router.post('/rentals/:id/update-status', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.updateRentalStatus(req, res);
-}));
+router.post('/rentals/:id/update-status', staffOrAdminWeb, (req, res) => {
+  staffController.updateRentalStatus(req, res);
+});
 
 // API endpoints voor AJAX calls
-router.get('/api/customers/search', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.searchCustomers(req, res);
-}));
-router.get('/api/films/search', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.searchFilms(req, res);
-}));
+router.get('/api/customers/search', staffOrAdminWeb, (req, res) => {
+  staffController.searchCustomers(req, res);
+});
+router.get('/api/films/search', staffOrAdminWeb, (req, res) => {
+  staffController.searchFilms(req, res);
+});
 
 // Extra API endpoints voor staff dashboard - specific routes first
-router.get('/api/rentals/current', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.getCurrentRentals(req, res);
-}));
-router.get('/api/rentals/overdue', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.getOverdueRentals(req, res);
-}));
-router.get('/api/rentals/pending', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.getPendingRentals(req, res);
-}));
+router.get('/api/rentals/current', staffOrAdminWeb, (req, res) => {
+  staffController.getCurrentRentals(req, res);
+});
+router.get('/api/rentals/overdue', staffOrAdminWeb, (req, res) => {
+  staffController.getOverdueRentals(req, res);
+});
+router.get('/api/rentals/pending', staffOrAdminWeb, (req, res) => {
+  staffController.getPendingRentals(req, res);
+});
 
 // More specific rental routes before generic :id route
-router.put('/api/rentals/:id/due-date', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.updateRentalDueDateAPI(req, res);
-}));
-router.put('/api/rentals/:id/status', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.updateRentalStatusAPI(req, res);
-}));
+router.put('/api/rentals/:id/due-date', staffOrAdminWeb, (req, res) => {
+  staffController.updateRentalDueDateAPI(req, res);
+});
+router.put('/api/rentals/:id/status', staffOrAdminWeb, (req, res) => {
+  staffController.updateRentalStatusAPI(req, res);
+});
 
 // Generic rental routes
-router.get('/api/rentals/:id', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.getRentalDetails(req, res);
-}));
-router.get('/api/rentals', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.getAllRentalsAPI(req, res);
-}));
-router.post('/api/rentals', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.createRental(req, res);
-}));
-router.post('/api/rentals/return', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.checkinFilm(req, res);
-}));
+router.get('/api/rentals/:id', staffOrAdminWeb, (req, res) => {
+  staffController.getRentalDetails(req, res);
+});
+router.get('/api/rentals', staffOrAdminWeb, (req, res) => {
+  staffController.getAllRentalsAPI(req, res);
+});
+router.post('/api/rentals', staffOrAdminWeb, (req, res) => {
+  staffController.createRental(req, res);
+});
+router.post('/api/rentals/return', staffOrAdminWeb, (req, res) => {
+  staffController.checkinFilm(req, res);
+});
 
 // API endpoints voor klanten en films
-router.get('/api/customers', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.getAllCustomersAPI(req, res);
-}));
-router.get('/api/customers/:id', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.getCustomerDetailsAPI(req, res);
-}));
-router.put('/api/customers/:id', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.updateCustomerAPI(req, res);
-}));
-router.delete('/api/customers/:id', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.deleteCustomerAPI(req, res);
-}));
+router.get('/api/customers', staffOrAdminWeb, (req, res) => {
+  staffController.getAllCustomersAPI(req, res);
+});
+router.get('/api/customers/:id', staffOrAdminWeb, (req, res) => {
+  staffController.getCustomerDetailsAPI(req, res);
+});
+router.put('/api/customers/:id', staffOrAdminWeb, (req, res) => {
+  staffController.updateCustomerAPI(req, res);
+});
+router.delete('/api/customers/:id', staffOrAdminWeb, (req, res) => {
+  staffController.deleteCustomerAPI(req, res);
+});
 // Staff Profile Management Routes
-router.put('/api/customers/:id/profile', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.updateCustomerProfileAPI(req, res);
-}));
-router.post('/api/customers/:id/change-password', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.changeCustomerPasswordAPI(req, res);
-}));
-router.get('/api/customers/:id/rentals', staffOrAdminWeb, asyncHandler(async (req, res) => {
-  await staffController.getCustomerRentalsAPI(req, res);
-}));
+router.put('/api/customers/:id/profile', staffOrAdminWeb, (req, res) => {
+  staffController.updateCustomerProfileAPI(req, res);
+});
+router.post('/api/customers/:id/change-password', staffOrAdminWeb, (req, res) => {
+  staffController.changeCustomerPasswordAPI(req, res);
+});
+router.get('/api/customers/:id/rentals', staffOrAdminWeb, (req, res) => {
+  staffController.getCustomerRentalsAPI(req, res);
+});
 
 module.exports = router;

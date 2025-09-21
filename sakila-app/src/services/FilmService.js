@@ -22,10 +22,82 @@ class FilmService {
   }
 
   /**
+   * Get films with advanced filtering
+   */
+  getFilmsAdvanced(page = 1, limit = 12, filters = {}, callback) {
+    // Zorg dat filters de juiste properties heeft
+    const effectiveFilters = {
+      search: filters.search || '',
+      categoryId: filters.categoryId || null,
+      rating: filters.rating || '',
+      year: filters.year || null,
+      length: filters.length || '',
+      priceRange: filters.priceRange || '',
+      sortBy: filters.sortBy || 'title'
+    };
+    this.filmDAO.getFilmsWithAdvancedFilters(page, limit, effectiveFilters, (error, films) => {
+      if (error) {
+        console.error('Get films advanced error:', error);
+        return callback(null, {
+          success: false,
+          message: 'Er is een fout opgetreden bij het ophalen van films'
+        });
+      }
+
+      this.filmDAO.getFilmsCountAdvanced(filters, (countError, totalCount) => {
+        if (countError) {
+          console.error('Get films count advanced error:', countError);
+          return callback(null, {
+            success: false,
+            message: 'Er is een fout opgetreden bij het ophalen van films'
+          });
+        }
+
+        this.filmDAO.getAllCategories((categoriesError, categories) => {
+          if (categoriesError) {
+            console.error('Get categories error:', categoriesError);
+            return callback(null, {
+              success: false,
+              message: 'Er is een fout opgetreden bij het ophalen van films'
+            });
+          }
+
+          this.filmDAO.getUniqueYears((yearsError, years) => {
+            if (yearsError) {
+              console.error('Get years error:', yearsError);
+              return callback(null, {
+                success: false,
+                message: 'Er is een fout opgetreden bij het ophalen van films'
+              });
+            }
+
+            const totalPages = Math.ceil(totalCount / limit);
+
+            callback(null, {
+              success: true,
+              data: {
+                films,
+                categories,
+                years,
+                pagination: {
+                  page,
+                  totalPages,
+                  total: totalCount,
+                  limit
+                }
+              }
+            });
+          });
+        });
+      });
+    });
+  }
+
+  /**
    * Get films with pagination and filtering
    */
   getFilms(page = 1, limit = 12, search = '', categoryId = null, callback) {
-    this.filmDAO.getFilmsWithDetails(page, limit, search, categoryId, (error, films) => {
+    this.filmDAO.getFilmsWithDetails(page, limit, search, categoryId, 'title', (error, films) => {
       if (error) {
         console.error('Get films error:', error);
         return callback(null, {

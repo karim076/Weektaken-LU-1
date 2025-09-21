@@ -34,17 +34,23 @@ router.get('/rentals', (req, res) => {
 router.get('/rentals/:id', customerController.getRentalDetails);
 
 // Cancel rental route - for pending rentals only
-router.delete('/rentals/:id/cancel', async (req, res) => {
-  try {
-    const customerId = req.user.user_id;
-    const rentalId = req.params.id;
-    
-    console.log(`Attempting to cancel rental ${rentalId} for customer ${customerId}`);
-    
-    const RentalService = require('../services/RentalService');
-    const rentalService = new RentalService();
-    
-    const result = await rentalService.cancelRental(rentalId, customerId);
+router.delete('/rentals/:id/cancel', (req, res) => {
+  const customerId = req.user.user_id;
+  const rentalId = req.params.id;
+  
+  console.log(`Attempting to cancel rental ${rentalId} for customer ${customerId}`);
+  
+  const RentalService = require('../services/RentalService');
+  const rentalService = new RentalService();
+  
+  rentalService.cancelRental(rentalId, customerId, (error, result) => {
+    if (error) {
+      console.error('Cancel rental route error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Er is een fout opgetreden bij het annuleren van de verhuur'
+      });
+    }
     
     if (result.success) {
       console.log('Rental cancelled successfully:', result.message);
@@ -59,22 +65,22 @@ router.delete('/rentals/:id/cancel', async (req, res) => {
         message: result.message
       });
     }
-  } catch (error) {
-    console.error('Cancel rental route error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Er is een fout opgetreden bij het annuleren van de verhuur'
-    });
-  }
+  });
 });
 
 // GET /customer/rentals-data - Get rental data for AJAX loading
-router.get('/rentals-data', async (req, res) => {
-    try {
-        const customerId = req.user.user_id;
-        
-        // Get customer's rentals using controller method
-        const result = await customerController.getCustomerRentalsData(customerId);
+router.get('/rentals-data', (req, res) => {
+    const customerId = req.user.user_id;
+    
+    // Get customer's rentals using controller method
+    customerController.getCustomerRentalsData(customerId, (error, result) => {
+        if (error) {
+            console.error('Error loading rentals data:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Er is een fout opgetreden bij het laden van de verhuurgegevens'
+            });
+        }
         
         if (result.success) {
             res.json({
@@ -88,22 +94,22 @@ router.get('/rentals-data', async (req, res) => {
                 message: result.message
             });
         }
-    } catch (error) {
-        console.error('Error loading rentals data:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Er is een fout opgetreden bij het laden van de verhuurgegevens'
-        });
-    }
+    });
 });
 
 // GET /customer/profile-data - Get profile data for AJAX loading
-router.get('/profile-data', async (req, res) => {
-    try {
-        const customerId = req.user.user_id;
-        
-        // Get customer profile using controller method
-        const result = await customerController.getCustomerProfileData(customerId);
+router.get('/profile-data', (req, res) => {
+    const customerId = req.user.user_id;
+    
+    // Get customer profile using controller method
+    customerController.getCustomerProfileData(customerId, (error, result) => {
+        if (error) {
+            console.error('Error loading profile data:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Er is een fout opgetreden bij het laden van de profielgegevens'
+            });
+        }
         
         if (result.success) {
             res.json({
@@ -116,17 +122,11 @@ router.get('/profile-data', async (req, res) => {
                 message: result.message
             });
         }
-    } catch (error) {
-        console.error('Error loading profile data:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Er is een fout opgetreden bij het laden van de profielgegevens'
-        });
-    }
+    });
 });
 
 // POST /customer/profile-update - Update profile
-router.post('/profile-update', async (req, res) => {
+router.post('/profile-update', (req, res) => {
     try {
         const customerId = req.user.user_id;
         
@@ -174,19 +174,27 @@ router.post('/profile-update', async (req, res) => {
         };
         
         // Update customer profile using controller method
-        const result = await customerController.updateCustomerProfile(customerId, updateData);
-        
-        if (result.success) {
-            res.json({
-                success: true,
-                message: 'Profiel succesvol bijgewerkt'
-            });
-        } else {
-            res.status(400).json({
-                success: false,
-                message: result.message
-            });
-        }
+        customerController.updateCustomerProfile(customerId, updateData, (error, result) => {
+            if (error) {
+                console.error('Profile update error:', error);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Er is een fout opgetreden bij het bijwerken van het profiel'
+                });
+            }
+            
+            if (result.success) {
+                res.json({
+                    success: true,
+                    message: 'Profiel succesvol bijgewerkt'
+                });
+            } else {
+                res.status(400).json({
+                    success: false,
+                    message: result.message
+                });
+            }
+        });
     } catch (error) {
         console.error('Error updating profile:', error);
         res.status(500).json({
@@ -197,7 +205,7 @@ router.post('/profile-update', async (req, res) => {
 });
 
 // POST /customer/change-password - Change password only
-router.post('/change-password', async (req, res) => {
+router.post('/change-password', (req, res) => {
     try {
         const customerId = req.user.user_id;
         const { current_password, new_password, confirm_password } = req.body;
@@ -225,19 +233,27 @@ router.post('/change-password', async (req, res) => {
         }
         
         // Change password using controller method
-        const result = await customerController.changeCustomerPassword(customerId, current_password, new_password);
-        
-        if (result.success) {
-            res.json({
-                success: true,
-                message: 'Wachtwoord succesvol gewijzigd'
-            });
-        } else {
-            res.status(400).json({
-                success: false,
-                message: result.message
-            });
-        }
+        customerController.changeCustomerPassword(customerId, current_password, new_password, (error, result) => {
+            if (error) {
+                console.error('Error changing password:', error);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Er is een fout opgetreden bij het wijzigen van het wachtwoord'
+                });
+            }
+            
+            if (result.success) {
+                res.json({
+                    success: true,
+                    message: 'Wachtwoord succesvol gewijzigd'
+                });
+            } else {
+                res.status(400).json({
+                    success: false,
+                    message: result.message
+                });
+            }
+        });
     } catch (error) {
         console.error('Error changing password:', error);
         res.status(500).json({
@@ -248,7 +264,7 @@ router.post('/change-password', async (req, res) => {
 });
 
 // Pay rental route
-router.post('/rentals/:id/pay', async (req, res) => {
+router.post('/rentals/:id/pay', (req, res) => {
     try {
         const customerId = req.user.user_id;
         const rentalId = req.params.id;
@@ -259,21 +275,29 @@ router.post('/rentals/:id/pay', async (req, res) => {
         const RentalService = require('../services/RentalService');
         const rentalService = new RentalService();
         
-        const result = await rentalService.payRental(rentalId, customerId, amount);
-        
-        if (result.success) {
-            console.log('Rental payment successful:', result.message);
-            res.json({
-                success: true,
-                message: result.message
-            });
-        } else {
-            console.log('Failed to pay rental:', result.message);
-            res.status(400).json({
-                success: false,
-                message: result.message
-            });
-        }
+        rentalService.payRental(rentalId, customerId, amount, (error, result) => {
+            if (error) {
+                console.error('Pay rental route error:', error);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Er is een fout opgetreden bij de betaling'
+                });
+            }
+            
+            if (result.success) {
+                console.log('Rental payment successful:', result.message);
+                res.json({
+                    success: true,
+                    message: result.message
+                });
+            } else {
+                console.log('Failed to pay rental:', result.message);
+                res.status(400).json({
+                    success: false,
+                    message: result.message
+                });
+            }
+        });
     } catch (error) {
         console.error('Pay rental route error:', error);
         res.status(500).json({
@@ -284,7 +308,7 @@ router.post('/rentals/:id/pay', async (req, res) => {
 });
 
 // Return rental route
-router.post('/rentals/:id/return', async (req, res) => {
+router.post('/rentals/:id/return', (req, res) => {
     try {
         const customerId = req.user.user_id;
         const rentalId = req.params.id;
@@ -294,21 +318,29 @@ router.post('/rentals/:id/return', async (req, res) => {
         const RentalService = require('../services/RentalService');
         const rentalService = new RentalService();
         
-        const result = await rentalService.returnRental(rentalId, customerId);
-        
-        if (result.success) {
-            console.log('Rental returned successfully:', result.message);
-            res.json({
-                success: true,
-                message: result.message
-            });
-        } else {
-            console.log('Failed to return rental:', result.message);
-            res.status(400).json({
-                success: false,
-                message: result.message
-            });
-        }
+        rentalService.returnRental(rentalId, customerId, (error, result) => {
+            if (error) {
+                console.error('Return rental route error:', error);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Er is een fout opgetreden bij het inleveren'
+                });
+            }
+            
+            if (result.success) {
+                console.log('Rental returned successfully:', result.message);
+                res.json({
+                    success: true,
+                    message: result.message
+                });
+            } else {
+                console.log('Failed to return rental:', result.message);
+                res.status(400).json({
+                    success: false,
+                    message: result.message
+                });
+            }
+        });
     } catch (error) {
         console.error('Return rental route error:', error);
         res.status(500).json({
@@ -319,7 +351,7 @@ router.post('/rentals/:id/return', async (req, res) => {
 });
 
 // Extend rental route
-router.post('/rentals/:id/extend', async (req, res) => {
+router.post('/rentals/:id/extend', (req, res) => {
     try {
         const customerId = req.user.user_id;
         const rentalId = req.params.id;
@@ -329,21 +361,29 @@ router.post('/rentals/:id/extend', async (req, res) => {
         const RentalService = require('../services/RentalService');
         const rentalService = new RentalService();
         
-        const result = await rentalService.extendRental(rentalId, customerId);
-        
-        if (result.success) {
-            console.log('Rental extended successfully:', result.message);
-            res.json({
-                success: true,
-                message: result.message
-            });
-        } else {
-            console.log('Failed to extend rental:', result.message);
-            res.status(400).json({
-                success: false,
-                message: result.message
-            });
-        }
+        rentalService.extendRental(rentalId, customerId, (error, result) => {
+            if (error) {
+                console.error('Extend rental route error:', error);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Er is een fout opgetreden bij het verlengen'
+                });
+            }
+            
+            if (result.success) {
+                console.log('Rental extended successfully:', result.message);
+                res.json({
+                    success: true,
+                    message: result.message
+                });
+            } else {
+                console.log('Failed to extend rental:', result.message);
+                res.status(400).json({
+                    success: false,
+                    message: result.message
+                });
+            }
+        });
     } catch (error) {
         console.error('Extend rental route error:', error);
         res.status(500).json({

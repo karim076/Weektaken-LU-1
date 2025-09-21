@@ -12,14 +12,224 @@ class FilmDAO extends BaseDAO {
    * Search films by title
    */
   searchFilms(searchTerm, page = 1, limit = 12, callback) {
-    this.getFilmsWithDetails(page, limit, searchTerm, null, callback);
+    this.getFilmsWithDetails(page, limit, searchTerm, null, 'title', callback);
   }
 
   /**
    * Get films by category
    */
   getFilmsByCategory(categoryId, page = 1, limit = 12, callback) {
-    this.getFilmsWithDetails(page, limit, '', categoryId, callback);
+    this.getFilmsWithDetails(page, limit, '', categoryId, 'title', callback);
+  }
+
+  /**
+   * Get films with advanced filtering options
+   */
+  getFilmsWithAdvancedFilters(page = 1, limit = 12, filters = {}, callback) {
+    const offset = (page - 1) * limit;
+    let whereClause = 'WHERE 1=1';
+    let params = [];
+
+    // Search filter
+    if (filters.search) {
+      whereClause += ` AND (f.title LIKE ? OR f.description LIKE ? OR CONCAT(a.first_name, ' ', a.last_name) LIKE ?)`;
+      const searchPattern = `%${filters.search}%`;
+      params.push(searchPattern, searchPattern, searchPattern);
+    }
+
+    // Category filter
+    if (filters.hasOwnProperty('categoryId') && filters.categoryId !== '' && filters.categoryId !== null) {
+      whereClause += ` AND c.category_id = ?`;
+      params.push(filters.categoryId);
+    }
+
+    // Rating filter
+    if (filters.hasOwnProperty('rating') && filters.rating !== '') {
+      whereClause += ` AND f.rating = ?`;
+      params.push(filters.rating);
+    }
+
+    // Year filter
+    if (filters.hasOwnProperty('year') && filters.year !== '' && filters.year !== null) {
+      whereClause += ` AND f.release_year = ?`;
+      params.push(filters.year);
+    }
+
+    // Length filter
+    if (filters.hasOwnProperty('length') && filters.length !== '') {
+      if (filters.length === 'short') {
+        whereClause += ` AND f.length < 90`;
+      } else if (filters.length === 'medium') {
+        whereClause += ` AND f.length BETWEEN 90 AND 120`;
+      } else if (filters.length === 'long') {
+        whereClause += ` AND f.length > 120`;
+      }
+    }
+
+    // Price range filter
+    if (filters.hasOwnProperty('priceRange') && filters.priceRange !== '') {
+      if (filters.priceRange === 'low') {
+        whereClause += ` AND f.rental_rate BETWEEN 0.99 AND 2.99`;
+      } else if (filters.priceRange === 'medium') {
+        whereClause += ` AND f.rental_rate BETWEEN 3.00 AND 4.99`;
+      } else if (filters.priceRange === 'high') {
+        whereClause += ` AND f.rental_rate >= 5.00`;
+      }
+    }
+
+    // Determine ORDER BY clause
+    let orderByClause = 'ORDER BY f.title';
+    if (filters.hasOwnProperty('sortBy') && filters.sortBy !== '') {
+      switch (filters.sortBy) {
+        case 'title':
+          orderByClause = 'ORDER BY f.title ASC';
+          break;
+        case 'title_desc':
+          orderByClause = 'ORDER BY f.title DESC';
+          break;
+        case 'year':
+          orderByClause = 'ORDER BY f.release_year DESC, f.title ASC';
+          break;
+        case 'year_desc':
+          orderByClause = 'ORDER BY f.release_year ASC, f.title ASC';
+          break;
+        case 'price':
+          orderByClause = 'ORDER BY f.rental_rate ASC, f.title ASC';
+          break;
+        case 'price_desc':
+          orderByClause = 'ORDER BY f.rental_rate DESC, f.title ASC';
+          break;
+        case 'length':
+          orderByClause = 'ORDER BY f.length ASC, f.title ASC';
+          break;
+        case 'length_desc':
+          orderByClause = 'ORDER BY f.length DESC, f.title ASC';
+          break;
+        default:
+          orderByClause = 'ORDER BY f.title ASC';
+      }
+    }
+
+    const sql = `
+      SELECT 
+        f.film_id,
+        f.title,
+        f.description,
+        f.release_year,
+        f.rental_duration,
+        f.rental_rate,
+        f.length,
+        f.replacement_cost,
+        f.rating,
+        f.special_features,
+        c.name as category_name,
+        l.name as language_name,
+        GROUP_CONCAT(DISTINCT CONCAT(a.first_name, ' ', a.last_name) SEPARATOR ', ') as actors,
+        1 as total_copies,
+        1 as available_copies
+      FROM film f
+      LEFT JOIN film_category fc ON f.film_id = fc.film_id
+      LEFT JOIN category c ON fc.category_id = c.category_id
+      LEFT JOIN language l ON f.language_id = l.language_id
+      LEFT JOIN film_actor fa ON f.film_id = fa.film_id
+      LEFT JOIN actor a ON fa.actor_id = a.actor_id
+      ${whereClause}
+      GROUP BY f.film_id, f.title, f.description, f.release_year, f.rental_duration, 
+               f.rental_rate, f.length, f.replacement_cost, f.rating, f.special_features,
+               c.name, l.name
+      ${orderByClause}
+      LIMIT ? OFFSET ?
+    `;
+
+    console.log('Films query:', sql);
+    console.log('Films query params:', [...params, limit, offset]);
+    this.query(sql, [...params, limit, offset], callback);
+  }
+
+  /**
+   * Get total count of films for advanced filtering
+   */
+  getFilmsCountAdvanced(filters = {}, callback) {
+    let whereClause = 'WHERE 1=1';
+    let params = [];
+
+    // Search filter
+    if (filters.search) {
+      whereClause += ` AND (f.title LIKE ? OR f.description LIKE ? OR CONCAT(a.first_name, ' ', a.last_name) LIKE ?)`;
+      const searchPattern = `%${filters.search}%`;
+      params.push(searchPattern, searchPattern, searchPattern);
+    }
+
+    // Category filter
+    if (filters.hasOwnProperty('categoryId') && filters.categoryId !== '' && filters.categoryId !== null) {
+      whereClause += ` AND c.category_id = ?`;
+      params.push(filters.categoryId);
+    }
+
+    // Rating filter
+    if (filters.hasOwnProperty('rating') && filters.rating !== '') {
+      whereClause += ` AND f.rating = ?`;
+      params.push(filters.rating);
+    }
+
+    // Year filter
+    if (filters.hasOwnProperty('year') && filters.year !== '' && filters.year !== null) {
+      whereClause += ` AND f.release_year = ?`;
+      params.push(filters.year);
+    }
+
+    // Length filter
+    if (filters.hasOwnProperty('length') && filters.length !== '') {
+      if (filters.length === 'short') {
+        whereClause += ` AND f.length < 90`;
+      } else if (filters.length === 'medium') {
+        whereClause += ` AND f.length BETWEEN 90 AND 120`;
+      } else if (filters.length === 'long') {
+        whereClause += ` AND f.length > 120`;
+      }
+    }
+
+    // Price range filter
+    if (filters.hasOwnProperty('priceRange') && filters.priceRange !== '') {
+      if (filters.priceRange === 'low') {
+        whereClause += ` AND f.rental_rate BETWEEN 0.99 AND 2.99`;
+      } else if (filters.priceRange === 'medium') {
+        whereClause += ` AND f.rental_rate BETWEEN 3.00 AND 4.99`;
+      } else if (filters.priceRange === 'high') {
+        whereClause += ` AND f.rental_rate >= 5.00`;
+      }
+    }
+
+    const sql = `
+      SELECT COUNT(DISTINCT f.film_id) as count
+      FROM film f
+      LEFT JOIN film_category fc ON f.film_id = fc.film_id
+      LEFT JOIN category c ON fc.category_id = c.category_id
+      LEFT JOIN film_actor fa ON f.film_id = fa.film_id
+      LEFT JOIN actor a ON fa.actor_id = a.actor_id
+      ${whereClause}
+    `;
+
+    this.query(sql, params, (error, results) => {
+      if (error) {
+        return callback(error);
+      }
+      callback(null, results[0].count);
+    });
+  }
+
+  /**
+   * Get unique release years for filter dropdown
+   */
+  getUniqueYears(callback) {
+    const sql = `
+      SELECT DISTINCT release_year
+      FROM film
+      WHERE release_year IS NOT NULL
+      ORDER BY release_year DESC
+    `;
+
+    this.query(sql, [], callback);
   }
 
   /**

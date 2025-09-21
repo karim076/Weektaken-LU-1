@@ -142,7 +142,7 @@ class CustomerDAO extends BaseDAO {
   /**
    * Get customer count for pagination
    */
-  async getSearchCustomersCount(search = '') {
+  getSearchCustomersCount(search = '', callback) {
     let whereClause = 'WHERE c.active = 1';
     let params = [];
 
@@ -247,7 +247,7 @@ class CustomerDAO extends BaseDAO {
   /**
    * Update customer information
    */
-  async updateCustomer(customerId, customerData) {
+  updateCustomer(customerId, customerData, callback) {
     try {
       console.log('CustomerDAO updateCustomer - ID:', customerId, 'Data:', customerData);
       
@@ -274,10 +274,10 @@ class CustomerDAO extends BaseDAO {
 
       if (fields.length === 0) {
         console.log('CustomerDAO updateCustomer - No valid fields to update');
-        return {
+        return callback(null, {
           success: false,
           message: 'No valid fields to update'
-        };
+        });
       }
 
       fields.push('last_update = NOW()');
@@ -292,110 +292,168 @@ class CustomerDAO extends BaseDAO {
       console.log('CustomerDAO updateCustomer - SQL:', sql);
       console.log('CustomerDAO updateCustomer - Values:', values);
 
-      const result = await this.query(sql, values);
-      console.log('CustomerDAO updateCustomer - Result:', result);
-      
-      const success = result.affectedRows > 0;
-      const message = success ? 'Customer updated successfully' : 'No customer updated - customer not found or no changes made';
-      
-      console.log('CustomerDAO updateCustomer - Final result:', { success, message });
-      
-      return { success, message };
+      this.query(sql, values, (error, result) => {
+        if (error) {
+          console.error('CustomerDAO updateCustomer error:', error);
+          return callback(null, {
+            success: false,
+            message: error.message || 'Failed to update customer'
+          });
+        }
+        
+        console.log('CustomerDAO updateCustomer - Result:', result);
+        
+        const success = result.affectedRows > 0;
+        const message = success ? 'Customer updated successfully' : 'No customer updated - customer not found or no changes made';
+        
+        console.log('CustomerDAO updateCustomer - Final result:', { success, message });
+        
+        callback(null, { success, message });
+      });
     } catch (error) {
       console.error('CustomerDAO updateCustomer error:', error);
-      return {
+      callback(null, {
         success: false,
         message: error.message || 'Failed to update customer'
-      };
+      });
     }
   }
 
   /**
    * Update customer and address information together
    */
-  async updateCustomerAndAddress(customerId, customerData, addressData) {
-    const connection = await this.db.getConnection();
-    
-    try {
-      await connection.beginTransaction();
-
-      // First get the customer's address_id
-      const getAddressIdSql = 'SELECT address_id FROM customer WHERE customer_id = ?';
-      const [customerResult] = await connection.execute(getAddressIdSql, [customerId]);
+  updateCustomerAndAddress(customerId, customerData, addressData, callback) {
+    this.db.getConnection((err, connection) => {
+      if (err) return callback(err);
       
-      if (!customerResult.length) {
-        throw new Error('Customer not found');
-      }
-      
-      const addressId = customerResult[0].address_id;
+      connection.beginTransaction((err) => {
+        if (err) {
+          connection.release();
+          return callback(err);
+        }
 
-      // Update customer table if customerData provided
-      if (customerData && Object.keys(customerData).length > 0) {
-        const customerFields = [];
-        const customerValues = [];
-
-        for (const [key, value] of Object.entries(customerData)) {
-          if (value !== undefined) {
-            customerFields.push(`${key} = ?`);
-            customerValues.push(value);
+        // First get the customer's address_id
+        const getAddressIdSql = 'SELECT address_id FROM customer WHERE customer_id = ?';
+        connection.execute(getAddressIdSql, [customerId], (err, customerResult) => {
+          if (err) {
+            connection.rollback(() => {
+              connection.release();
+              callback(err);
+            });
+            return;
           }
-        }
-
-        if (customerFields.length > 0) {
-          customerFields.push('last_update = NOW()');
-          customerValues.push(customerId);
-
-          const customerSql = `
-            UPDATE customer 
-            SET ${customerFields.join(', ')}
-            WHERE customer_id = ?
-          `;
-
-          await connection.execute(customerSql, customerValues);
-        }
-      }
-
-      // Update address table if addressData provided
-      if (addressData && Object.keys(addressData).length > 0) {
-        const addressFields = [];
-        const addressValues = [];
-
-        for (const [key, value] of Object.entries(addressData)) {
-          if (value !== undefined) {
-            addressFields.push(`${key} = ?`);
-            addressValues.push(value);
+          
+          if (!customerResult.length) {
+            connection.rollback(() => {
+              connection.release();
+              callback(new Error('Customer not found'));
+            });
+            return;
           }
-        }
+          
+          const addressId = customerResult[0].address_id;
 
-        if (addressFields.length > 0) {
-          addressFields.push('last_update = NOW()');
-          addressValues.push(addressId);
+          // Update customer table if customerData provided
+          const updateCustomerStep = (nextCallback) => {
+            if (!customerData || Object.keys(customerData).length === 0) {
+              return nextCallback();
+            }
 
-          const addressSql = `
-            UPDATE address 
-            SET ${addressFields.join(', ')}
-            WHERE address_id = ?
-          `;
+            const customerFields = [];
+            const customerValues = [];
 
-          await connection.execute(addressSql, addressValues);
-        }
-      }
+            for (const [key, value] of Object.entries(customerData)) {
+              if (value !== undefined) {
+                customerFields.push(`${key} = ?`);
+                customerValues.push(value);
+              }
+            }
 
-      await connection.commit();
-      
-      return { affectedRows: 1 };
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    } finally {
-      connection.release();
-    }
+            if (customerFields.length === 0) {
+              return nextCallback();
+            }
+
+            customerFields.push('last_update = NOW()');
+            customerValues.push(customerId);
+
+            const customerSql = `
+              UPDATE customer 
+              SET ${customerFields.join(', ')}
+              WHERE customer_id = ?
+            `;
+
+            connection.execute(customerSql, customerValues, nextCallback);
+          };
+
+          // Update address table if addressData provided
+          const updateAddressStep = (nextCallback) => {
+            if (!addressData || Object.keys(addressData).length === 0) {
+              return nextCallback();
+            }
+
+            const addressFields = [];
+            const addressValues = [];
+
+            for (const [key, value] of Object.entries(addressData)) {
+              if (value !== undefined) {
+                addressFields.push(`${key} = ?`);
+                addressValues.push(value);
+              }
+            }
+
+            if (addressFields.length === 0) {
+              return nextCallback();
+            }
+
+            addressFields.push('last_update = NOW()');
+            addressValues.push(addressId);
+
+            const addressSql = `
+              UPDATE address 
+              SET ${addressFields.join(', ')}
+              WHERE address_id = ?
+            `;
+
+            connection.execute(addressSql, addressValues, nextCallback);
+          };
+
+          // Execute updates sequentially
+          updateCustomerStep((err) => {
+            if (err) {
+              connection.rollback(() => {
+                connection.release();
+                callback(err);
+              });
+              return;
+            }
+
+            updateAddressStep((err) => {
+              if (err) {
+                connection.rollback(() => {
+                  connection.release();
+                  callback(err);
+                });
+                return;
+              }
+
+              connection.commit((err) => {
+                connection.release();
+                if (err) {
+                  return callback(err);
+                }
+                callback(null, { affectedRows: 1 });
+              });
+            });
+          });
+        });
+      });
+    });
   }
 
   /**
    * Get customers by store
    */
-  async getCustomersByStore(storeId) {
+  getCustomersByStore(storeId, callback) {
     const sql = `
       SELECT 
         c.customer_id,
@@ -411,13 +469,13 @@ class CustomerDAO extends BaseDAO {
       ORDER BY c.last_name, c.first_name
     `;
 
-    return await this.query(sql, [storeId]);
+    this.query(sql, [storeId], callback);
   }
 
   /**
    * Get top customers by rental count
    */
-  async getTopCustomers(limit = 10) {
+  getTopCustomers(limit = 10, callback) {
     const sql = `
       SELECT 
         c.customer_id,
@@ -435,13 +493,13 @@ class CustomerDAO extends BaseDAO {
       LIMIT ?
     `;
 
-    return await this.query(sql, [limit]);
+    this.query(sql, [limit], callback);
   }
 
   /**
    * Get customer with detailed information by ID
    */
-  async getCustomerWithDetails(customerId) {
+  getCustomerWithDetails(customerId, callback) {
     const sql = `
       SELECT 
         c.customer_id,
@@ -472,14 +530,22 @@ class CustomerDAO extends BaseDAO {
       GROUP BY c.customer_id
     `;
 
-    const rows = await this.query(sql, [customerId]);
-    return rows.length > 0 ? rows[0] : null;
+    this.query(sql, [customerId], (error, rows) => {
+      if (error) return callback(error);
+      callback(null, rows.length > 0 ? rows[0] : null);
+    });
   }
 
   /**
    * Check if username exists for a different customer
    */
-  async findByUsername(username, excludeCustomerId = null) {
+  findByUsername(username, excludeCustomerId, callback) {
+    // Allow for optional excludeCustomerId parameter
+    if (typeof excludeCustomerId === 'function') {
+      callback = excludeCustomerId;
+      excludeCustomerId = null;
+    }
+
     let sql = 'SELECT customer_id, username FROM customer WHERE username = ?';
     let params = [username];
     
@@ -488,118 +554,124 @@ class CustomerDAO extends BaseDAO {
       params.push(excludeCustomerId);
     }
     
-    const result = await this.query(sql, params);
-    return result[0] || null;
+    this.query(sql, params, (error, result) => {
+      if (error) return callback(error);
+      callback(null, result[0] || null);
+    });
   }
 
   /**
    * Search customers (basic - voor staff interface)
    */
-  async searchCustomersBasic(query) {
-    try {
-      const sql = `
-        SELECT 
-          customer_id,
-          first_name,
-          last_name,
-          email,
-          active,
-          create_date,
-          CONCAT(first_name, ' ', last_name) as full_name
-        FROM customer
-        WHERE active = 1
-          AND (
-            first_name LIKE ? OR 
-            last_name LIKE ? OR 
-            email LIKE ? OR
-            CONCAT(first_name, ' ', last_name) LIKE ?
-          )
-        ORDER BY last_name, first_name
-        LIMIT 20
-      `;
-      
-      const searchTerm = `%${query}%`;
-      return await this.query(sql, [searchTerm, searchTerm, searchTerm, searchTerm]);
-    } catch (error) {
-      console.error('CustomerDAO searchCustomersBasic error:', error);
-      return [];
-    }
+  searchCustomersBasic(query, callback) {
+    const sql = `
+      SELECT 
+        customer_id,
+        first_name,
+        last_name,
+        email,
+        active,
+        create_date,
+        CONCAT(first_name, ' ', last_name) as full_name
+      FROM customer
+      WHERE active = 1
+        AND (
+          first_name LIKE ? OR 
+          last_name LIKE ? OR 
+          email LIKE ? OR
+          CONCAT(first_name, ' ', last_name) LIKE ?
+        )
+      ORDER BY last_name, first_name
+      LIMIT 20
+    `;
+    
+    const searchTerm = `%${query}%`;
+    this.query(sql, [searchTerm, searchTerm, searchTerm, searchTerm], (error, result) => {
+      if (error) {
+        console.error('CustomerDAO searchCustomersBasic error:', error);
+        return callback(null, []);
+      }
+      callback(null, result);
+    });
   }
 
   /**
    * Get all active customers (voor staff interface)
    */
-  async getAllActiveCustomers() {
-    try {
-      const sql = `
-        SELECT 
-          customer_id,
-          first_name,
-          last_name,
-          email,
-          active,
-          create_date,
-          last_update,
-          CONCAT(first_name, ' ', last_name) as full_name
-        FROM customer
-        WHERE active = 1
-        ORDER BY last_name, first_name
-        LIMIT 500
-      `;
-      
-      return await this.query(sql);
-    } catch (error) {
-      console.error('CustomerDAO getAllActiveCustomers error:', error);
-      return [];
-    }
+  getAllActiveCustomers(callback) {
+    const sql = `
+      SELECT 
+        customer_id,
+        first_name,
+        last_name,
+        email,
+        active,
+        create_date,
+        last_update,
+        CONCAT(first_name, ' ', last_name) as full_name
+      FROM customer
+      WHERE active = 1
+      ORDER BY last_name, first_name
+      LIMIT 500
+    `;
+    
+    this.query(sql, (error, result) => {
+      if (error) {
+        console.error('CustomerDAO getAllActiveCustomers error:', error);
+        return callback(null, []);
+      }
+      callback(null, result);
+    });
   }
 
   /**
    * Get active rentals for a customer
    */
-  async getActiveRentals(customerId) {
-    try {
-      const sql = `
-        SELECT 
-          r.rental_id,
-          r.rental_date,
-          r.return_date,
-          r.return_date,
-          f.film_id,
-          f.title,
-          i.inventory_id
-        FROM rental r
-        JOIN inventory i ON r.inventory_id = i.inventory_id
-        JOIN film f ON i.film_id = f.film_id
-        WHERE r.customer_id = ? AND r.return_date IS NULL
-        ORDER BY r.rental_date DESC
-      `;
-      
-      return await this.query(sql, [customerId]);
-    } catch (error) {
-      console.error('CustomerDAO getActiveRentals error:', error);
-      return [];
-    }
+  getActiveRentals(customerId, callback) {
+    const sql = `
+      SELECT 
+        r.rental_id,
+        r.rental_date,
+        r.return_date,
+        r.return_date,
+        f.film_id,
+        f.title,
+        i.inventory_id
+      FROM rental r
+      JOIN inventory i ON r.inventory_id = i.inventory_id
+      JOIN film f ON i.film_id = f.film_id
+      WHERE r.customer_id = ? AND r.return_date IS NULL
+      ORDER BY r.rental_date DESC
+    `;
+    
+    this.query(sql, [customerId], (error, result) => {
+      if (error) {
+        console.error('CustomerDAO getActiveRentals error:', error);
+        return callback(null, []);
+      }
+      callback(null, result);
+    });
   }
 
   /**
    * Delete customer (soft delete by setting active = 0)
    */
-  async deleteCustomer(customerId) {
-    try {
-      // In Sakila, we typically don't hard delete customers due to rental history
-      // Instead, we set them as inactive
-      const sql = `
-        UPDATE customer 
-        SET active = 0, last_update = NOW()
-        WHERE customer_id = ?
-      `;
-      
-      return await this.query(sql, [customerId]);
-    } catch (error) {
-      console.error('CustomerDAO deleteCustomer error:', error);
-      throw error;
-    }
+  deleteCustomer(customerId, callback) {
+    // In Sakila, we typically don't hard delete customers due to rental history
+    // Instead, we set them as inactive
+    const sql = `
+      UPDATE customer 
+      SET active = 0, last_update = NOW()
+      WHERE customer_id = ?
+    `;
+    
+    this.query(sql, [customerId], (error, result) => {
+      if (error) {
+        console.error('CustomerDAO deleteCustomer error:', error);
+        return callback(error);
+      }
+      callback(null, result);
+    });
   }
 }
 

@@ -11,81 +11,83 @@ class SessionDAO extends BaseDAO {
   /**
    * Create new session
    */
-  async createSession(sessionId, userId, userType, expiresAt) {
+  createSession(sessionId, userId, userType, expiresAt, callback) {
     const sql = `
       INSERT INTO user_sessions (session_id, user_id, user_type, expires_at, created_at)
       VALUES (?, ?, ?, ?, NOW())
     `;
 
-    return await this.query(sql, [sessionId, userId, userType, expiresAt]);
+    this.query(sql, [sessionId, userId, userType, expiresAt], callback);
   }
 
   /**
    * Get session by ID
    */
-  async getSession(sessionId) {
+  getSession(sessionId, callback) {
     const sql = `
       SELECT * FROM user_sessions 
       WHERE session_id = ? AND expires_at > NOW()
     `;
 
-    const results = await this.query(sql, [sessionId]);
-    return results.length > 0 ? results[0] : null;
+    this.query(sql, [sessionId], (error, results) => {
+      if (error) return callback(error);
+      callback(null, results.length > 0 ? results[0] : null);
+    });
   }
 
   /**
    * Update session last accessed time
    */
-  async updateSessionAccess(sessionId) {
+  updateSessionAccess(sessionId, callback) {
     const sql = `
       UPDATE user_sessions 
       SET last_accessed = NOW()
       WHERE session_id = ?
     `;
 
-    return await this.query(sql, [sessionId]);
+    this.query(sql, [sessionId], callback);
   }
 
   /**
    * Delete session (logout)
    */
-  async deleteSession(sessionId) {
+  deleteSession(sessionId, callback) {
     const sql = `
       DELETE FROM user_sessions 
       WHERE session_id = ?
     `;
 
-    return await this.query(sql, [sessionId]);
+    this.query(sql, [sessionId], callback);
   }
 
   /**
    * Delete all sessions for a user (logout from all devices)
    */
-  async deleteUserSessions(userId, userType) {
+  deleteUserSessions(userId, userType, callback) {
     const sql = `
       DELETE FROM user_sessions 
       WHERE user_id = ? AND user_type = ?
     `;
 
-    return await this.query(sql, [userId, userType]);
+    this.query(sql, [userId, userType], callback);
   }
 
   /**
    * Clean up expired sessions
    */
-  async cleanupExpiredSessions() {
+  cleanupExpiredSessions(callback) {
     const sql = `
       DELETE FROM user_sessions 
       WHERE expires_at <= NOW()
     `;
 
-    return await this.query(sql);
+    this.query(sql, [], callback);
   }
 
   /**
    * Get active sessions for a user
    */
-  async getUserActiveSessions(userId, userType) {
+  getUserActiveSessions(userId, userType, callback) {
     const sql = `
       SELECT session_id, created_at, last_accessed, expires_at
       FROM user_sessions 
@@ -93,13 +95,13 @@ class SessionDAO extends BaseDAO {
       ORDER BY last_accessed DESC
     `;
 
-    return await this.query(sql, [userId, userType]);
+    this.query(sql, [userId, userType], callback);
   }
 
   /**
    * Count active sessions
    */
-  async countActiveSessions() {
+  countActiveSessions(callback) {
     const sql = `
       SELECT 
         user_type,
@@ -109,13 +111,13 @@ class SessionDAO extends BaseDAO {
       GROUP BY user_type
     `;
 
-    return await this.query(sql);
+    this.query(sql, [], callback);
   }
 
   /**
    * Get session statistics
    */
-  async getSessionStats() {
+  getSessionStats(callback) {
     const sql = `
       SELECT 
         COUNT(*) as total_sessions,
@@ -125,21 +127,23 @@ class SessionDAO extends BaseDAO {
       FROM user_sessions
     `;
 
-    const results = await this.query(sql);
-    return results[0];
+    this.query(sql, [], (error, results) => {
+      if (error) return callback(error);
+      callback(null, results[0]);
+    });
   }
 
   /**
    * Extend session expiry
    */
-  async extendSession(sessionId, newExpiresAt) {
+  extendSession(sessionId, newExpiresAt, callback) {
     const sql = `
       UPDATE user_sessions 
       SET expires_at = ?, last_accessed = NOW()
       WHERE session_id = ?
     `;
 
-    return await this.query(sql, [newExpiresAt, sessionId]);
+    this.query(sql, [newExpiresAt, sessionId], callback);
   }
 }
 

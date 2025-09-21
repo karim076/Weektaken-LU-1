@@ -1,290 +1,468 @@
 # 🎬 Sakila App
 
-Een Node.js + Express applicatie die verbinding maakt met de [Sakila MySQL database](https://dev.mysql.com/doc/sakila/en/) en gegevens overzichtelijk weergeeft in de browser met behulp van **Bootstrap** en **EJS**.
+Een Node.js + Express applicatie die verbinding maakt met de [Sakila MySQL database](https://dev.mysql.com/doc/sakila/en/) en een complete film verhuur systeem biedt met **Bootstrap** styling en **EJS** server-side rendering.
 
 ## Inhoud
 - [Overzicht](#-overzicht)
-- [UserStories](#-userstories)
+- [Functionaliteiten](#-functionaliteiten)
+- [User Stories](#-user-stories)
 - [Benodigdheden](#-benodigdheden)
 - [Installatie](#-installatie)
 - [Projectstructuur](#-projectstructuur)
 - [Routes](#-routes)
-- [Functionaliteiten](#-functionaliteiten)
-- [Screenshots](#-preview)
-- [Randvoorwaarden](#-randvoorwaarden (requirements))
-- [Non-Functional Requirements](#-Non-FunctionalRequirements)
+- [Screenshots](#-screenshots)
+- [Randvoorwaarden](#-randvoorwaarden)
+- [Non-Functional Requirements](#-non-functional-requirements)
 
 ---
 
-## 🚀 Overzicht
-De applicatie demonstreert hoe je een Node.js-project opzet, koppelt met MySQL en data uit de **Sakila-database** toont in de browser.  
-Voor deze weektaak ligt de focus op:
-1. Basis projectstructuur met **Node.js**, **Express** en **Bootstrap**.
-2. Succesvolle verbinding met de **Sakila database**.
-3. Ophalen en weergeven van een dataset (customers) in een overzichtelijke tabel (met limit 50).
+## Overzicht
+
+De Sakila App is een volledig functioneel film verhuur systeem met twee hoofdperspectieven:
+- **Klanten (Customers)**: Kunnen films bekijken, huren, en hun verhuurgeschiedenis beheren
+- **Staff (Medewerkers)**: Kunnen klanten beheren, verhuurprocessen afhandelen, en rapportages bekijken
+
+De applicatie gebruikt een **callback-only architecture** (geen async/await), volgt **MVC-patronen** en implementeert een **gelaagde architectuur** met strikte scheiding tussen Controllers, Services en DAOs.
 
 ---
-## 📖 UserStories
-
-Voor deze applicatie is het gekozen viewpoint: **Customer**.  
-De user stories zijn afgeleid van de requirements en geprioriteerd op must/should/could.
-
-### Requirements & Prioritering
-1. **[Must]** Klant kan een overzicht van klanten zien (max 50 rijen).  
-2. **[Must]** Klant kan de homepagina bereiken en navigeren via een menu.  
-3. **[Should]** Klant kan in de toekomst films en transacties bekijken.  
-4. **[Could]** Klant kan zoek- en filterfunctionaliteit gebruiken.  
-
----
-
-## 🛠 Benodigdheden
-- [Node.js](https://nodejs.org/) (v18 of hoger aanbevolen)
-- [MySQL](https://dev.mysql.com/downloads/mysql/)
-- Sakila database (te importeren in MySQL, bv. via DBeaver)
-- Een teksteditor, bv. [VS Code](https://code.visualstudio.com/)
-
----
-
-## 📥 Installatie
-
-1. **Clone of download dit project**  
-   ```bash
-   git clone https://github.com/jouw-gebruikersnaam/sakila-app.git
-   cd sakila-app
-2. **Installeer dependencies**
-
- ```npm install```
-
-3. **Configureer databaseverbinding**
-Pas in db.js je MySQL inloggegevens aan:
-```bash
-const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: 'jouw-wachtwoord',
-  database: 'sakila'
-});
-```
-4. **Start de applicatie**
-Voor development (met automatische reload):
-```bash
-npm run dev
-```
-Voor normaal gebruik:
-```bash
-npm start
-```
-Open in de browser
-👉 http://localhost:3000
-
-## Projectstructuur
-```
-sakila-app/
-│── public/           # Bootstrap/CSS/JS bestanden
-│── routes/           # Express routes (bv. customers)
-│── views/            # EJS-templates
-│   ├── home.ejs      # Home pagina
-│   └── customers.ejs # Klanten pagina
-│── app.js            # Main server bestand
-│── db.js             # Databaseconnectie
-│── package.json      # NPM configuratie
-```
-## Routes
-- Ga naar / voor de Homepagina.
-- Ga naar /customers voor een tabel met 50 klanten uit de Sakila database.
 
 ## Functionaliteiten
-- Node.js + Express projectstructuur
-- Verbinding met MySQL Sakila database
-- Routes voor het ophalen van data
-- Bootstrap styling + navigatiebalk
-- Dynamische views met EJS
 
-## Preview
-### Home pagina
-![alt text](https://github.com/karim076/Weektaak-1/blob/main/Images/homepage.png?raw=true)
-### Klanten pagina
-![alt text](https://github.com/karim076/Weektaak-1/blob/main/Images/Klanten.png?raw=true)
+### Voor Klanten
+- **Film Catalogus**: Bladeren door beschikbare films met paginering
+- **Film Details**: Gedetailleerde filmview met beschikbaarheid per winkel
+- **Film Zoeken**: Zoeken op titel en filteren op categorie
+- **Film Huren**: Direct huren vanuit filmdetails
+- **Persoonlijk Dashboard**: Overzicht van actieve en afgelopen huren
+- **Profiel Beheer**: Persoonlijke gegevens aanpassen
+- **Verhuurgeschiedenis**: Volledige historie van gehuurde films
+- **Gebruikersregistratie**: Account aanmaken met validatie
 
-## 🛡️ Randvoorwaarden (Requirements)
+### Voor Staff
+- **Staff Dashboard**: Overzicht van verhuurstatistieken
+- **Klantbeheer**: CRUD operaties voor klanten
+- **Klant Zoeken**: Uitgebreid zoeken in klantendatabase
+- **Verhuur Management**: Films uitlenen en retourneren
+- **Klant Details**: Gedetailleerde klantinformatie en verhuurgeschiedenis
+- **Rapportages**: Overzicht van actieve en achterstallige verhuren
 
-- **RV-01: JavaScript en MySQL gebruiken**  
-  Beschrijving: Geen TypeScript, geen SqlServer  
-  Status: Voldaan
+### Algemene Features
+- **Authenticatie & Autorisatie**: JWT-based met role-based access
+- **Responsive Design**: Optimaal voor desktop, tablet en mobiel
+- **Bootstrap UI**: Moderne, gebruiksvriendelijke interface
+- **Error Handling**: Comprehensive error management
+- **Database Connectie**: MySQL connection pooling
 
-- **RV-02: Server-side rendering**  
-  Beschrijving: De webapplicatie rendert de pages server-side, geen clientside frontend  
-  Status: Voldaan
+---
+## User Stories
 
-- **RV-03: Bewezen CSS framework gebruiken**  
-  Beschrijving: Bootstrap of vergelijkbaar voor layout en styling  
-  Status: Voldaan
+De applicatie ondersteunt twee hoofdperspectieven: **Klanten** en **Staff**. Hieronder staan de daadwerkelijk geïmplementeerde user stories.
 
-- **RV-04: Open source technologieën**  
-  Beschrijving: Waar mogelijk open source gebruiken  
-  Status: Voldaan
+### Klanten (Customer Perspective)
 
-- **RV-05: Geen Object Relational Mapper**  
-  Beschrijving: SQL queries worden uitgeschreven en uitgevoerd via een npm package  
-  Status: Voldaan
+#### Epic 1: Films Ontdekken
+**US1.1 - Films Bekijken (Must)**  
+Als klant wil ik een overzicht van beschikbare films kunnen bekijken, zodat ik weet welke films ik kan huren.  
+**Acceptatiecriteria:**  
+- Films worden getoond in een responsive grid met titel, categorie, rating en beschikbaarheid
+- Paginering voor eenvoudige navigatie door grote collecties
+- Alleen beschikbare films worden prominent getoond
+- Data wordt real-time uit de database geladen
 
-- **RV-06: Alleen callbackfuncties gebruiken**  
-  Beschrijving: Geen async/await of Promises; volledig callback-based  
-  Status: Voldaan
+**US1.2 - Film Details (Must)**  
+Als klant wil ik gedetailleerde informatie over een film kunnen bekijken, zodat ik een geïnformeerde keuze kan maken.  
+**Acceptatiecriteria:**  
+- Volledige filmdetails inclusief beschrijving, cast, speelduur en rating
+- Beschikbaarheid per winkel met real-time voorraadinfo
+- Direct huur-knop per winkel locatie
+- Responsive design voor alle apparaten
 
-## ⚙️ Non-Functional Requirements
+**US1.3 - Films Zoeken (Should)**  
+Als klant wil ik films kunnen zoeken en filteren, zodat ik sneller de juiste film vind.  
+**Acceptatiecriteria:**  
+- Zoeken op filmtitel met real-time resultaten
+- Filteren op categorie/genre
+- Combinatie van zoeken en filteren mogelijk
+- Snelle, responsive zoekresultaten
 
-- **NF-01: Modulariteit**  
-  Beschrijving: Gelaagde architectuur; routes communiceren alleen via db.js, views bevatten geen database-logica  
-  Status: Voldaan
+**US1.4 - Film Huren (Must)**  
+Als klant wil ik een film direct kunnen huren, zodat ik deze kan bekijken.  
+**Acceptatiecriteria:**  
+- Direct huren vanuit filmdetail pagina
+- Keuze uit beschikbare winkellocaties
+- Bevestiging van succesvolle huur
+- Automatische toevoeging aan persoonlijke verhuurgeschiedenis
 
-- **NF-02: Onderhoudbaarheid**  
-  Beschrijving: DRY-principe; geen duplicatie van code, herbruikbare logica in aparte modules/functies  
-  Status: Voldaan
+#### Epic 2: Persoonlijk Account Beheer
+**US2.1 - Account Registratie (Must)**  
+Als nieuwe klant wil ik een account kunnen aanmaken, zodat ik films kan huren.  
+**Acceptatiecriteria:**  
+- Registratieformulier met validatie van verplichte velden
+- Email verificatie en unieke gebruikersnaam controle
+- Automatische koppeling aan stad/adres database
+- Directe doorverwijzing naar dashboard na registratie
 
-- **NF-03: Gebruiksvriendelijkheid**  
-  Beschrijving: Logische toegang tot functionaliteit; navbar aanwezig, overzichtelijke tabellen, duidelijke startpagina  
-  Status: Voldaan
+**US2.2 - Persoonlijk Dashboard (Must)**  
+Als klant wil ik een persoonlijk dashboard hebben, zodat ik mijn verhuuractiviteit kan overzien.  
+**Acceptatiecriteria:**  
+- Overzicht van actieve verhuren met vervaldatums
+- Snelle toegang tot populaire films
+- Verhuurgeschiedenis met filter opties
+- Responsive design voor alle apparaten
 
-# 📽️ Sakila Applicatie – Epics & User Stories
+**US2.3 - Profiel Beheer (Should)**  
+Als klant wil ik mijn profielgegevens kunnen aanpassen, zodat mijn account up-to-date blijft.  
+**Acceptatiecriteria:**  
+- Bewerken van persoonlijke gegevens (naam, email, adres)
+- Wachtwoord wijzigen met validatie
+- Real-time validatie van invoervelden
+- Bevestiging van wijzigingen
 
-Dit document bevat de epics, user stories en acceptatiecriteria voor de Node.js/Express applicatie gebaseerd op de **Sakila-database**.  
-De applicatie ondersteunt drie perspectieven (viewpoints): **Staff**, **Huurder (klant)** en **Eigenaar (admin)**.  
+**US2.4 - Verhuurgeschiedenis (Must)**  
+Als klant wil ik mijn complete verhuurgeschiedenis kunnen inzien, zodat ik kan zien welke films ik eerder heb gehuurd.  
+**Acceptatiecriteria:**  
+- Chronologisch overzicht van alle verhuren
+- Details per verhuur: film, datum, kosten, status
+- Filter op status (actief/geretourneerd)
+- Export functionaliteit voor persoonlijke administratie
+
+### Staff (Medewerker Perspective)
+
+#### Epic 3: Klantenbeheer
+**US3.1 - Klanten Overzicht (Must)**  
+Als medewerker wil ik een overzicht van alle klanten kunnen bekijken, zodat ik snel klantinformatie kan vinden.  
+**Acceptatiecriteria:**  
+- Tabel met klantbasisgegevens (naam, email, status, registratiedatum)
+- Paginering voor grote klantenaantallen
+- Sortering op verschillende velden
+- Direct toegang tot klantdetails
+
+**US3.2 - Klant Zoeken (Must)**  
+Als medewerker wil ik klanten kunnen zoeken, zodat ik snel de juiste klant kan vinden.  
+**Acceptatiecriteria:**  
+- Zoeken op naam, email of klant-ID
+- Real-time zoekresultaten tijdens typen
+- Geavanceerde filters (status, registratiedatum)
+- Snelle toegang tot gevonden klantprofielen
+
+**US3.3 - Klant Details (Must)**  
+Als medewerker wil ik gedetailleerde klantinformatie kunnen bekijken, zodat ik klanten optimaal kan helpen.  
+**Acceptatiecriteria:**  
+- Volledig klantprofiel met contactgegevens
+- Complete verhuurgeschiedenis van de klant
+- Huidige status en openstaande verhuren
+- Snelle acties: nieuwe verhuur, profiel bewerken
+
+**US3.4 - Klant Aanmaken (Must)**  
+Als medewerker wil ik nieuwe klanten kunnen registreren, zodat zij gebruik kunnen maken van onze diensten.  
+**Acceptatiecriteria:**  
+- Uitgebreid registratieformulier met validatie
+- Koppeling aan bestaande adres/stad database
+- Automatische generatie van klant-ID
+- Direct beschikbaar voor verhuurprocessen
+
+**US3.5 - Klant Bewerken (Should)**  
+Als medewerker wil ik klantgegevens kunnen bewerken, zodat ik correcties en updates kan doorvoeren.  
+**Acceptatiecriteria:**  
+- Bewerken van alle klantgegevens
+- Validatie van wijzigingen
+- Audit trail van wijzigingen
+- Bevestiging van updates
+
+#### Epic 4: Verhuur Management
+**US4.1 - Staff Dashboard (Must)**  
+Als medewerker wil ik een dashboard met verhuuroverzicht, zodat ik de huidige situatie kan monitoren.  
+**Acceptatiecriteria:**  
+- Overzicht van actieve verhuren
+- Achterstallige verhuren met alerts
+- Statistieken van de dag/week
+- Snelle toegang tot belangrijkste functies
+
+**US4.2 - Verhuur Afhandeling (Must)**  
+Als medewerker wil ik verhuren kunnen afhandelen, zodat klanten films kunnen huren en retourneren.  
+**Acceptatiecriteria:**  
+- Nieuwe verhuur aanmaken voor klant
+- Film retourneer proces
+- Status updates van verhuren
+- Automatische kostencalculatie
+
+**US4.3 - Klant Verhuurgeschiedenis (Should)**  
+Als medewerker wil ik de verhuurgeschiedenis van een klant kunnen bekijken, zodat ik gerichte service kan bieden.  
+**Acceptatiecriteria:**  
+- Complete verhuurhistorie per klant
+- Filter op periode en status
+- Details van elke individuele verhuur
+- Export mogelijkheden voor rapportage
 
 ---
 
-## 👩‍💼 Staff (Medewerker)
+## Benodigdheden
 
-### Epic 1: Klantenbeheer
-**US1E1 - User Story 1 (Must)**  
-Als medewerker wil ik een nieuwe klant kunnen registreren, zodat ik hem of haar kan toevoegen aan het systeem en films kan verhuren.  
-**Acceptatiecriteria:**  
-- Er is een formulier met verplichte velden: naam, adres, e-mail, telefoonnummer.  
-- Wanneer verplichte velden ontbreken, verschijnt een foutmelding.  
-- Na succesvolle invoer verschijnt de klant in het klantenoverzicht.  
-
-**US2E1 - User Story 2 (Must)**  
-Als medewerker wil ik klantgegevens kunnen inzien, zodat ik snel toegang heb tot relevante informatie bij vragen of transacties.  
-**Acceptatiecriteria:**  
-- Er is een klantenoverzicht met basisgegevens (naam, e-mail, status).  
-- Ik kan op een klant klikken om details te zien.  
-- De data komt rechtstreeks uit de database.  
-
-**US3E1 - User Story 3 (Should)**  
-Als medewerker wil ik klantgegevens kunnen bewerken, zodat ik fouten kan corrigeren of updates kan verwerken.  
-**Acceptatiecriteria:**  
-- Er is een bewerk-knop bij elke klant.  
-- Wijzigingen worden gecontroleerd op geldige invoer.  
-- De wijziging is direct zichtbaar in het overzicht.  
-
-**US4E1 - User Story 4 (Could)**  
-Als medewerker wil ik een klant kunnen verwijderen, zodat oude of inactieve klanten niet in de database blijven staan.  
-**Acceptatiecriteria:**  
-- Er is een delete-knop.  
-- Er verschijnt een bevestigingspopup.  
-- Na verwijderen wordt de klant niet meer in het overzicht getoond.  
+- **[Node.js](https://nodejs.org/)** v18 of hoger
+- **[MySQL](https://dev.mysql.com/downloads/mysql/)** v8.0 of hoger
+- **Sakila Database** (meegeleverd in `/Database/sakila.sql`)
+- **Git** voor version control
+- Code editor zoals **[VS Code](https://code.visualstudio.com/)**
 
 ---
 
-### Epic 2: Verhuurbeheer
-**US1E2 - User Story 1 (Must)**  
-Als medewerker wil ik een film aan een klant kunnen verhuren, zodat de transactie geregistreerd wordt in het systeem.  
-**Acceptatiecriteria:**  
-- Ik kan een klant selecteren.  
-- Ik kan een beschikbare film selecteren.  
-- De verhuur wordt opgeslagen met datum en medewerker.  
+## Installatie
 
-**US2E2 - User Story 2 (Should)**  
-Als medewerker wil ik een lopende huur kunnen beëindigen, zodat de film terug beschikbaar is voor verhuur.  
-**Acceptatiecriteria:**  
-- Bij elke lopende huur is een "retourneer"-knop beschikbaar.  
-- Na klikken wordt de huurstatus aangepast naar "afgesloten".  
-- De film verschijnt opnieuw in de lijst met beschikbare films.  
+### 1. Project Setup
+```bash
+# Clone het project
+git clone https://github.com/karim076/Weektaken-LU-1.git
+cd Weektaak-1/sakila-app
 
----
+# Installeer dependencies
+npm install
+```
 
-## 🎬 Huurder (Klant)
+### 2. Database Setup
+```sql
+-- Importeer de Sakila database in MySQL
+-- Bestand: Database/sakila.sql
+mysql -u root -p < Database/sakila.sql
+```
 
-### Epic 3: Films ontdekken
-**US1E3 - User Story 1 (Must)**  
-Als huurder wil ik een overzicht van beschikbare films kunnen bekijken, zodat ik weet welke films ik kan huren.  
-**Acceptatiecriteria:**  
-- Films worden getoond in een lijst of tabel met titel, genre en speelduur.  
-- Alleen beschikbare films worden getoond.  
-- Data wordt direct uit de database geladen.  
+### 3. Environment Configuratie
+Maak een `.env` bestand in de root directory:
+```env
+# Database Configuration
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=jouw-mysql-wachtwoord
+DB_NAME=sakila
+DB_PORT=3306
 
-**US2E3 - User Story 2 (Should)**  
-Als huurder wil ik films kunnen zoeken of filteren, zodat ik sneller de juiste film vind.  
-**Acceptatiecriteria:**  
-- Er is een zoekveld (minimaal op titel).  
-- Resultaten worden gefilterd zodra ik zoek.  
-- Filters zoals genre of jaar zijn optioneel beschikbaar.  
+# Application Configuration
+PORT=3000
+NODE_ENV=development
 
----
+# JWT Configuration
+JWT_SECRET=jouw-geheime-jwt-sleutel
+JWT_EXPIRES_IN=24h
+```
 
-### Epic 4: Mijn verhuurgeschiedenis
-**US1E4 - User Story 1 (Must)**  
-Als huurder wil ik mijn huurgeschiedenis kunnen inzien, zodat ik overzicht heb van de films die ik eerder heb gehuurd.  
-**Acceptatiecriteria:**  
-- Er is een overzicht van mijn persoonlijke gehuurde films.  
-- Per film staat huur- en retourdatum vermeld.  
-- Alleen mijn eigen transacties worden getoond.  
+### 4. Start de Applicatie
+```bash
+# Development mode (met auto-reload)
+npm run dev
 
-**US2E4 - User Story 2 (Could)**  
-Als huurder wil ik favoriete films kunnen opslaan, zodat ik ze later eenvoudig kan terugvinden.  
-**Acceptatiecriteria:**  
-- Er is een "favoriet"-knop bij films.  
-- Favorieten worden opgeslagen in mijn profiel.  
-- Ik kan mijn favorietenlijst apart bekijken.  
+# Production mode
+npm start
+```
 
----
+### 5. Open in Browser
+🌐 **http://localhost:3000**
 
-## 🏢 Eigenaar (Admin)
-
-### Epic 5: Medewerkersbeheer
-**US1E5 - User Story 1 (Must)**  
-Als eigenaar wil ik nieuwe medewerkers kunnen toevoegen, zodat zij klanten kunnen helpen en films kunnen verhuren.  
-**Acceptatiecriteria:**  
-- Er is een formulier voor medewerkergegevens (naam, gebruikersnaam, filiaal).  
-- Alle verplichte velden zijn gevalideerd.  
-- De medewerker verschijnt na opslaan in het overzicht.  
-
-**US2E5 - User Story 2 (Must)**  
-Als eigenaar wil ik een overzicht van alle medewerkers kunnen bekijken, zodat ik inzicht heb in wie er werkzaam zijn.  
-**Acceptatiecriteria:**  
-- Er is een tabel met alle medewerkers.  
-- Per medewerker zijn naam, filiaal en status zichtbaar.  
-- De data komt uit de database.  
-
-**US3E4 - User Story 3 (Should)**  
-Als eigenaar wil ik medewerkers kunnen verwijderen, zodat ik alleen actuele medewerkers in het systeem houd.  
-**Acceptatiecriteria:**  
-- Bij elke medewerker staat een delete-knop.  
-- Er verschijnt een bevestigingspopup.  
-- Na verwijderen verdwijnt de medewerker uit het overzicht.  
+### 6. Test Accounts
+De applicatie bevat vooraf geconfigureerde test accounts:
+- **Staff**: `staff2` / `admin123`
 
 ---
 
-### Epic 6: Filmbeheer
-**US1E6 - User Story 1 (Must)**  
-Als eigenaar wil ik nieuwe films kunnen toevoegen, zodat de collectie up-to-date blijft.  
-**Acceptatiecriteria:**  
-- Er is een formulier voor titel, genre, speelduur en taal.  
-- Verplichte velden worden gecontroleerd.  
-- De film verschijnt na opslaan in het overzicht.  
+## Projectstructuur
 
-**US2E6 - User Story 2 (Should)**  
-Als eigenaar wil ik bestaande films kunnen bewerken, zodat ik foutieve gegevens kan corrigeren.  
-**Acceptatiecriteria:**  
-- Bij elke film staat een edit-knop.  
-- Wijzigingen worden gecontroleerd en opgeslagen.  
-- Het overzicht toont direct de bijgewerkte gegevens.  
-
-**US3E6 - User Story 3 (Could)**  
-Als eigenaar wil ik films kunnen verwijderen, zodat oude of irrelevante titels uit de database verdwijnen.  
-**Acceptatiecriteria:**  
-- Er is een delete-knop per film.  
-- Ik krijg een bevestiging voordat de film verdwijnt.  
-- De film verdwijnt definitief uit het overzicht.  
+```
+sakila-app/
+├── 📁 src/
+│   ├── 📁 config/          # Database configuratie
+│   ├── 📁 controllers/     # Request handlers (MVC)
+│   │   ├── AuthController.js
+│   │   ├── CustomerController.js
+│   │   ├── FilmController.js
+│   │   ├── HomeController.js
+│   │   └── StaffController.js
+│   ├── 📁 dao/            # Data Access Objects
+│   │   ├── BaseDAO.js
+│   │   ├── CustomerDAO.js
+│   │   ├── FilmDAO.js
+│   │   ├── RentalDAO.js
+│   │   └── UserDAO.js
+│   ├── 📁 services/       # Logic Layer
+│   │   ├── AuthService.js
+│   │   ├── CustomerService.js
+│   │   ├── FilmService.js
+│   │   └── RentalService.js
+│   ├── 📁 routes/         # Express routing
+│   │   ├── customer.js
+│   │   ├── films.js
+│   │   └── staff.js
+│   ├── 📁 middleware/     # Custom middleware
+│   │   ├── auth.js        # Authentication & authorization
+│   │   └── error.js       # Error handling
+│   ├── 📁 views/          # EJS templates
+│   │   ├── 📁 customer/   # Customer views
+│   │   ├── 📁 staff/      # Staff views
+│   │   ├── 📁 partials/   # Reusable components
+│   │   ├── dashboard.ejs
+│   │   ├── films.ejs
+│   │   ├── home.ejs
+│   │   └── login.ejs
+│   ├── 📁 public/         # Static assets
+│   │   ├── 📁 css/        # Stylesheets
+│   │   ├── 📁 js/         # Client-side JavaScript
+│   │   └── 📁 images/     # Images
+│   └── 📁 utils/          # Utility functions
+├── 📁 Database/           # Database files
+│   └── sakila.sql
+├── 📁 Images/            # README screenshots
+├── app.js                # Main application entry
+├── package.json          # NPM configuration
+└── README.md            # Project documentation
+```
 
 ---
+
+## Routes
+
+### Public Routes
+- `GET /` - Homepage met populaire films
+- `GET /films` - Film catalogus met zoek/filter
+- `GET /films/:id` - Film details
+- `GET /login` - Login pagina
+- `GET /register` - Registratie pagina
+
+### Customer Routes (Authenticatie vereist)
+- `GET /dashboard` - Persoonlijk dashboard
+- `POST /films/:id/rent` - Film huren
+- `PUT /customer/profile` - Profiel bijwerken
+- `GET /customer/rentals` - Verhuurgeschiedenis
+
+### Staff Routes (Staff authenticatie vereist)
+- `GET /staff/dashboard` - Staff dashboard
+- `GET /staff/customers` - Klantenbeheer
+- `POST /staff/customers` - Nieuwe klant aanmaken
+- `GET /staff/customers/:id` - Klant details
+- `PUT /staff/customers/:id` - Klant bewerken
+- `POST /staff/rental-management/checkout` - Verhuur verwerken
+- `POST /staff/rental-management/checkin` - Retour verwerken
+
+### API Endpoints
+- `GET /api/cities` - Steden voor formulieren
+- `GET /customer/rentals-data` - Persoonlijke verhuurdata
+- `GET /customer/profile-data` - Profiel data
+
+---
+
+##  Screenshots
+
+### Homepage
+![Homepage](https://github.com/karim076/Weektaken-LU-1/blob/main/Images/homepage.png?raw=true)
+
+### Klanten Overzicht  
+![Klanten](https://github.com/karim076/Weektaken-LU-1/blob/main/Images/Klanten.png?raw=true)
+
+---
+
+## Randvoorwaarden
+
+**RV-01: JavaScript en MySQL gebruiken**  
+*Beschrijving: Geen TypeScript, geen SqlServer*  
+**Status: Voldaan** - Pure JavaScript met MySQL/Sakila database
+
+**RV-02: Server-side rendering**  
+*Beschrijving: Webapplicatie rendert pages server-side, geen clientside frontend*  
+**Status: Voldaan** - EJS templates met server-side rendering
+
+**RV-03: Bewezen CSS framework gebruiken**  
+*Beschrijving: Bootstrap of vergelijkbaar voor layout en styling*  
+**Status: Voldaan** - Bootstrap 5.3.0 met custom CSS
+
+**RV-04: Open source technologieën**  
+*Beschrijving: Waar mogelijk open source gebruiken*  
+**Status: Voldaan** - Node.js, Express, MySQL, Bootstrap (alle open source)
+
+**RV-05: Geen Object Relational Mapper**  
+*Beschrijving: SQL queries uitgeschreven en uitgevoerd via npm package*  
+**Status: Voldaan** - Raw SQL queries via mysql2 package
+
+**RV-06: Alleen callbackfuncties gebruiken**  
+*Beschrijving: Geen async/await of Promises; volledig callback-based*  
+**Status: Voldaan** - Complete callback architecture, geen async/await patterns
+
+---
+
+## Non-Functional Requirements
+
+**NF-01: Modulariteit (Layered Architecture)**  
+*Beschrijving: Gelaagde architectuur; routes communiceren via services/DAOs*  
+**Status: Voldaan**
+- Controllers → Services → DAOs → Database
+- Strikte scheiding van verantwoordelijkheden
+- Geen database logica in views of controllers
+
+**NF-02: Onderhoudbaarheid (DRY Principle)**  
+*Beschrijving: Geen duplicatie van code, herbruikbare modules*  
+**Status: Voldaan**
+- BaseDAO voor gemeenschappelijke database operaties
+- Herbruikbare middleware (auth, error handling)
+- Modulaire service en controller structuur
+
+**NF-03: Gebruiksvriendelijkheid**  
+*Beschrijving: Logische toegang tot functionaliteit*  
+**Status: Voldaan**
+- Intuïtieve navigatie met responsive navbar
+- Overzichtelijke dashboards per gebruikerstype
+- Duidelijke error messages en success feedback
+- Mobile-first responsive design
+
+**NF-04: Beveiliging**  
+*Beschrijving: Veilige authenticatie en autorisatie*  
+**Status: Voldaan**
+- JWT-based authentication
+- Role-based access control (Customer/Staff)
+- Wachtwoord hashing met bcrypt
+- Input validatie en SQL injection preventie
+
+**NF-05: Performance**  
+*Beschrijving: Efficiënte database operaties*  
+**Status: Voldaan**
+- Database connection pooling
+- Paginering voor grote datasets
+- Optimized SQL queries
+- Callback-based asynchrone operaties
+
+---
+
+## Testing
+
+### Manual Testing
+- **Functionaliteit**: Alle user stories getest en werkend
+- **Responsive Design**: Getest op verschillende schermformaten
+- **Cross-browser**: Chrome, Firefox, Safari compatibility
+- **Error Handling**: Graceful degradation bij fouten
+
+### Database Testing
+- **Connectie**: Stabiele database verbinding
+- **CRUD Operaties**: Alle database operaties functioneel
+- **Data Integriteit**: Referentiële integriteit behouden
+
+---
+
+## Deployment
+
+### Development
+```bash
+npm run dev  # Nodemon met auto-reload
+```
+
+### Production
+```bash
+npm start    # Standard Node.js server
+```
+
+### Environment Variables
+Zie `.env.example` voor complete configuratie.
+
+---
+## Team
+
+**Ontwikkelaar**: Karim  
+**Project**: Weektaak-1 - Sakila App  
+**Periode**: 2025  
+**Repository**: [Weektaken-LU-1](https://github.com/karim076/Weektaken-LU-1)
+
+---
+

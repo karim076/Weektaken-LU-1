@@ -90,19 +90,43 @@ app.get('/about', (req, res) => {
   });
 });
 
+// Contact page route
+app.get('/contact', (req, res) => {
+  res.render('contact', {
+    title: 'Contact - Sakila App',
+    user: req.user || null
+  });
+});
+
+// Help page route
+app.get('/help', (req, res) => {
+  res.render('help', {
+    title: 'Help & FAQ - Sakila App',
+    user: req.user || null
+  });
+});
+
 // ===== API ROUTES =====
 
 // Cities API endpoint for forms
-app.get('/api/cities', async (req, res) => {
+app.get('/api/cities', (req, res) => {
   try {
     const BaseDAO = require('./src/dao/BaseDAO');
     const baseDAO = new BaseDAO();
     
-    const cities = await baseDAO.query('SELECT city_id, city FROM city ORDER BY city');
-    
-    res.json({
-      success: true,
-      cities: cities
+    baseDAO.query('SELECT city_id, city FROM city ORDER BY city', [], (error, cities) => {
+      if (error) {
+        console.error('Error fetching cities:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to fetch cities'
+        });
+      }
+      
+      res.json({
+        success: true,
+        cities: cities
+      });
     });
   } catch (error) {
     console.error('Error fetching cities:', error);

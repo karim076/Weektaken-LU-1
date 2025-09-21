@@ -2,6 +2,22 @@
 const errorMiddleware = {
   // 404 Not Found handler
   notFound: (req, res, next) => {
+    // Skip logging for Chrome DevTools and other automated requests
+    const ignoredPaths = [
+      '/.well-known/',
+      '/favicon.ico',
+      '/robots.txt',
+      '/apple-touch-icon',
+      '/browserconfig.xml'
+    ];
+    
+    const shouldIgnore = ignoredPaths.some(path => req.originalUrl.startsWith(path));
+    
+    if (shouldIgnore) {
+      // Silently return 404 without logging
+      return res.status(404).end();
+    }
+    
     const error = new Error(`Pagina niet gevonden - ${req.originalUrl}`);
     error.status = 404;
     next(error);
@@ -12,8 +28,21 @@ const errorMiddleware = {
     const status = err.status || 500;
     const message = err.message || 'Er is een onverwachte fout opgetreden';
     
-    console.error(`Error ${status}: ${message}`);
-    console.error(err.stack);
+    // Skip logging for Chrome DevTools and other automated requests
+    const ignoredPaths = [
+      '/.well-known/',
+      '/favicon.ico',
+      '/robots.txt',
+      '/apple-touch-icon',
+      '/browserconfig.xml'
+    ];
+    
+    const shouldIgnoreLogging = ignoredPaths.some(path => req.originalUrl.startsWith(path));
+    
+    if (!shouldIgnoreLogging) {
+      console.error(`Error ${status}: ${message}`);
+      console.error(err.stack);
+    }
 
     // Send error response
     res.status(status);

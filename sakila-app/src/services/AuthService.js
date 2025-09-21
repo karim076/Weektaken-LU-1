@@ -304,23 +304,37 @@ class AuthService {
     callback(null, { success: true, message: 'Logout successful' });
   }
 
-  async isUserActive(userIdOrUsername, userType = null) {
-    try {
-      let user;
-      if (userType) {
-        // Called with userId and userType
-        user = await this.userDAO.findById(userIdOrUsername, userType);
-      } else {
-        // Called with username only
-        user = await this.userDAO.findByUsername(userIdOrUsername);
-        if (!user) {
-          user = await this.userDAO.findByEmail(userIdOrUsername);
+  isUserActive(userIdOrUsername, userType = null, callback) {
+    if (userType) {
+      // Called with userId and userType
+      this.userDAO.findById(userIdOrUsername, userType, (err, user) => {
+        if (err) {
+          console.error('isUserActive error:', err);
+          return callback(null, false);
         }
-      }
-      return user && user.active === 1;
-    } catch (err) {
-      console.error('isUserActive error:', err);
-      return false;
+        callback(null, user && user.active === 1);
+      });
+    } else {
+      // Called with username only
+      this.userDAO.findByUsername(userIdOrUsername, (err, user) => {
+        if (err) {
+          console.error('isUserActive error:', err);
+          return callback(null, false);
+        }
+        
+        if (user) {
+          return callback(null, user.active === 1);
+        }
+        
+        // Try finding by email if username not found
+        this.userDAO.findByEmail(userIdOrUsername, (err, user) => {
+          if (err) {
+            console.error('isUserActive error:', err);
+            return callback(null, false);
+          }
+          callback(null, user && user.active === 1);
+        });
+      });
     }
   }
 }

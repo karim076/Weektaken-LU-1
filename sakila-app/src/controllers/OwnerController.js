@@ -11,21 +11,30 @@ class OwnerController {
   /**
    * Admin dashboard (Epic 5 & 6)
    */
-  index = async (req, res) => {
+  index = (req, res) => {
     try {
-      const result = await this.ownerService.getDashboardStats();
+      this.ownerService.getDashboardStats((error, result) => {
+        if (error) {
+          console.error('Admin dashboard error:', error);
+          return res.status(500).render('error', {
+            title: 'Server Fout',
+            status: 500,
+            message: 'Er is een fout opgetreden bij het laden van het dashboard'
+          });
+        }
 
-      if (!result.success) {
-        return res.status(500).render('error', {
-          title: 'Server Fout',
-          status: 500,
-          message: result.message
+        if (!result.success) {
+          return res.status(500).render('error', {
+            title: 'Server Fout',
+            status: 500,
+            message: result.message
+          });
+        }
+
+        res.render('admin/dashboard', {
+          title: 'Admin Dashboard - Sakila',
+          stats: result.data
         });
-      }
-
-      res.render('admin/dashboard', {
-        title: 'Admin Dashboard - Sakila',
-        stats: result.data
       });
     } catch (error) {
       console.error('Admin dashboard error:', error);
@@ -40,22 +49,31 @@ class OwnerController {
   /**
    * Staff management overview (US2E5)
    */
-  manageStaff = async (req, res) => {
+  manageStaff = (req, res) => {
     try {
-      const result = await this.ownerService.getStaffManagementOverview();
+      this.ownerService.getStaffManagementOverview((error, result) => {
+        if (error) {
+          console.error('Staff management error:', error);
+          return res.status(500).render('error', {
+            title: 'Server Fout',
+            status: 500,
+            message: 'Er is een fout opgetreden bij het laden van personeelsbeheer'
+          });
+        }
 
-      if (!result.success) {
-        return res.status(500).render('error', {
-          title: 'Server Fout',
-          status: 500,
-          message: result.message
+        if (!result.success) {
+          return res.status(500).render('error', {
+            title: 'Server Fout',
+            status: 500,
+            message: result.message
+          });
+        }
+
+        res.render('admin/staff-management', {
+          title: 'Personeelsbeheer - Admin',
+          staff: result.data.staff,
+          stores: result.data.stores
         });
-      }
-
-      res.render('admin/staff-management', {
-        title: 'Personeelsbeheer - Admin',
-        staff: result.data.staff,
-        stores: result.data.stores
       });
     } catch (error) {
       console.error('Staff management error:', error);
@@ -70,15 +88,24 @@ class OwnerController {
   /**
    * Show create staff form (US1E5)
    */
-  showCreateStaff = async (req, res) => {
+  showCreateStaff = (req, res) => {
     try {
-      const storesResult = await this.ownerService.getAllStores();
-      
-      res.render('admin/staff-create', {
-        title: 'Nieuwe Medewerker Toevoegen',
-        stores: storesResult.success ? storesResult.data : [],
-        error: null,
-        success: null
+      this.ownerService.getAllStores((error, storesResult) => {
+        if (error) {
+          console.error('Show create staff error:', error);
+          return res.status(500).render('error', {
+            title: 'Server Fout',
+            status: 500,
+            message: 'Er is een fout opgetreden bij het laden van het formulier'
+          });
+        }
+        
+        res.render('admin/staff-create', {
+          title: 'Nieuwe Medewerker Toevoegen',
+          stores: storesResult.success ? storesResult.data : [],
+          error: null,
+          success: null
+        });
       });
     } catch (error) {
       console.error('Show create staff error:', error);
@@ -93,55 +120,91 @@ class OwnerController {
   /**
    * Create new staff member (US1E5)
    */
-  createStaff = async (req, res) => {
+  createStaff = (req, res) => {
     try {
       const { firstName, lastName, email, username, password, storeId } = req.body;
 
       // Validation (NF-02: No code duplication)
       if (!firstName || !lastName || !email || !username || !password || !storeId) {
-        const storesResult = await this.ownerService.getAllStores();
-        return res.render('admin/staff-create', {
-          title: 'Nieuwe Medewerker Toevoegen',
-          stores: storesResult.success ? storesResult.data : [],
-          error: 'Alle velden zijn verplicht',
-          success: null
+        this.ownerService.getAllStores((storeError, storesResult) => {
+          if (storeError) {
+            console.error('Create staff error:', storeError);
+            return res.render('admin/staff-create', {
+              title: 'Nieuwe Medewerker Toevoegen',
+              stores: [],
+              error: 'Er is een fout opgetreden bij het laden van winkels',
+              success: null
+            });
+          }
+          
+          res.render('admin/staff-create', {
+            title: 'Nieuwe Medewerker Toevoegen',
+            stores: storesResult.success ? storesResult.data : [],
+            error: 'Alle velden zijn verplicht',
+            success: null
+          });
         });
+        return;
       }
 
-      const result = await this.ownerService.createStaff({
+      this.ownerService.createStaff({
         firstName,
         lastName,
         email,
         username,
         password,
         storeId
-      });
+      }, (createError, result) => {
+        if (createError) {
+          console.error('Create staff error:', createError);
+          this.ownerService.getAllStores((storeError, storesResult) => {
+            res.render('admin/staff-create', {
+              title: 'Nieuwe Medewerker Toevoegen',
+              stores: storeError ? [] : (storesResult.success ? storesResult.data : []),
+              error: 'Er is een fout opgetreden bij het toevoegen van de medewerker',
+              success: null
+            });
+          });
+          return;
+        }
 
-      const storesResult = await this.ownerService.getAllStores();
+        this.ownerService.getAllStores((storeError, storesResult) => {
+          if (storeError) {
+            console.error('Get stores error after create:', storeError);
+            return res.render('admin/staff-create', {
+              title: 'Nieuwe Medewerker Toevoegen',
+              stores: [],
+              error: result.success ? null : result.message,
+              success: result.success ? 'Medewerker succesvol toegevoegd!' : null
+            });
+          }
 
-      if (!result.success) {
-        return res.render('admin/staff-create', {
-          title: 'Nieuwe Medewerker Toevoegen',
-          stores: storesResult.success ? storesResult.data : [],
-          error: result.message,
-          success: null
+          if (!result.success) {
+            return res.render('admin/staff-create', {
+              title: 'Nieuwe Medewerker Toevoegen',
+              stores: storesResult.success ? storesResult.data : [],
+              error: result.message,
+              success: null
+            });
+          }
+
+          res.render('admin/staff-create', {
+            title: 'Nieuwe Medewerker Toevoegen',
+            stores: storesResult.success ? storesResult.data : [],
+            error: null,
+            success: 'Medewerker succesvol toegevoegd!'
+          });
         });
-      }
-
-      res.render('admin/staff-create', {
-        title: 'Nieuwe Medewerker Toevoegen',
-        stores: storesResult.success ? storesResult.data : [],
-        error: null,
-        success: 'Medewerker succesvol toegevoegd!'
       });
     } catch (error) {
       console.error('Create staff error:', error);
-      const storesResult = await this.ownerService.getAllStores();
-      res.render('admin/staff-create', {
-        title: 'Nieuwe Medewerker Toevoegen',
-        stores: storesResult.success ? storesResult.data : [],
-        error: 'Er is een fout opgetreden bij het toevoegen van de medewerker',
-        success: null
+      this.ownerService.getAllStores((storeError, storesResult) => {
+        res.render('admin/staff-create', {
+          title: 'Nieuwe Medewerker Toevoegen',
+          stores: storeError ? [] : (storesResult.success ? storesResult.data : []),
+          error: 'Er is een fout opgetreden bij het toevoegen van de medewerker',
+          success: null
+        });
       });
     }
   };
@@ -149,29 +212,48 @@ class OwnerController {
   /**
    * Show edit staff form
    */
-  showEditStaff = async (req, res) => {
+  showEditStaff = (req, res) => {
     try {
       const staffId = req.params.id;
       
-      const [staffResult, storesResult] = await Promise.all([
-        this.ownerService.getStaffDetails(staffId),
-        this.ownerService.getAllStores()
-      ]);
+      this.ownerService.getStaffDetails(staffId, (staffError, staffResult) => {
+        if (staffError) {
+          console.error('Show edit staff error:', staffError);
+          return res.status(500).render('error', {
+            title: 'Server Fout',
+            status: 500,
+            message: 'Er is een fout opgetreden bij het laden van het formulier'
+          });
+        }
 
-      if (!staffResult.success) {
-        return res.status(404).render('error', {
-          title: 'Medewerker Niet Gevonden',
-          status: 404,
-          message: staffResult.message
+        if (!staffResult.success) {
+          return res.status(404).render('error', {
+            title: 'Medewerker Niet Gevonden',
+            status: 404,
+            message: staffResult.message
+          });
+        }
+
+        this.ownerService.getAllStores((storeError, storesResult) => {
+          if (storeError) {
+            console.error('Get stores error in edit staff:', storeError);
+            return res.render('admin/staff-edit', {
+              title: `Medewerker Bewerken - ${staffResult.data.first_name} ${staffResult.data.last_name}`,
+              staff: staffResult.data,
+              stores: [],
+              error: 'Kon winkels niet laden',
+              success: null
+            });
+          }
+
+          res.render('admin/staff-edit', {
+            title: `Medewerker Bewerken - ${staffResult.data.first_name} ${staffResult.data.last_name}`,
+            staff: staffResult.data,
+            stores: storesResult.success ? storesResult.data : [],
+            error: null,
+            success: null
+          });
         });
-      }
-
-      res.render('admin/staff-edit', {
-        title: `Medewerker Bewerken - ${staffResult.data.first_name} ${staffResult.data.last_name}`,
-        staff: staffResult.data,
-        stores: storesResult.success ? storesResult.data : [],
-        error: null,
-        success: null
       });
     } catch (error) {
       console.error('Show edit staff error:', error);
@@ -186,7 +268,7 @@ class OwnerController {
   /**
    * Update staff member
    */
-  updateStaff = async (req, res) => {
+  updateStaff = (req, res) => {
     try {
       const staffId = req.params.id;
       const { firstName, lastName, email, username, password, storeId, active } = req.body;
@@ -205,43 +287,77 @@ class OwnerController {
         updateData.password = password;
       }
 
-      const result = await this.ownerService.updateStaff(staffId, updateData);
+      this.ownerService.updateStaff(staffId, updateData, (updateError, result) => {
+        if (updateError) {
+          console.error('Update staff error:', updateError);
+          // Get staff details and stores for error rendering
+          this.ownerService.getStaffDetails(staffId, (staffError, staffResult) => {
+            this.ownerService.getAllStores((storesError, storesResult) => {
+              res.render('admin/staff-edit', {
+                title: 'Medewerker Bewerken',
+                staff: staffResult?.data || {},
+                stores: storesResult?.success ? storesResult.data : [],
+                error: 'Er is een fout opgetreden bij het bijwerken van de medewerker',
+                success: null
+              });
+            });
+          });
+          return;
+        }
 
-      const [staffResult, storesResult] = await Promise.all([
-        this.ownerService.getStaffDetails(staffId),
-        this.ownerService.getAllStores()
-      ]);
+        // Get updated staff details and stores for rendering
+        this.ownerService.getStaffDetails(staffId, (staffError, staffResult) => {
+          if (staffError) {
+            console.error('Staff details error:', staffError);
+            return res.status(500).render('error', {
+              title: 'Server Fout',
+              status: 500,
+              message: 'Er is een fout opgetreden bij het laden van medewerkergegevens'
+            });
+          }
 
-      if (!result.success) {
-        return res.render('admin/staff-edit', {
-          title: 'Medewerker Bewerken',
-          staff: staffResult.data || {},
-          stores: storesResult.success ? storesResult.data : [],
-          error: result.message,
-          success: null
+          this.ownerService.getAllStores((storesError, storesResult) => {
+            if (storesError) {
+              console.error('Stores error:', storesError);
+              return res.status(500).render('error', {
+                title: 'Server Fout',
+                status: 500,
+                message: 'Er is een fout opgetreden bij het laden van winkelgegevens'
+              });
+            }
+
+            if (!result.success) {
+              return res.render('admin/staff-edit', {
+                title: 'Medewerker Bewerken',
+                staff: staffResult.data || {},
+                stores: storesResult.success ? storesResult.data : [],
+                error: result.message,
+                success: null
+              });
+            }
+
+            res.render('admin/staff-edit', {
+              title: 'Medewerker Bewerken',
+              staff: staffResult.data,
+              stores: storesResult.success ? storesResult.data : [],
+              error: null,
+              success: 'Medewerker succesvol bijgewerkt!'
+            });
+          });
         });
-      }
-
-      res.render('admin/staff-edit', {
-        title: 'Medewerker Bewerken',
-        staff: staffResult.data,
-        stores: storesResult.success ? storesResult.data : [],
-        error: null,
-        success: 'Medewerker succesvol bijgewerkt!'
       });
     } catch (error) {
       console.error('Update staff error:', error);
-      const [staffResult, storesResult] = await Promise.all([
-        this.ownerService.getStaffDetails(req.params.id),
-        this.ownerService.getAllStores()
-      ]);
-      
-      res.render('admin/staff-edit', {
-        title: 'Medewerker Bewerken',
-        staff: staffResult.data || {},
-        stores: storesResult.success ? storesResult.data : [],
-        error: 'Er is een fout opgetreden bij het bijwerken van de medewerker',
-        success: null
+      this.ownerService.getStaffDetails(req.params.id, (staffError, staffResult) => {
+        this.ownerService.getAllStores((storesError, storesResult) => {
+          res.render('admin/staff-edit', {
+            title: 'Medewerker Bewerken',
+            staff: staffResult?.data || {},
+            stores: storesResult?.success ? storesResult.data : [],
+            error: 'Er is een fout opgetreden bij het bijwerken van de medewerker',
+            success: null
+          });
+        });
       });
     }
   };
@@ -249,22 +365,30 @@ class OwnerController {
   /**
    * Delete staff member (US3E5)
    */
-  deleteStaff = async (req, res) => {
+  deleteStaff = (req, res) => {
     try {
       const staffId = req.params.id;
 
-      const result = await this.ownerService.deleteStaff(staffId);
+      this.ownerService.deleteStaff(staffId, (error, result) => {
+        if (error) {
+          console.error('Delete staff error:', error);
+          return res.status(500).json({
+            success: false,
+            message: 'Er is een fout opgetreden bij het verwijderen van de medewerker'
+          });
+        }
 
-      if (!result.success) {
-        return res.status(400).json({
-          success: false,
+        if (!result.success) {
+          return res.status(400).json({
+            success: false,
+            message: result.message
+          });
+        }
+
+        res.json({
+          success: true,
           message: result.message
         });
-      }
-
-      res.json({
-        success: true,
-        message: result.message
       });
     } catch (error) {
       console.error('Delete staff error:', error);
@@ -278,23 +402,31 @@ class OwnerController {
   /**
    * Assign staff to store
    */
-  assignStaffToStore = async (req, res) => {
+  assignStaffToStore = (req, res) => {
     try {
       const { staffId, storeId } = req.body;
       const assignedBy = req.user.id; // Owner ID from auth middleware
 
-      const result = await this.ownerService.assignStaffToStore(staffId, storeId, assignedBy);
+      this.ownerService.assignStaffToStore(staffId, storeId, assignedBy, (error, result) => {
+        if (error) {
+          console.error('Assign staff to store error:', error);
+          return res.status(500).json({
+            success: false,
+            message: 'Er is een fout opgetreden bij het toewijzen van de medewerker'
+          });
+        }
 
-      if (!result.success) {
-        return res.status(400).json({
-          success: false,
+        if (!result.success) {
+          return res.status(400).json({
+            success: false,
+            message: result.message
+          });
+        }
+
+        res.json({
+          success: true,
           message: result.message
         });
-      }
-
-      res.json({
-        success: true,
-        message: result.message
       });
     } catch (error) {
       console.error('Assign staff to store error:', error);
@@ -308,22 +440,30 @@ class OwnerController {
   /**
    * Remove staff from store
    */
-  removeStaffFromStore = async (req, res) => {
+  removeStaffFromStore = (req, res) => {
     try {
       const { staffId, storeId } = req.body;
 
-      const result = await this.ownerService.removeStaffFromStore(staffId, storeId);
+      this.ownerService.removeStaffFromStore(staffId, storeId, (error, result) => {
+        if (error) {
+          console.error('Remove staff from store error:', error);
+          return res.status(500).json({
+            success: false,
+            message: 'Er is een fout opgetreden bij het verwijderen van de medewerker'
+          });
+        }
 
-      if (!result.success) {
-        return res.status(400).json({
-          success: false,
+        if (!result.success) {
+          return res.status(400).json({
+            success: false,
+            message: result.message
+          });
+        }
+
+        res.json({
+          success: true,
           message: result.message
         });
-      }
-
-      res.json({
-        success: true,
-        message: result.message
       });
     } catch (error) {
       console.error('Remove staff from store error:', error);
@@ -337,22 +477,30 @@ class OwnerController {
   /**
    * Get store staff assignments
    */
-  getStoreStaff = async (req, res) => {
+  getStoreStaff = (req, res) => {
     try {
       const storeId = req.params.storeId;
 
-      const result = await this.ownerService.getStoreStaffAssignments(storeId);
+      this.ownerService.getStoreStaffAssignments(storeId, (error, result) => {
+        if (error) {
+          console.error('Get store staff error:', error);
+          return res.status(500).json({
+            success: false,
+            message: 'Er is een fout opgetreden bij het ophalen van winkelpersoneel'
+          });
+        }
 
-      if (!result.success) {
-        return res.status(500).json({
-          success: false,
-          message: result.message
+        if (!result.success) {
+          return res.status(500).json({
+            success: false,
+            message: result.message
+          });
+        }
+
+        res.json({
+          success: true,
+          data: result.data
         });
-      }
-
-      res.json({
-        success: true,
-        data: result.data
       });
     } catch (error) {
       console.error('Get store staff error:', error);

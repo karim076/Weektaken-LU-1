@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -28,8 +27,14 @@
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-funnel"></i> Zoeken en Filteren
+                        </h5>
+                    </div>
                     <div class="card-body">
                         <form method="GET" action="/films" class="row g-3">
+                            <!-- Search Input -->
                             <div class="col-md-6">
                                 <label for="search" class="form-label">Zoeken</label>
                                 <div class="input-group">
@@ -40,12 +45,13 @@
                                            class="form-control" 
                                            id="search" 
                                            name="search" 
-                                           placeholder="Zoek films op titel of beschrijving..."
+                                           placeholder="Zoek films op titel, beschrijving of acteur..."
                                            value="<%= typeof search !== 'undefined' ? search : '' %>">
                                 </div>
                             </div>
                             
-                            <div class="col-md-4">
+                            <!-- Category Filter -->
+                            <div class="col-md-3">
                                 <label for="category" class="form-label">Categorie</label>
                                 <select class="form-select" id="category" name="category">
                                     <option value="">Alle categorieën</option>
@@ -60,10 +66,82 @@
                                 </select>
                             </div>
                             
-                            <div class="col-md-2 d-flex align-items-end">
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="bi bi-funnel"></i> Filter
-                                </button>
+                            <!-- Rating Filter -->
+                            <div class="col-md-3">
+                                <label for="rating" class="form-label">Rating</label>
+                                <select class="form-select" id="rating" name="rating">
+                                    <option value="">Alle ratings</option>
+                                    <option value="G" <%= typeof selectedRating !== 'undefined' && selectedRating === 'G' ? 'selected' : '' %>>G - Algemeen</option>
+                                    <option value="PG" <%= typeof selectedRating !== 'undefined' && selectedRating === 'PG' ? 'selected' : '' %>>PG - Begeleiding</option>
+                                    <option value="PG-13" <%= typeof selectedRating !== 'undefined' && selectedRating === 'PG-13' ? 'selected' : '' %>>PG-13 - 13+</option>
+                                    <option value="R" <%= typeof selectedRating !== 'undefined' && selectedRating === 'R' ? 'selected' : '' %>>R - Beperkt</option>
+                                    <option value="NC-17" <%= typeof selectedRating !== 'undefined' && selectedRating === 'NC-17' ? 'selected' : '' %>>NC-17 - 17+</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Release Year Filter -->
+                            <div class="col-md-3">
+                                <label for="year" class="form-label">Jaar</label>
+                                <select class="form-select" id="year" name="year">
+                                    <option value="">Alle jaren</option>
+                                    <% if (typeof years !== 'undefined' && years) { %>
+                                        <% years.forEach(function(year) { %>
+                                            <option value="<%= year.release_year %>" 
+                                                    <%= typeof selectedYear !== 'undefined' && selectedYear == year.release_year ? 'selected' : '' %>>
+                                                <%= year.release_year %>
+                                            </option>
+                                        <% }); %>
+                                    <% } %>
+                                </select>
+                            </div>
+                            
+                            <!-- Length Filter -->
+                            <div class="col-md-3">
+                                <label for="length" class="form-label">Speelduur</label>
+                                <select class="form-select" id="length" name="length">
+                                    <option value="">Alle lengtes</option>
+                                    <option value="short" <%= typeof selectedLength !== 'undefined' && selectedLength === 'short' ? 'selected' : '' %>>Kort (< 90 min)</option>
+                                    <option value="medium" <%= typeof selectedLength !== 'undefined' && selectedLength === 'medium' ? 'selected' : '' %>>Gemiddeld (90-120 min)</option>
+                                    <option value="long" <%= typeof selectedLength !== 'undefined' && selectedLength === 'long' ? 'selected' : '' %>>Lang (> 120 min)</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Price Range Filter -->
+                            <div class="col-md-3">
+                                <label for="priceRange" class="form-label">Huurprijs</label>
+                                <select class="form-select" id="priceRange" name="priceRange">
+                                    <option value="">Alle prijzen</option>
+                                    <option value="low" <%= typeof selectedPriceRange !== 'undefined' && selectedPriceRange === 'low' ? 'selected' : '' %>>€0.99 - €2.99</option>
+                                    <option value="medium" <%= typeof selectedPriceRange !== 'undefined' && selectedPriceRange === 'medium' ? 'selected' : '' %>>€3.00 - €4.99</option>
+                                    <option value="high" <%= typeof selectedPriceRange !== 'undefined' && selectedPriceRange === 'high' ? 'selected' : '' %>>€5.00+</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Sort By -->
+                            <div class="col-md-3">
+                                <label for="sortBy" class="form-label">Sorteren op</label>
+                                <select class="form-select" id="sortBy" name="sortBy">
+                                    <option value="title" <%= typeof selectedSort !== 'undefined' && selectedSort === 'title' ? 'selected' : '' %>>Titel (A-Z)</option>
+                                    <option value="title_desc" <%= typeof selectedSort !== 'undefined' && selectedSort === 'title_desc' ? 'selected' : '' %>>Titel (Z-A)</option>
+                                    <option value="year" <%= typeof selectedSort !== 'undefined' && selectedSort === 'year' ? 'selected' : '' %>>Jaar (nieuw-oud)</option>
+                                    <option value="year_desc" <%= typeof selectedSort !== 'undefined' && selectedSort === 'year_desc' ? 'selected' : '' %>>Jaar (oud-nieuw)</option>
+                                    <option value="price" <%= typeof selectedSort !== 'undefined' && selectedSort === 'price' ? 'selected' : '' %>>Prijs (laag-hoog)</option>
+                                    <option value="price_desc" <%= typeof selectedSort !== 'undefined' && selectedSort === 'price_desc' ? 'selected' : '' %>>Prijs (hoog-laag)</option>
+                                    <option value="length" <%= typeof selectedSort !== 'undefined' && selectedSort === 'length' ? 'selected' : '' %>>Speelduur (kort-lang)</option>
+                                    <option value="length_desc" <%= typeof selectedSort !== 'undefined' && selectedSort === 'length_desc' ? 'selected' : '' %>>Speelduur (lang-kort)</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Action Buttons -->
+                            <div class="col-12">
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-funnel"></i> Filter Toepassen
+                                    </button>
+                                    <a href="/films" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-clockwise"></i> Reset Filters
+                                    </a>
+                                </div>
                             </div>
                         </form>
                     </div>
@@ -110,6 +188,15 @@
                                     <%= (film.description || '').substring(0, 100) %><%= (film.description || '').length > 100 ? '...' : '' %>
                                 </p>
                                 
+                                <% if (film.actors) { %>
+                                    <div class="mb-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-person"></i> 
+                                            <%= film.actors.length > 60 ? film.actors.substring(0, 60) + '...' : film.actors %>
+                                        </small>
+                                    </div>
+                                <% } %>
+                                
                                 <div class="row text-center mb-3">
                                     <div class="col-6">
                                         <small class="text-muted">Duur</small>
@@ -145,7 +232,7 @@
                                     <a href="/films/<%= film.film_id %>" class="btn btn-outline-primary btn-sm">
                                         <i class="bi bi-eye"></i> Details
                                     </a>
-                                    <% if (film.available_copies > 0) { %>
+                                    <!-- <% if (film.available_copies > 0) { %>
                                         <% if (typeof user !== 'undefined' && user) { %>
                                             <button class="btn btn-primary btn-sm" 
                                                     data-film-id="<%= film.film_id %>"
@@ -161,7 +248,7 @@
                                         <button class="btn btn-secondary btn-sm" disabled>
                                             <i class="bi bi-clock"></i> Niet beschikbaar
                                         </button>
-                                    <% } %>
+                                    <% } %> -->
                                 </div>
                             </div>
                         </div>
@@ -191,13 +278,27 @@
 
         <!-- Pagination -->
         <% if (typeof pagination !== 'undefined' && pagination && pagination.totalPages > 1) { %>
+            <%
+            // Helper function to build query string with all current filters
+            function buildQueryString(page) {
+                let params = [`page=${page}`];
+                if (typeof search !== 'undefined' && search) params.push(`search=${encodeURIComponent(search)}`);
+                if (typeof selectedCategory !== 'undefined' && selectedCategory) params.push(`category=${selectedCategory}`);
+                if (typeof selectedRating !== 'undefined' && selectedRating) params.push(`rating=${selectedRating}`);
+                if (typeof selectedYear !== 'undefined' && selectedYear) params.push(`year=${selectedYear}`);
+                if (typeof selectedLength !== 'undefined' && selectedLength) params.push(`length=${selectedLength}`);
+                if (typeof selectedPriceRange !== 'undefined' && selectedPriceRange) params.push(`priceRange=${selectedPriceRange}`);
+                if (typeof selectedSort !== 'undefined' && selectedSort) params.push(`sortBy=${selectedSort}`);
+                return '?' + params.join('&');
+            }
+            %>
             <div class="row mt-4">
                 <div class="col-12">
                     <nav aria-label="Films paginering">
                         <ul class="pagination justify-content-center">
                             <!-- Previous Button -->
                             <li class="page-item <%= pagination.page <= 1 ? 'disabled' : '' %>">
-                                <a class="page-link" href="?page=<%= pagination.page - 1 %><%= typeof search !== 'undefined' && search ? '&search=' + search : '' %><%= typeof categoryId !== 'undefined' && categoryId ? '&categoryId=' + categoryId : '' %>">
+                                <a class="page-link" href="<%= buildQueryString(pagination.page - 1) %>">
                                     <i class="bi bi-chevron-left"></i> Vorige
                                 </a>
                             </li>
@@ -210,7 +311,7 @@
                             
                             <% if (startPage > 1) { %>
                                 <li class="page-item">
-                                    <a class="page-link" href="?page=1<%= typeof search !== 'undefined' && search ? '&search=' + search : '' %><%= typeof categoryId !== 'undefined' && categoryId ? '&categoryId=' + categoryId : '' %>">1</a>
+                                    <a class="page-link" href="<%= buildQueryString(1) %>">1</a>
                                 </li>
                                 <% if (startPage > 2) { %>
                                     <li class="page-item disabled">
@@ -221,7 +322,7 @@
                             
                             <% for (let i = startPage; i <= endPage; i++) { %>
                                 <li class="page-item <%= i === pagination.page ? 'active' : '' %>">
-                                    <a class="page-link" href="?page=<%= i %><%= typeof search !== 'undefined' && search ? '&search=' + search : '' %><%= typeof categoryId !== 'undefined' && categoryId ? '&categoryId=' + categoryId : '' %>">
+                                    <a class="page-link" href="<%= buildQueryString(i) %>">
                                         <%= i %>
                                     </a>
                                 </li>
@@ -234,7 +335,7 @@
                                     </li>
                                 <% } %>
                                 <li class="page-item">
-                                    <a class="page-link" href="?page=<%= pagination.totalPages %><%= typeof search !== 'undefined' && search ? '&search=' + search : '' %><%= typeof categoryId !== 'undefined' && categoryId ? '&categoryId=' + categoryId : '' %>">
+                                    <a class="page-link" href="<%= buildQueryString(pagination.totalPages) %>">
                                         <%= pagination.totalPages %>
                                     </a>
                                 </li>
@@ -242,7 +343,7 @@
                             
                             <!-- Next Button -->
                             <li class="page-item <%= pagination.page >= pagination.totalPages ? 'disabled' : '' %>">
-                                <a class="page-link" href="?page=<%= pagination.page + 1 %><%= typeof search !== 'undefined' && search ? '&search=' + search : '' %><%= typeof categoryId !== 'undefined' && categoryId ? '&categoryId=' + categoryId : '' %>">
+                                <a class="page-link" href="<%= buildQueryString(pagination.page + 1) %>">
                                     Volgende <i class="bi bi-chevron-right"></i>
                                 </a>
                             </li>
@@ -252,21 +353,24 @@
             </div>
         <% } %>
     </div>
-    
-    <%- include('partials/footer') %>
-    
+    <!-- Separated footer from the container -->
+    <div>
+        <%- include('partials/footer') %>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Auto-submit form on category change -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const categorySelect = document.getElementById('category');
-            if (categorySelect) {
-                categorySelect.addEventListener('change', function() {
-                    // Auto-submit the form when category changes
-                    this.form.submit();
-                });
-            }
+            const filterIds = ['category', 'rating', 'year', 'length', 'priceRange', 'sortBy'];
+            filterIds.forEach(function(id) {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('change', function() {
+                        this.form.submit();
+                    });
+                }
+            });
         });
     </script>
     

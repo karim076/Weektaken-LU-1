@@ -5,253 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Over Ons - Sakila App</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="/css/style.css" rel="stylesheet">
 </head>
-<body class="bg-light">
+<body>
     <%- include('partials/navbar') %>
     
-    <div class="container py-5">
-        <div class="row">
+    <div class="container my-5">
+        <!-- Header Section -->
+        <div class="row mb-5">
+            <div class="col-12 text-center">
+                <h1 class="display-4 mb-3">Over de Sakila App</h1>
+                <p class="lead text-muted">Een volledig functioneel film verhuur systeem</p>
+                <hr class="w-25 mx-auto">
+            </div>
+        </div>
+
+        <!-- Project Overview -->
+        <div class="row mb-5">
             <div class="col-12">
-                <div class="card shadow">
-                    <div class="card-header bg-primary text-white">
-                        <h1 class="mb-0">
-                            <i class="bi bi-info-circle"></i>
-                            Over de Sakila App
-                        </h1>
-                    </div>
-                    <div class="card-body">
-                        <h2>📖 User Stories & Acceptatiecriteria</h2>
-                        <p class="lead">Deze applicatie ondersteunt drie perspectieven: <strong>Staff</strong>, <strong>Huurder (klant)</strong> en <strong>Eigenaar (admin)</strong>.</p>
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <h2 class="h3 mb-4">Projectoverzicht</h2>
+                        <p class="mb-4">De Sakila App is een Node.js + Express applicatie die een complete film verhuur systeem biedt. De applicatie ondersteunt twee hoofdperspectieven:</p>
                         
-                        <!-- Staff Epic -->
-                        <div class="mt-4">
-                            <h3 class="text-primary">👩‍💼 Staff (Medewerker)</h3>
-                            
-                            <div class="accordion" id="staffAccordion">
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#epic1">
-                                            Epic 1: Klantenbeheer
-                                        </button>
-                                    </h2>
-                                    <div id="epic1" class="accordion-collapse collapse show" data-bs-parent="#staffAccordion">
-                                        <div class="accordion-body">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="card mb-3">
-                                                        <div class="card-header bg-success text-white">
-                                                            <strong>US1E1 - Nieuwe klant registreren (Must)</strong>
-                                                        </div>
-                                                        <div class="card-body">
-                                                            <p><strong>Als</strong> medewerker <strong>wil ik</strong> een nieuwe klant kunnen registreren, <strong>zodat</strong> ik hem of haar kan toevoegen aan het systeem en films kan verhuren.</p>
-                                                            <h6>Acceptatiecriteria:</h6>
-                                                            <ul>
-                                                                <li>Er is een formulier met verplichte velden: naam, adres, e-mail, telefoonnummer</li>
-                                                                <li>Wanneer verplichte velden ontbreken, verschijnt een foutmelding</li>
-                                                                <li>Na succesvolle invoer verschijnt de klant in het klantenoverzicht</li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="card mb-3">
-                                                        <div class="card-header bg-success text-white">
-                                                            <strong>US2E1 - Klantgegevens inzien (Must)</strong>
-                                                        </div>
-                                                        <div class="card-body">
-                                                            <p><strong>Als</strong> medewerker <strong>wil ik</strong> klantgegevens kunnen inzien, <strong>zodat</strong> ik snel toegang heb tot relevante informatie bij vragen of transacties.</p>
-                                                            <h6>Acceptatiecriteria:</h6>
-                                                            <ul>
-                                                                <li>Er is een klantenoverzicht met basisgegevens (naam, e-mail, status)</li>
-                                                                <li>Ik kan op een klant klikken om details te zien</li>
-                                                                <li>De data komt rechtstreeks uit de database</li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#epic2">
-                                            Epic 2: Verhuurbeheer
-                                        </button>
-                                    </h2>
-                                    <div id="epic2" class="accordion-collapse collapse" data-bs-parent="#staffAccordion">
-                                        <div class="accordion-body">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="card mb-3">
-                                                        <div class="card-header bg-success text-white">
-                                                            <strong>US1E2 - Film verhuren (Must)</strong>
-                                                        </div>
-                                                        <div class="card-body">
-                                                            <p><strong>Als</strong> medewerker <strong>wil ik</strong> een film aan een klant kunnen verhuren, <strong>zodat</strong> de transactie geregistreerd wordt in het systeem.</p>
-                                                            <h6>Acceptatiecriteria:</h6>
-                                                            <ul>
-                                                                <li>Ik kan een klant selecteren</li>
-                                                                <li>Ik kan een beschikbare film selecteren</li>
-                                                                <li>De verhuur wordt opgeslagen met datum en medewerker</li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="card mb-3">
-                                                        <div class="card-header bg-warning text-dark">
-                                                            <strong>US2E2 - Huur beëindigen (Should)</strong>
-                                                        </div>
-                                                        <div class="card-body">
-                                                            <p><strong>Als</strong> medewerker <strong>wil ik</strong> een lopende huur kunnen beëindigen, <strong>zodat</strong> de film terug beschikbaar is voor verhuur.</p>
-                                                            <h6>Acceptatiecriteria:</h6>
-                                                            <ul>
-                                                                <li>Bij elke lopende huur is een "retourneer"-knop beschikbaar</li>
-                                                                <li>Na klikken wordt de huurstatus aangepast naar "afgesloten"</li>
-                                                                <li>De film verschijnt opnieuw in de lijst met beschikbare films</li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="card border-primary h-100">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title text-primary">Klanten</h5>
+                                        <p class="card-text">Films bekijken, huren en verhuurgeschiedenis beheren</p>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <!-- Customer Epic -->
-                        <div class="mt-4">
-                            <h3 class="text-info">🎬 Huurder (Klant)</h3>
-                            
-                            <div class="accordion" id="customerAccordion">
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#epic3">
-                                            Epic 3: Films ontdekken
-                                        </button>
-                                    </h2>
-                                    <div id="epic3" class="accordion-collapse collapse" data-bs-parent="#customerAccordion">
-                                        <div class="accordion-body">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="card mb-3">
-                                                        <div class="card-header bg-success text-white">
-                                                            <strong>US1E3 - Films bekijken (Must)</strong>
-                                                        </div>
-                                                        <div class="card-body">
-                                                            <p><strong>Als</strong> huurder <strong>wil ik</strong> een overzicht van beschikbare films kunnen bekijken, <strong>zodat</strong> ik weet welke films ik kan huren.</p>
-                                                            <h6>Acceptatiecriteria:</h6>
-                                                            <ul>
-                                                                <li>Films worden getoond in een lijst of tabel met titel, genre en speelduur</li>
-                                                                <li>Alleen beschikbare films worden getoond</li>
-                                                                <li>Data wordt direct uit de database geladen</li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="card mb-3">
-                                                        <div class="card-header bg-warning text-dark">
-                                                            <strong>US2E3 - Films zoeken (Should)</strong>
-                                                        </div>
-                                                        <div class="card-body">
-                                                            <p><strong>Als</strong> huurder <strong>wil ik</strong> films kunnen zoeken of filteren, <strong>zodat</strong> ik sneller de juiste film vind.</p>
-                                                            <h6>Acceptatiecriteria:</h6>
-                                                            <ul>
-                                                                <li>Er is een zoekveld (minimaal op titel)</li>
-                                                                <li>Resultaten worden gefilterd zodra ik zoek</li>
-                                                                <li>Filters zoals genre of jaar zijn optioneel beschikbaar</li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card border-success h-100">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title text-success">Staff</h5>
+                                        <p class="card-text">Klanten beheren, verhuurprocessen afhandelen en rapportages bekijken</p>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Owner Epic -->
-                        <div class="mt-4">
-                            <h3 class="text-warning">🏢 Eigenaar (Admin)</h3>
-                            
-                            <div class="accordion" id="ownerAccordion">
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header">
-                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#epic5">
-                                            Epic 5: Medewerkersbeheer
-                                        </button>
-                                    </h2>
-                                    <div id="epic5" class="accordion-collapse collapse" data-bs-parent="#ownerAccordion">
-                                        <div class="accordion-body">
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="card mb-3">
-                                                        <div class="card-header bg-success text-white">
-                                                            <strong>US1E5 - Medewerkers toevoegen (Must)</strong>
-                                                        </div>
-                                                        <div class="card-body">
-                                                            <p><strong>Als</strong> eigenaar <strong>wil ik</strong> nieuwe medewerkers kunnen toevoegen, <strong>zodat</strong> zij klanten kunnen helpen en films kunnen verhuren.</p>
-                                                            <h6>Acceptatiecriteria:</h6>
-                                                            <ul>
-                                                                <li>Er is een formulier voor medewerkergegevens (naam, gebruikersnaam, filiaal)</li>
-                                                                <li>Alle verplichte velden zijn gevalideerd</li>
-                                                                <li>De medewerker verschijnt na opslaan in het overzicht</li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="card mb-3">
-                                                        <div class="card-header bg-success text-white">
-                                                            <strong>US2E5 - Medewerkers bekijken (Must)</strong>
-                                                        </div>
-                                                        <div class="card-body">
-                                                            <p><strong>Als</strong> eigenaar <strong>wil ik</strong> een overzicht van alle medewerkers kunnen bekijken, <strong>zodat</strong> ik inzicht heb in wie er werkzaam zijn.</p>
-                                                            <h6>Acceptatiecriteria:</h6>
-                                                            <ul>
-                                                                <li>Er is een tabel met alle medewerkers</li>
-                                                                <li>Per medewerker zijn naam, filiaal en status zichtbaar</li>
-                                                                <li>De data komt uit de database</li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-5 p-4 bg-light rounded">
-                            <h4>🛡️ Technische Randvoorwaarden</h4>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <h6>✅ Voldaan aan:</h6>
-                                    <ul>
-                                        <li>JavaScript en MySQL</li>
-                                        <li>Server-side rendering (EJS)</li>
-                                        <li>Bootstrap CSS framework</li>
-                                        <li>Open source technologieën</li>
-                                        <li>Geen ORM (raw SQL)</li>
-                                        <li>Callback-functies</li>
-                                    </ul>
-                                </div>
-                                <div class="col-md-6">
-                                    <h6>🏗️ Architectuur:</h6>
-                                    <ul>
-                                        <li>Gelaagde architectuur (MVC)</li>
-                                        <li>DRY-principe toegepast</li>
-                                        <li>Modulaire opzet</li>
-                                        <li>Herbruikbare componenten</li>
-                                    </ul>
                                 </div>
                             </div>
                         </div>
@@ -259,10 +50,565 @@
                 </div>
             </div>
         </div>
+
+        <!-- Customer User Stories -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="h4 mb-0">Klanten (Customer) User Stories</h2>
+                    </div>
+                    <div class="card-body p-4">
+                        
+                        <!-- Epic 1: Films Ontdekken -->
+                        <div class="mb-4">
+                            <h3 class="h5 text-primary mb-3">Epic 1: Films Ontdekken</h3>
+                            
+                            <div class="row g-3">
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-primary mb-0">US1.1 - Films Bekijken (Must)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> klant <strong>wil ik</strong> een overzicht van beschikbare films kunnen bekijken, <strong>zodat</strong> ik weet welke films ik kan huren.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Films in responsive grid met titel, categorie, rating</li>
+                                                    <li>Paginering voor grote collecties</li>
+                                                    <li>Prominente weergave van beschikbare films</li>
+                                                    <li>Real-time data uit database</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-primary mb-0">US1.2 - Film Details (Must)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> klant <strong>wil ik</strong> gedetailleerde informatie over een film kunnen bekijken, <strong>zodat</strong> ik een geïnformeerde keuze kan maken.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Volledige filmdetails met beschrijving en cast</li>
+                                                    <li>Beschikbaarheid per winkel real-time</li>
+                                                    <li>Direct huur-knop per winkellocatie</li>
+                                                    <li>Responsive design voor alle apparaten</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-warning mb-0">US1.3 - Films Zoeken (Should)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> klant <strong>wil ik</strong> films kunnen zoeken en filteren, <strong>zodat</strong> ik sneller de juiste film vind.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Zoeken op filmtitel met real-time resultaten</li>
+                                                    <li>Filteren op categorie/genre</li>
+                                                    <li>Combinatie zoeken en filteren mogelijk</li>
+                                                    <li>Snelle, responsive zoekresultaten</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-primary mb-0">US1.4 - Film Huren (Must)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> klant <strong>wil ik</strong> een film direct kunnen huren, <strong>zodat</strong> ik deze kan bekijken.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Direct huren vanuit filmdetail pagina</li>
+                                                    <li>Keuze uit beschikbare winkellocaties</li>
+                                                    <li>Bevestiging van succesvolle huur</li>
+                                                    <li>Automatische toevoeging aan verhuurgeschiedenis</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-primary mb-0">US1.5 - Film Catalogus Paginering (Must)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> klant <strong>wil ik</strong> door grote film collecties kunnen bladeren, <strong>zodat</strong> ik gemakkelijk alle beschikbare films kan zien.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Paginering voor eenvoudige navigatie</li>
+                                                    <li>Aantal films per pagina configureerbaar</li>
+                                                    <li>Pagina nummering en vorige/volgende knoppen</li>
+                                                    <li>Behoud van zoek/filter instellingen bij paginering</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-primary mb-0">US1.6 - Responsive Film Interface (Must)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> klant <strong>wil ik</strong> de applicatie op alle apparaten kunnen gebruiken, <strong>zodat</strong> ik vanaf desktop, tablet of smartphone films kan bekijken en huren.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Responsive design voor alle schermformaten</li>
+                                                    <li>Touch-friendly interface op mobiele apparaten</li>
+                                                    <li>Optimale weergave van film grids en details</li>
+                                                    <li>Consistent gedrag across verschillende browsers</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Epic 2: Account Beheer -->
+                        <div class="mb-4">
+                            <h3 class="h5 text-info mb-3">Epic 2: Persoonlijk Account Beheer</h3>
+                            
+                            <div class="row g-3">
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-primary mb-0">US2.1 - Account Registratie (Must)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> nieuwe klant <strong>wil ik</strong> een account kunnen aanmaken, <strong>zodat</strong> ik films kan huren.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Registratieformulier met validatie</li>
+                                                    <li>Email verificatie en unieke gebruikersnaam</li>
+                                                    <li>Automatische koppeling aan stad/adres database</li>
+                                                    <li>Directe doorverwijzing naar dashboard</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-primary mb-0">US2.2 - Persoonlijk Dashboard (Must)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> klant <strong>wil ik</strong> een persoonlijk dashboard hebben, <strong>zodat</strong> ik mijn verhuuractiviteit kan overzien.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Overzicht actieve verhuren met vervaldatums</li>
+                                                    <li>Snelle toegang tot populaire films</li>
+                                                    <li>Verhuurgeschiedenis met filter opties</li>
+                                                    <li>Responsive design voor alle apparaten</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-warning mb-0">US2.3 - Profiel Beheer (Should)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> klant <strong>wil ik</strong> mijn profielgegevens kunnen aanpassen, <strong>zodat</strong> mijn account up-to-date blijft.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Bewerken persoonlijke gegevens (naam, email, adres)</li>
+                                                    <li>Wachtwoord wijzigen met validatie</li>
+                                                    <li>Real-time validatie van invoervelden</li>
+                                                    <li>Bevestiging van wijzigingen</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-primary mb-0">US2.4 - Verhuurgeschiedenis (Must)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> klant <strong>wil ik</strong> mijn complete verhuurgeschiedenis kunnen inzien, <strong>zodat</strong> ik kan zien welke films ik eerder heb gehuurd.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Chronologisch overzicht van alle verhuren</li>
+                                                    <li>Details per verhuur: film, datum, kosten, status</li>
+                                                    <li>Filter op status (actief/geretourneerd)</li>
+                                                    <li>Export functionaliteit voor administratie</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Staff User Stories -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h2 class="h4 mb-0">Staff (Medewerker) User Stories</h2>
+                    </div>
+                    <div class="card-body p-4">
+                        
+                        <!-- Epic 3: Klantenbeheer -->
+                        <div class="mb-4">
+                            <h3 class="h5 text-success mb-3">Epic 3: Klantenbeheer</h3>
+                            
+                            <div class="row g-3">
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-primary mb-0">US3.1 - Klanten Overzicht (Must)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> medewerker <strong>wil ik</strong> een overzicht van alle klanten kunnen bekijken, <strong>zodat</strong> ik snel klantinformatie kan vinden.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Tabel met klantbasisgegevens (naam, email, status)</li>
+                                                    <li>Paginering voor grote klantenaantallen</li>
+                                                    <li>Sortering op verschillende velden</li>
+                                                    <li>Direct toegang tot klantdetails</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-primary mb-0">US3.2 - Klant Zoeken (Must)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> medewerker <strong>wil ik</strong> klanten kunnen zoeken, <strong>zodat</strong> ik snel de juiste klant kan vinden.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Zoeken op naam, email of klant-ID</li>
+                                                    <li>Real-time zoekresultaten tijdens typen</li>
+                                                    <li>Geavanceerde filters (status, registratiedatum)</li>
+                                                    <li>Snelle toegang tot gevonden klantprofielen</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-primary mb-0">US3.3 - Klant Details (Must)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> medewerker <strong>wil ik</strong> gedetailleerde klantinformatie kunnen bekijken, <strong>zodat</strong> ik klanten optimaal kan helpen.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Volledig klantprofiel met contactgegevens</li>
+                                                    <li>Complete verhuurgeschiedenis van klant</li>
+                                                    <li>Huidige status en openstaande verhuren</li>
+                                                    <li>Snelle acties: nieuwe verhuur, profiel bewerken</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-primary mb-0">US3.4 - Klant Aanmaken (Must)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> medewerker <strong>wil ik</strong> nieuwe klanten kunnen registreren, <strong>zodat</strong> zij gebruik kunnen maken van onze diensten.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Uitgebreid registratieformulier met validatie</li>
+                                                    <li>Koppeling aan bestaande adres/stad database</li>
+                                                    <li>Automatische generatie van klant-ID</li>
+                                                    <li>Direct beschikbaar voor verhuurprocessen</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-warning mb-0">US3.5 - Klant Bewerken (Should)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> medewerker <strong>wil ik</strong> klantgegevens kunnen bewerken, <strong>zodat</strong> ik correcties en updates kan doorvoeren.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Bewerken van alle klantgegevens</li>
+                                                    <li>Validatie van wijzigingen</li>
+                                                    <li>Audit trail van wijzigingen</li>
+                                                    <li>Bevestiging van updates</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Epic 4: Verhuur Management -->
+                        <div class="mb-4">
+                            <h3 class="h5 text-warning mb-3">Epic 4: Verhuur Management</h3>
+                            
+                            <div class="row g-3">
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-primary mb-0">US4.1 - Staff Dashboard (Must)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> medewerker <strong>wil ik</strong> een dashboard met verhuuroverzicht, <strong>zodat</strong> ik de huidige situatie kan monitoren.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Overzicht van actieve verhuren</li>
+                                                    <li>Achterstallige verhuren met alerts</li>
+                                                    <li>Statistieken van de dag/week</li>
+                                                    <li>Snelle toegang tot belangrijkste functies</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-primary mb-0">US4.2 - Verhuur Afhandeling (Must)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> medewerker <strong>wil ik</strong> verhuren kunnen afhandelen, <strong>zodat</strong> klanten films kunnen huren en retourneren.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Nieuwe verhuur aanmaken voor klant</li>
+                                                    <li>Film retourneer proces</li>
+                                                    <li>Status updates van verhuren</li>
+                                                    <li>Automatische kostencalculatie</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-6">
+                                    <div class="card border-light h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <h6 class="card-title text-warning mb-0">US4.3 - Klant Verhuurgeschiedenis (Should)</h6>
+                                                <span class="badge bg-success">Geïmplementeerd</span>
+                                            </div>
+                                            <p class="card-text"><strong>Als</strong> medewerker <strong>wil ik</strong> de verhuurgeschiedenis van een klant kunnen bekijken, <strong>zodat</strong> ik gerichte service kan bieden.</p>
+                                            <div class="bg-light p-3 rounded">
+                                                <h6 class="mb-2">Acceptatiecriteria:</h6>
+                                                <ul class="small mb-0">
+                                                    <li>Complete verhuurhistorie per klant</li>
+                                                    <li>Filter op periode en status</li>
+                                                    <li>Details van elke individuele verhuur</li>
+                                                    <li>Export mogelijkheden voor rapportage</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical Requirements -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-dark text-white">
+                        <h2 class="h4 mb-0">Technische Randvoorwaarden (RV-01 t/m RV-07)</h2>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5 class="mb-3">Compliance Status</h5>
+                                <div class="list-group list-group-flush">
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>RV-01:</strong> JavaScript & MySQL
+                                            <br><small class="text-muted">Geen TypeScript, geen SqlServer</small>
+                                        </div>
+                                        <span class="badge bg-success">Voldaan</span>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>RV-02:</strong> Server-side rendering
+                                            <br><small class="text-muted">EJS templates, geen client-side frontend</small>
+                                        </div>
+                                        <span class="badge bg-success">Voldaan</span>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>RV-03:</strong> CSS Framework
+                                            <br><small class="text-muted">Bootstrap 5.3.0 voor styling</small>
+                                        </div>
+                                        <span class="badge bg-success">Voldaan</span>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>RV-04:</strong> Open Source
+                                            <br><small class="text-muted">Node.js, Express, MySQL, Bootstrap</small>
+                                        </div>
+                                        <span class="badge bg-success">Voldaan</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h5 class="mb-3">&nbsp;</h5>
+                                <div class="list-group list-group-flush">
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>RV-05:</strong> Geen ORM
+                                            <br><small class="text-muted">Raw SQL queries via mysql2</small>
+                                        </div>
+                                        <span class="badge bg-success">Voldaan</span>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>RV-06:</strong> Alleen callbacks
+                                            <br><small class="text-muted">Geen async/await of Promises</small>
+                                        </div>
+                                        <span class="badge bg-success">Voldaan</span>
+                                    </div>
+                                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <strong>RV-07:</strong> About pagina
+                                            <br><small class="text-muted">User stories en acceptatiecriteria</small>
+                                        </div>
+                                        <span class="badge bg-success">Voldaan</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <h5 class="mb-3">Architectuur Overzicht</h5>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="text-center p-3 bg-light rounded">
+                                            <h6>Architectuur</h6>
+                                            <p class="small mb-0">MVC met gelaagde structuur</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center p-3 bg-light rounded">
+                                            <h6>Database</h6>
+                                            <p class="small mb-0">MySQL met Sakila sample database</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center p-3 bg-light rounded">
+                                            <h6>Frontend</h6>
+                                            <p class="small mb-0">EJS templates met Bootstrap 5.3.0</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center p-3 bg-light rounded">
+                                            <h6>Authenticatie</h6>
+                                            <p class="small mb-0">JWT-based met role-based access</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5>Contact & Support</h5>
+                        <p class="mb-3">Voor vragen over deze user stories of de implementatie, raadpleeg de GitHub repository.</p>
+                        <a href="https://github.com/karim076/Weektaken-LU-1" class="btn btn-primary" target="_blank">
+                            GitHub Repository
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    
+
     <%- include('partials/footer') %>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

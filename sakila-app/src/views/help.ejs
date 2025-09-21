@@ -1,0 +1,360 @@
+<%- include('partials/header', { title: 'Help & FAQ - Sakila App' }) %>
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="text-center mb-5">
+                <h1 class="display-4 text-primary">Help & Veelgestelde Vragen</h1>
+                <p class="lead text-muted">Vind snel antwoorden op uw vragen over het gebruik van Sakila App</p>
+            </div>
+
+            <!-- Quick Help Cards -->
+            <div class="row g-4 mb-5">
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body text-center p-4">
+                            <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                                <i class="bi bi-person-circle fs-4"></i>
+                            </div>
+                            <h5 class="card-title">Account Beheer</h5>
+                            <p class="card-text text-muted">Registratie, inloggen en profiel aanpassen</p>
+                            <a href="#account" class="btn btn-outline-primary">Meer info</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body text-center p-4">
+                            <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                                <i class="bi bi-film fs-4"></i>
+                            </div>
+                            <h5 class="card-title">Films Huren</h5>
+                            <p class="card-text text-muted">Hoe u films kunt zoeken, huren en retourneren</p>
+                            <a href="#rental" class="btn btn-outline-success">Meer info</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body text-center p-4">
+                            <div class="bg-info text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
+                                <i class="bi bi-gear fs-4"></i>
+                            </div>
+                            <h5 class="card-title">Technische Hulp</h5>
+                            <p class="card-text text-muted">Problemen oplossen en technische ondersteuning</p>
+                            <a href="#technical" class="btn btn-outline-info">Meer info</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Sections -->
+            <div class="accordion" id="helpAccordion">
+                
+                <!-- Account Management Section -->
+                <div class="card border-0 shadow-sm mb-3" id="account">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="bi bi-person-circle me-2"></i>Account Beheer
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="accordion" id="accountAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#account1">
+                                        Hoe maak ik een account aan?
+                                    </button>
+                                </h2>
+                                <div id="account1" class="accordion-collapse collapse show" data-bs-parent="#accountAccordion">
+                                    <div class="accordion-body">
+                                        <ol>
+                                            <li>Klik op "Registreren" in de navigatiebalk</li>
+                                            <li>Vul alle verplichte velden in (naam, email, adres, etc.)</li>
+                                            <li>Kies een veilig wachtwoord</li>
+                                            <li>Accepteer de algemene voorwaarden</li>
+                                            <li>Klik op "Account Aanmaken"</li>
+                                        </ol>
+                                        <div class="alert alert-info mt-3">
+                                            <strong>Tip:</strong> Gebruik een geldig emailadres voor bevestigingen en updates.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#account2">
+                                        Ik ben mijn wachtwoord vergeten, wat nu?
+                                    </button>
+                                </h2>
+                                <div id="account2" class="accordion-collapse collapse" data-bs-parent="#accountAccordion">
+                                    <div class="accordion-body">
+                                        <p>Als u uw wachtwoord bent vergeten:</p>
+                                        <ol>
+                                            <li>Ga naar de login pagina</li>
+                                            <li>Klik op "Wachtwoord vergeten?"</li>
+                                            <li>Voer uw emailadres in</li>
+                                            <li>Controleer uw email voor een reset link</li>
+                                            <li>Volg de instructies in de email</li>
+                                        </ol>
+                                        <div class="alert alert-warning mt-3">
+                                            <strong>Let op:</strong> De reset link is 24 uur geldig.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#account3">
+                                        Hoe kan ik mijn profiel aanpassen?
+                                    </button>
+                                </h2>
+                                <div id="account3" class="accordion-collapse collapse" data-bs-parent="#accountAccordion">
+                                    <div class="accordion-body">
+                                        <p>Voor klanten:</p>
+                                        <ol>
+                                            <li>Log in op uw account</li>
+                                            <li>Ga naar uw dashboard</li>
+                                            <li>Klik op "Profiel bewerken"</li>
+                                            <li>Pas de gewenste gegevens aan</li>
+                                            <li>Klik op "Opslaan"</li>
+                                        </ol>
+                                        <p>U kunt wijzigen: naam, emailadres, wachtwoord en adresgegevens.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Film Rental Section -->
+                <div class="card border-0 shadow-sm mb-3" id="rental">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0">
+                            <i class="bi bi-film me-2"></i>Films Huren
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="accordion" id="rentalAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#rental1">
+                                        Hoe huur ik een film?
+                                    </button>
+                                </h2>
+                                <div id="rental1" class="accordion-collapse collapse show" data-bs-parent="#rentalAccordion">
+                                    <div class="accordion-body">
+                                        <ol>
+                                            <li>Zorg dat u bent ingelogd</li>
+                                            <li>Ga naar "Films" in het menu</li>
+                                            <li>Zoek de gewenste film of blader door de catalogus</li>
+                                            <li>Klik op de film voor details</li>
+                                            <li>Selecteer een beschikbare winkel</li>
+                                            <li>Klik op "Huur deze film"</li>
+                                            <li>Bevestig uw keuze</li>
+                                        </ol>
+                                        <div class="alert alert-success mt-3">
+                                            <strong>Success!</strong> De film verschijnt nu in uw dashboard onder "Actieve Verhuren".
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rental2">
+                                        Hoe lang mag ik een film houden?
+                                    </button>
+                                </h2>
+                                <div id="rental2" class="accordion-collapse collapse" data-bs-parent="#rentalAccordion">
+                                    <div class="accordion-body">
+                                        <p>De standaard huurperiode is <strong>7 dagen</strong> vanaf de huurdatum.</p>
+                                        <ul>
+                                            <li>U kunt de vervaldatum zien in uw dashboard</li>
+                                            <li>Bij overschrijding kunnen er kosten in rekening worden gebracht</li>
+                                            <li>Verlenging is mogelijk via uw account (indien beschikbaar)</li>
+                                        </ul>
+                                        <div class="alert alert-info mt-3">
+                                            <strong>Tip:</strong> Controleer regelmatig uw dashboard voor vervaldatums.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rental3">
+                                        Hoe kan ik films zoeken?
+                                    </button>
+                                </h2>
+                                <div id="rental3" class="accordion-collapse collapse" data-bs-parent="#rentalAccordion">
+                                    <div class="accordion-body">
+                                        <p>Er zijn verschillende manieren om films te vinden:</p>
+                                        <ul>
+                                            <li><strong>Titel zoeken:</strong> Gebruik het zoekveld bovenaan de films pagina</li>
+                                            <li><strong>Categorie filter:</strong> Filter op genre zoals Action, Drama, Comedy</li>
+                                            <li><strong>Populaire films:</strong> Bekijk de meest gehuurde films op de homepage</li>
+                                            <li><strong>Bladeren:</strong> Gebruik paginering om door alle films te bladeren</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rental4">
+                                        Wat betekent "Niet beschikbaar" bij een film?
+                                    </button>
+                                </h2>
+                                <div id="rental4" class="accordion-collapse collapse" data-bs-parent="#rentalAccordion">
+                                    <div class="accordion-body">
+                                        <p>Als een film "Niet beschikbaar" toont, kan dit betekenen:</p>
+                                        <ul>
+                                            <li>Alle exemplaren zijn momenteel verhuurd</li>
+                                            <li>De film is tijdelijk uit voorraad</li>
+                                            <li>Er is onderhoud aan de database</li>
+                                        </ul>
+                                        <div class="alert alert-warning mt-3">
+                                            <strong>Oplossing:</strong> Probeer het later opnieuw of contacteer onze klantenservice.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Technical Support Section -->
+                <div class="card border-0 shadow-sm mb-3" id="technical">
+                    <div class="card-header bg-info text-white">
+                        <h4 class="mb-0">
+                            <i class="bi bi-gear me-2"></i>Technische Ondersteuning
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="accordion" id="technicalAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#tech1">
+                                        De website laadt langzaam, wat kan ik doen?
+                                    </button>
+                                </h2>
+                                <div id="tech1" class="accordion-collapse collapse show" data-bs-parent="#technicalAccordion">
+                                    <div class="accordion-body">
+                                        <p>Probeer de volgende stappen:</p>
+                                        <ol>
+                                            <li>Controleer uw internetverbinding</li>
+                                            <li>Refresh de pagina (F5 of Ctrl+R)</li>
+                                            <li>Wis uw browser cache en cookies</li>
+                                            <li>Probeer een andere browser</li>
+                                            <li>Schakel browser extensies tijdelijk uit</li>
+                                        </ol>
+                                        <div class="alert alert-info mt-3">
+                                            <strong>Nog steeds problemen?</strong> Neem contact op via support@sakila-app.nl
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tech2">
+                                        Ik kan niet inloggen, wat nu?
+                                    </button>
+                                </h2>
+                                <div id="tech2" class="accordion-collapse collapse" data-bs-parent="#technicalAccordion">
+                                    <div class="accordion-body">
+                                        <p>Controleer het volgende:</p>
+                                        <ul>
+                                            <li>Spelling van uw gebruikersnaam/email</li>
+                                            <li>Caps Lock staat niet aan</li>
+                                            <li>Gebruik "Wachtwoord vergeten" indien nodig</li>
+                                            <li>Cookies zijn ingeschakeld in uw browser</li>
+                                        </ul>
+                                        <p>Als het probleem aanhoudt, neem dan contact op met onze support.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tech3">
+                                        Welke browsers worden ondersteund?
+                                    </button>
+                                </h2>
+                                <div id="tech3" class="accordion-collapse collapse" data-bs-parent="#technicalAccordion">
+                                    <div class="accordion-body">
+                                        <p>Sakila App werkt optimaal in de volgende browsers:</p>
+                                        <ul>
+                                            <li><strong>Chrome:</strong> Versie 90 en hoger</li>
+                                            <li><strong>Firefox:</strong> Versie 88 en hoger</li>
+                                            <li><strong>Safari:</strong> Versie 14 en hoger</li>
+                                            <li><strong>Edge:</strong> Versie 90 en hoger</li>
+                                        </ul>
+                                        <div class="alert alert-warning mt-3">
+                                            <strong>Let op:</strong> Internet Explorer wordt niet ondersteund.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tech4">
+                                        Is mijn data veilig?
+                                    </button>
+                                </h2>
+                                <div id="tech4" class="accordion-collapse collapse" data-bs-parent="#technicalAccordion">
+                                    <div class="accordion-body">
+                                        <p>Ja, wij nemen uw privacy en veiligheid serieus:</p>
+                                        <ul>
+                                            <li>Alle data wordt versleuteld opgeslagen</li>
+                                            <li>Wachtwoorden worden gehashed en nooit in platte tekst bewaard</li>
+                                            <li>We gebruiken HTTPS voor alle communicatie</li>
+                                            <li>Reguliere security updates en monitoring</li>
+                                            <li>GDPR-compliant data behandeling</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Section -->
+            <div class="row mt-5">
+                <div class="col-12">
+                    <div class="card border-0 bg-light">
+                        <div class="card-body p-4 text-center">
+                            <h4 class="card-title">Heeft u nog vragen?</h4>
+                            <p class="card-text text-muted">
+                                Kunt u het antwoord niet vinden? Ons klantenservice team helpt u graag verder.
+                            </p>
+                            <div class="row g-3 justify-content-center">
+                                <div class="col-auto">
+                                    <a href="/contact" class="btn btn-primary">
+                                        <i class="bi bi-envelope me-2"></i>Contact Opnemen
+                                    </a>
+                                </div>
+                                <div class="col-auto">
+                                    <a href="tel:+31201234567" class="btn btn-outline-primary">
+                                        <i class="bi bi-telephone me-2"></i>+31 (0)20 123 4567
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('partials/footer') %>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

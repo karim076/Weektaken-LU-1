@@ -16,17 +16,31 @@ class FilmController {
     const page = parseInt(req.query.page) || 1;
     const limit = 12;
     const search = req.query.search || '';
-    const categoryId = req.query.category ? parseInt(req.query.category) : null;
+    const category = req.query.category ? parseInt(req.query.category) : null; // Blijf 'category' gebruiken
+    const rating = req.query.rating || '';
+    const year = req.query.year ? parseInt(req.query.year) : null;
+    const length = req.query.length || '';
+    const priceRange = req.query.priceRange || '';
+    const sortBy = req.query.sortBy || 'title';
 
-    console.log('Film index - Query params:', {
-      page,
-      limit,
-      search,
-      categoryId,
-      originalQuery: req.query
-    });
+  // Gebruik dezelfde parameter namen als in frontend
+  const filters = {};
+    if (search && search !== '') filters.search = search;
+    if (category !== null && category !== '' && !isNaN(category)) filters.category = category; // Gebruik 'category' i.p.v. 'categoryId'
+    if (rating && rating !== '') filters.rating = rating;
+    if (year !== null && year !== '' && !isNaN(year)) filters.year = year;
+    if (length && length !== '') filters.length = length;
+    if (priceRange && priceRange !== '') filters.priceRange = priceRange;
+    if (sortBy && sortBy !== '') filters.sortBy = sortBy;
 
-    this.filmService.getFilms(page, limit, search, categoryId, (error, result) => {
+  console.log('Film index - Query params:', {
+    page,
+    limit,
+    filters,
+    originalQuery: req.query
+  });
+
+    this.filmService.getFilmsAdvanced(page, limit, filters, (error, result) => {
       if (error) {
         console.error('Film index error:', error);
         return res.status(500).render('error', {
@@ -48,9 +62,15 @@ class FilmController {
         title: 'Films - Sakila App',
         films: result.data.films,
         categories: result.data.categories,
+        years: result.data.years,
         pagination: result.data.pagination,
         search,
-        selectedCategory: categoryId
+        selectedCategory: category,
+        selectedRating: rating,
+        selectedYear: year,
+        selectedLength: length,
+        selectedPriceRange: priceRange,
+        selectedSort: sortBy
       });
     });
   }
