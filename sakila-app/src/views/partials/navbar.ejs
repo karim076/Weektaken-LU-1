@@ -21,6 +21,11 @@
                         <i class="bi bi-collection-play"></i> Films
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/about">
+                        <i class="bi bi-info-circle"></i> Over Ons
+                    </a>
+                </li>
                 <% if (typeof user !== 'undefined' && user) { %>
                     <% if (user.userType === 'staff' || user.userType === 'owner') { %>
                         <li class="nav-item">

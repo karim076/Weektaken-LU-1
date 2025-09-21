@@ -8,121 +8,182 @@ class UserDAO extends BaseDAO {
   }
 
   //  Zoek gebruiker op username
-  async findByUsername(username) {
-    const rows = await this.query(
+  findByUsername(username, callback) {
+    this.query(
       `SELECT * FROM user_auth WHERE username = ? LIMIT 1`,
-      [username]
+      [username],
+      (error, rows) => {
+        if (error) {
+          return callback(error);
+        }
+        callback(null, rows.length ? rows[0] : null);
+      }
     );
-    return rows.length ? rows[0] : null;
   }
 
   //  Zoek gebruiker op email
-  async findByEmail(email) {
-    const rows = await this.query(
+  findByEmail(email, callback) {
+    this.query(
       `SELECT * FROM user_auth WHERE email = ? LIMIT 1`,
-      [email]
+      [email],
+      (error, rows) => {
+        if (error) {
+          return callback(error);
+        }
+        callback(null, rows.length ? rows[0] : null);
+      }
     );
-    return rows.length ? rows[0] : null;
   }
 
   //  Zoek gebruiker op id en type
-  async findById(id, type) {
-    const rows = await this.query(
+  findById(id, type, callback) {
+    this.query(
       `SELECT * FROM user_auth WHERE user_id = ? AND user_type = ? LIMIT 1`,
-      [id, type]
+      [id, type],
+      (err, rows) => {
+        if (err) return callback(err);
+        callback(null, rows.length ? rows[0] : null);
+      }
     );
-    return rows.length ? rows[0] : null;
   }
 
   //  Maak nieuwe klant
-  async createCustomer(customerData) {
-    const conn = await this.db.getConnection();
-    try {
-      await conn.beginTransaction();
+  createCustomer(customerData, callback) {
+    this.db.getConnection((err, conn) => {
+      if (err) return callback(err);
+      
+      conn.beginTransaction((err) => {
+        if (err) {
+          conn.release();
+          return callback(err);
+        }
 
-      // Hash password if not already hashed
-      let hashedPassword = customerData.password;
-      if (!hashedPassword.startsWith('$2b$') && !hashedPassword.startsWith('$2a$')) {
-        hashedPassword = await bcrypt.hash(customerData.password, 10);
-      }
+        // Hash password if not already hashed
+        let hashedPassword = customerData.password;
+        if (!hashedPassword.startsWith('$2b$') && !hashedPassword.startsWith('$2a$')) {
+          bcrypt.hash(customerData.password, 10, (err, hash) => {
+            if (err) {
+              conn.rollback(() => {
+                conn.release();
+                callback(err);
+              });
+              return;
+            }
+            hashedPassword = hash;
+            insertAddress();
+          });
+        } else {
+          insertAddress();
+        }
 
-      // Insert address als dat in customerData zit
-      const [addrResult] = await conn.query(
-        `INSERT INTO address (address, address2, district, city_id, postal_code, phone, location) 
-         VALUES (?, ?, ?, ?, ?, ?, POINT(0, 0))`,
-        [
-          customerData.address,
-          customerData.address2,
-          customerData.district,
-          customerData.city_id,
-          customerData.postal_code,
-          customerData.phone
-        ]
-      );
-      const addressId = addrResult.insertId;
-
-      // Insert customer
-      const [custResult] = await conn.query(
-        `INSERT INTO customer (store_id, first_name, last_name, email, address_id, active, username, password) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          customerData.store_id || 1,
-          customerData.first_name,
-          customerData.last_name,
-          customerData.email,
-          addressId,
-          1,
-          customerData.username,
-          hashedPassword
-        ]
-      );
-
-      await conn.commit();
-      return { success: true, customerId: custResult.insertId };
-    } catch (err) {
-      await conn.rollback();
-      console.error('createCustomer error:', err);
-      return { success: false };
-    } finally {
-      conn.release();
-    }
+        function insertAddress() {
+          // Insert address als dat in customerData zit
+          conn.query(
+            `INSERT INTO address (address, address2, district, city_id, postal_code, phone, location) 
+             VALUES (?, ?, ?, ?, ?, ?, POINT(0, 0))`,
+            [
+              customerData.address,
+              customerData.address2,
+              customerData.district,
+              customerData.city_id,
+              customerData.postal_code,
+              customerData.phone
+            ],
+            (err, addrResult) => {
+              if (err) {
+                conn.rollback(() => {
+                  conn.release();
+                  callback(err);
+                });
+                return;
+              }
+              
+              const addressId = addrResult.insertId;
+              
+              // Insert customer
+              conn.query(
+                `INSERT INTO customer (store_id, first_name, last_name, email, address_id, active, username, password) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                  customerData.store_id || 1,
+                  customerData.first_name,
+                  customerData.last_name,
+                  customerData.email,
+                  addressId,
+                  1,
+                  customerData.username,
+                  hashedPassword
+                ],
+                (err, custResult) => {
+                  if (err) {
+                    conn.rollback(() => {
+                      conn.release();
+                      callback(err);
+                    });
+                    return;
+                  }
+                  
+                  conn.commit((err) => {
+                    if (err) {
+                      conn.rollback(() => {
+                        conn.release();
+                        callback(err);
+                      });
+                      return;
+                    }
+                    
+                    conn.release();
+                    callback(null, { success: true, customerId: custResult.insertId });
+                  });
+                }
+              );
+            }
+          );
+        }
+      });
+    });
   }
 
   //  Password check
-  async verifyPassword(username, password) {
-    const user = await this.findByUsername(username);
-    if (!user) return false;
-    
-    // Check if password is already hashed (starts with $2b$ for bcrypt)
-    if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
-      // It's a hashed password, use bcrypt compare
-      return bcrypt.compare(password, user.password);
-    } else {
-      // It's a plain text password (legacy), do direct comparison
-      console.log(' Using plain text password comparison for:', username);
-      return password === user.password;
-    }
+  verifyPassword(username, password, callback) {
+    this.findByUsername(username, (err, user) => {
+      if (err) return callback(err);
+      if (!user) return callback(null, false);
+      
+      // Check if password is already hashed (starts with $2b$ for bcrypt)
+      if (user.password.startsWith('$2b$') || user.password.startsWith('$2a$')) {
+        // It's a hashed password, use bcrypt compare
+        bcrypt.compare(password, user.password, (err, isMatch) => {
+          if (err) return callback(err);
+          callback(null, isMatch);
+        });
+      } else {
+        // It's a plain text password (legacy), do direct comparison
+        console.log(' Using plain text password comparison for:', username);
+        callback(null, password === user.password);
+      }
+    });
   }
 
   //  Password update
-  async updatePassword(userId, userType, newPassword) {
-    const result = await this.query(
+  updatePassword(userId, userType, newPassword, callback) {
+    this.query(
       `UPDATE ${userType} SET password = ? WHERE ${userType}_id = ?`,
-      [newPassword, userId]
+      [newPassword, userId],
+      callback
     );
-    return result;
   }
 
   //  Profiel update
-  async updateProfile(userId, userType, profileData) {
+  updateProfile(userId, userType, profileData, callback) {
     const fields = Object.keys(profileData).map(f => `${f} = ?`).join(', ');
     const values = Object.values(profileData);
 
-    const result = await this.query(
+    this.query(
       `UPDATE ${userType} SET ${fields} WHERE ${userType}_id = ?`,
-      [...values, userId]
+      [...values, userId],
+      callback
     );
-    return result;
   }
 }
 

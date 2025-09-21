@@ -11,7 +11,7 @@ class OwnerDAO extends BaseDAO {
   /**
    * Get dashboard statistics for owners
    */
-  async getDashboardStats() {
+  getDashboardStats(callback) {
     const sql = `
       SELECT 
         (SELECT COUNT(*) FROM customer WHERE active = 1) as total_customers,
@@ -22,14 +22,16 @@ class OwnerDAO extends BaseDAO {
         (SELECT COALESCE(SUM(amount), 0) FROM payment WHERE payment_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)) as revenue_30_days
     `;
 
-    const results = await this.query(sql);
-    return results[0];
+    this.query(sql, [], (error, results) => {
+      if (error) return callback(error);
+      callback(null, results[0]);
+    });
   }
 
   /**
    * Get all staff with store assignments
    */
-  async getStaffWithStoreAssignments() {
+  getStaffWithStoreAssignments(callback) {
     const sql = `
       SELECT 
         s.staff_id,
@@ -51,13 +53,13 @@ class OwnerDAO extends BaseDAO {
       ORDER BY s.last_name, s.first_name
     `;
 
-    return await this.query(sql);
+    this.query(sql, [], callback);
   }
 
   /**
    * Get staff member with assignments
    */
-  async getStaffWithAssignments(staffId) {
+  getStaffWithAssignments(staffId, callback) {
     const sql = `
       SELECT 
         s.*,
@@ -78,70 +80,91 @@ class OwnerDAO extends BaseDAO {
                s.active, a.address, a.district, a.phone, ci.city, co.country
     `;
 
-    const results = await this.query(sql, [staffId]);
-    return results.length > 0 ? results[0] : null;
+    const results = this.query(sql, [staffId], (error, results) => {
+      if (error) return callback(error);
+      callback(null, results.length > 0 ? results[0] : null);
+    });
   }
 
   /**
    * Create new staff member
    */
-  async createStaff(staffData) {
-    const connection = await this.db.getConnection();
-    
-    try {
-      await connection.beginTransaction();
-
-      // Create address first (using default address for simplicity)
-      const addressSql = `
-        INSERT INTO address (address, district, city_id, phone, location)
-        VALUES (?, ?, ?, ?, POINT(0, 0))
-      `;
+  createStaff(staffData, callback) {
+    this.db.getConnection((err, connection) => {
+      if (err) return callback(err);
       
-      const [addressResult] = await connection.execute(addressSql, [
-        'Staff Address',
-        'Staff District',
-        1, // Default city
-        staffData.phone || '000-000-0000'
-      ]);
+      connection.beginTransaction((err) => {
+        if (err) {
+          connection.release();
+          return callback(err);
+        }
 
-      const addressId = addressResult.insertId;
+        // Create address first (using default address for simplicity)
+        const addressSql = `
+          INSERT INTO address (address, district, city_id, phone, location)
+          VALUES (?, ?, ?, ?, POINT(0, 0))
+        `;
+        
+        connection.execute(addressSql, [
+          'Staff Address',
+          'Staff District',
+          1, // Default city
+          staffData.phone || '000-000-0000'
+        ], (err, addressResult) => {
+          if (err) {
+            connection.rollback(() => {
+              connection.release();
+              callback(err);
+            });
+            return;
+          }
 
-      // Create staff member
-      const staffSql = `
-        INSERT INTO staff (first_name, last_name, email, username, password, address_id, store_id, active)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `;
+          const addressId = addressResult.insertId;
 
-      const [staffResult] = await connection.execute(staffSql, [
-        staffData.firstName,
-        staffData.lastName,
-        staffData.email,
-        staffData.username,
-        staffData.password,
-        addressId,
-        staffData.storeId,
-        staffData.active
-      ]);
+          // Create staff member
+          const staffSql = `
+            INSERT INTO staff (first_name, last_name, email, username, password, address_id, store_id, active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `;
 
-      await connection.commit();
-      
-      return {
-        insertId: staffResult.insertId,
-        addressId: addressId,
-        affectedRows: staffResult.affectedRows
-      };
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    } finally {
-      connection.release();
-    }
+          connection.execute(staffSql, [
+            staffData.firstName,
+            staffData.lastName,
+            staffData.email,
+            staffData.username,
+            staffData.password,
+            addressId,
+            staffData.storeId,
+            staffData.active
+          ], (err, staffResult) => {
+            if (err) {
+              connection.rollback(() => {
+                connection.release();
+                callback(err);
+              });
+              return;
+            }
+
+            connection.commit((err) => {
+              connection.release();
+              if (err) return callback(err);
+              
+              callback(null, {
+                insertId: staffResult.insertId,
+                addressId: addressId,
+                affectedRows: staffResult.affectedRows
+              });
+            });
+          });
+        });
+      });
+    });
   }
 
   /**
    * Update staff member
    */
-  async updateStaff(staffId, staffData) {
+  updateStaff(staffId, staffData, callback) {
     const fields = [];
     const values = [];
 
@@ -165,39 +188,39 @@ class OwnerDAO extends BaseDAO {
       WHERE staff_id = ?
     `;
 
-    return await this.query(sql, values);
+    this.query(sql, values, callback);
   }
 
   /**
    * Assign staff to store
    */
-  async assignStaffToStore(staffId, storeId, assignedBy) {
+  assignStaffToStore(staffId, storeId, assignedBy, callback) {
     const sql = `
       INSERT INTO store_staff (store_id, staff_id, assigned_by, assigned_at, active)
       VALUES (?, ?, ?, NOW(), 1)
       ON DUPLICATE KEY UPDATE active = 1, assigned_at = NOW()
     `;
 
-    return await this.query(sql, [storeId, staffId, assignedBy]);
+    this.query(sql, [storeId, staffId, assignedBy], callback);
   }
 
   /**
    * Remove staff from store
    */
-  async removeStaffFromStore(staffId, storeId) {
+  removeStaffFromStore(staffId, storeId, callback) {
     const sql = `
       UPDATE store_staff 
       SET active = 0 
       WHERE staff_id = ? AND store_id = ?
     `;
 
-    return await this.query(sql, [staffId, storeId]);
+    this.query(sql, [staffId, storeId], callback);
   }
 
   /**
    * Get all stores
    */
-  async getAllStores() {
+  getAllStores(callback) {
     const sql = `
       SELECT 
         s.*,
@@ -215,13 +238,13 @@ class OwnerDAO extends BaseDAO {
       ORDER BY s.store_id
     `;
 
-    return await this.query(sql);
+    this.query(sql, callback);
   }
 
   /**
    * Get store staff assignments
    */
-  async getStoreStaffAssignments(storeId) {
+  getStoreStaffAssignments(storeId, callback) {
     const sql = `
       SELECT 
         ss.*,
@@ -237,13 +260,13 @@ class OwnerDAO extends BaseDAO {
       ORDER BY ss.assigned_at DESC
     `;
 
-    return await this.query(sql, [storeId]);
+    this.query(sql, [storeId], callback);
   }
 
   /**
    * Get rental statistics
    */
-  async getRentalStats(days = 30) {
+  getRentalAnalytics(callback) {
     const sql = `
       SELECT 
         DATE(r.rental_date) as rental_date,
@@ -256,13 +279,13 @@ class OwnerDAO extends BaseDAO {
       ORDER BY rental_date DESC
     `;
 
-    return await this.query(sql, [days]);
+    this.query(sql, [days], callback);
   }
 
   /**
    * Get top performing films
    */
-  async getTopFilms(limit = 10) {
+  getFilmAnalytics(callback) {
     const sql = `
       SELECT 
         f.film_id,
@@ -280,13 +303,13 @@ class OwnerDAO extends BaseDAO {
       LIMIT ?
     `;
 
-    return await this.query(sql, [limit]);
+    this.query(sql, [limit], callback);
   }
 
   /**
    * Get inventory summary
    */
-  async getInventorySummary() {
+  getInventoryAnalytics(callback) {
     const sql = `
       SELECT 
         s.store_id,
@@ -303,7 +326,7 @@ class OwnerDAO extends BaseDAO {
       ORDER BY s.store_id
     `;
 
-    return await this.query(sql);
+    this.query(sql, callback);
   }
 }
 

@@ -10,41 +10,68 @@ class StaffController {
   }
 
   // Staff Dashboard
-  async dashboard(req, res) {
-    try {
-      console.log('Staff Dashboard - User:', req.user.username, 'Role:', req.user.role);
+  dashboard(req, res) {
+    console.log('Staff Dashboard - User:', req.user.username, 'Role:', req.user.role);
+    
+    // Haal dashboard statistieken op
+    this.getStaffStats((statsError, stats) => {
+      if (statsError) {
+        console.error('Staff dashboard stats error:', statsError);
+        return res.status(500).render('error', {
+          title: 'Dashboard Fout',
+          status: 500,
+          message: 'Kon dashboard statistieken niet laden'
+        });
+      }
       
-      // Haal dashboard statistieken op
-      const stats = await this.getStaffStats();
-      const recentRentals = await this.rentalService.getRecentRentals(10);
-      const overdueRentals = await this.rentalService.getOverdueRentals();
-      
-      res.render('dashboard', {
-        title: 'Staff Dashboard',
-        user: req.user,
-        dashboardType: 'staff',
-        stats,
-        recentRentals: recentRentals.rentals || [],
-        overdueRentals: overdueRentals.rentals || []
+      this.rentalService.getRecentRentals(10, (recentError, recentRentals) => {
+        if (recentError) {
+          console.error('Staff dashboard recent rentals error:', recentError);
+          return res.status(500).render('error', {
+            title: 'Dashboard Fout',
+            status: 500,
+            message: 'Kon recente verhuur niet laden'
+          });
+        }
+        
+        this.rentalService.getOverdueRentals((overdueError, overdueRentals) => {
+          if (overdueError) {
+            console.error('Staff dashboard overdue rentals error:', overdueError);
+            return res.status(500).render('error', {
+              title: 'Dashboard Fout',
+              status: 500,
+              message: 'Kon achterstallige verhuur niet laden'
+            });
+          }
+          
+          res.render('dashboard', {
+            title: 'Staff Dashboard',
+            user: req.user,
+            dashboardType: 'staff',
+            stats,
+            recentRentals: recentRentals.rentals || [],
+            overdueRentals: overdueRentals.rentals || []
+          });
+        });
       });
-    } catch (error) {
-      console.error('Staff dashboard error:', error);
-      res.status(500).render('error', {
-        title: 'Dashboard Fout',
-        status: 500,
-        message: 'Kon dashboard niet laden'
-      });
-    }
+    });
   }
 
   // Alle klanten weergeven
-  async getAllCustomers(req, res) {
-    try {
-      const page = parseInt(req.query.page) || 1;
-      const search = req.query.search || '';
-      const limit = 20;
-      
-      const result = await this.customerService.getAllCustomers(page, limit, search);
+  getAllCustomers(req, res) {
+    const page = parseInt(req.query.page) || 1;
+    const search = req.query.search || '';
+    const limit = 20;
+    
+    this.customerService.getAllCustomers(page, limit, search, (error, result) => {
+      if (error) {
+        console.error('Get customers error:', error);
+        return res.status(500).render('error', {
+          title: 'Klanten Fout',
+          status: 500,
+          message: 'Kon klanten niet laden'
+        });
+      }
       
       res.render('staff/customers', {
         title: 'Klantenbeheer',
@@ -53,21 +80,22 @@ class StaffController {
         pagination: result.pagination || {},
         search
       });
-    } catch (error) {
-      console.error('Get customers error:', error);
-      res.status(500).render('error', {
-        title: 'Klanten Fout',
-        status: 500,
-        message: 'Kon klanten niet laden'
-      });
-    }
+    });
   }
 
   // Klant details
-  async getCustomerDetails(req, res) {
-    try {
-      const customerId = req.params.id;
-      const customer = await this.customerService.getCustomerDetails(customerId);
+  getCustomerDetails(req, res) {
+    const customerId = req.params.id;
+    
+    this.customerService.getCustomerDetails(customerId, (error, customer) => {
+      if (error) {
+        console.error('Customer details error:', error);
+        return res.status(500).render('error', {
+          title: 'Klant Details Fout',
+          status: 500,
+          message: 'Kon klantgegevens niet laden'
+        });
+      }
       
       if (!customer) {
         return res.status(404).render('error', {
@@ -78,83 +106,93 @@ class StaffController {
       }
       
       // Haal klant verhuurgeschiedenis op
-      const rentals = await this.rentalService.getCustomerRentals(customerId);
-      
-      res.render('staff/customer-details', {
-        title: `Klant: ${customer.full_name}`,
-        user: req.user,
-        customer,
-        rentals: rentals.rentals || []
+      this.rentalService.getCustomerRentals(customerId, (rentalError, rentals) => {
+        if (rentalError) {
+          console.error('Customer rentals error:', rentalError);
+          return res.status(500).render('error', {
+            title: 'Verhuur Geschiedenis Fout',
+            status: 500,
+            message: 'Kon verhuurgeschiedenis niet laden'
+          });
+        }
+        
+        res.render('staff/customer-details', {
+          title: `Klant: ${customer.full_name}`,
+          user: req.user,
+          customer,
+          rentals: rentals.rentals || []
+        });
       });
-    } catch (error) {
-      console.error('Customer details error:', error);
-      res.status(500).render('error', {
-        title: 'Klant Details Fout',
-        status: 500,
-        message: 'Kon klantgegevens niet laden'
-      });
-    }
+    });
   }
 
   // Klant bewerken
-  async editCustomer(req, res) {
-    try {
-      const customerId = req.params.id;
-      const updates = req.body;
-      
-      const result = await this.customerService.updateCustomer(customerId, updates);
+  editCustomer(req, res) {
+    const customerId = req.params.id;
+    const updates = req.body;
+    
+    this.customerService.updateCustomer(customerId, updates, (error, result) => {
+      if (error) {
+        console.error('Edit customer error:', error);
+        return res.status(500).render('error', {
+          title: 'Bewerken Fout',
+          status: 500,
+          message: 'Kon klantgegevens niet bijwerken'
+        });
+      }
       
       if (result.success) {
         req.flash = req.flash || {};
         req.flash.success = 'Klantgegevens succesvol bijgewerkt';
         res.redirect(`/staff/customers/${customerId}`);
       } else {
-        res.status(400).render('staff/customer-details', {
-          title: 'Klant Bewerken',
-          user: req.user,
-          customer: await this.customerService.getCustomerDetails(customerId),
-          error: result.message
+        // Haal klantgegevens op voor foutmelding
+        this.customerService.getCustomerDetails(customerId, (detailError, customer) => {
+          if (detailError) {
+            return res.status(500).render('error', {
+              title: 'Bewerken Fout',
+              status: 500,
+              message: 'Kon klantgegevens niet laden'
+            });
+          }
+          
+          res.status(400).render('staff/customer-details', {
+            title: 'Klant Bewerken',
+            user: req.user,
+            customer: customer,
+            error: result.message
+          });
         });
       }
-    } catch (error) {
-      console.error('Edit customer error:', error);
-      res.status(500).render('error', {
-        title: 'Bewerken Fout',
-        status: 500,
-        message: 'Kon klantgegevens niet bijwerken'
-      });
-    }
+    });
   }
 
   // Verhuur beheer pagina
-  async rentalManagement(req, res) {
-    try {
-      res.render('staff/rental-management', {
-        title: 'Verhuur Beheer',
-        user: req.user
-      });
-    } catch (error) {
-      console.error('Rental management error:', error);
-      res.status(500).render('error', {
-        title: 'Verhuur Beheer Fout',
-        status: 500,
-        message: 'Kon verhuur beheer niet laden'
-      });
-    }
+  rentalManagement(req, res) {
+    res.render('staff/rental-management', {
+      title: 'Verhuur Beheer',
+      user: req.user
+    });
   }
 
   // Film uitgeven
-  async checkoutFilm(req, res) {
-    try {
-      const { customer_id, film_id, rental_duration } = req.body;
-      const staff_id = req.user.user_id;
-      
-      const result = await this.rentalService.createRental({
-        customer_id,
-        film_id,
-        staff_id,
-        rental_duration: rental_duration || 3
-      });
+  checkoutFilm(req, res) {
+    const { customer_id, film_id, rental_duration } = req.body;
+    const staff_id = req.user.user_id;
+    
+    this.rentalService.createRental({
+      customer_id,
+      film_id,
+      staff_id,
+      rental_duration: rental_duration || 3
+    }, (error, result) => {
+      if (error) {
+        console.error('Checkout film error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Fout bij uitgeven film'
+        });
+      }
       
       if (result.success) {
         res.json({
@@ -168,24 +206,24 @@ class StaffController {
           message: result.message
         });
       }
-    } catch (error) {
-      console.error('Checkout film error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Fout bij uitgeven film'
-      });
-    }
+    });
   }
 
   // Film innemen
-  async checkinFilm(req, res) {
-    try {
-      const { rental_id } = req.body;
-      const staff_id = req.user.staff_id || req.user.user_id; // Handle both staff_id and user_id
-      
-      console.log('CheckinFilm called with:', { rental_id, staff_id, user: req.user });
-      
-      const result = await this.rentalService.returnRental(rental_id, staff_id);
+  checkinFilm(req, res) {
+    const { rental_id } = req.body;
+    const staff_id = req.user.staff_id || req.user.user_id; // Handle both staff_id and user_id
+    
+    console.log('CheckinFilm called with:', { rental_id, staff_id, user: req.user });
+    
+    this.rentalService.returnRental(rental_id, staff_id, (error, result) => {
+      if (error) {
+        console.error('Checkin film error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Fout bij innemen film'
+        });
+      }
       
       if (result.success) {
         res.json({
@@ -199,22 +237,22 @@ class StaffController {
           message: result.message
         });
       }
-    } catch (error) {
-      console.error('Checkin film error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Fout bij innemen film'
-      });
-    }
+    });
   }
 
   // Verhuur status updaten
-  async updateRentalStatus(req, res) {
-    try {
-      const rentalId = req.params.id;
-      const { status } = req.body;
-      
-      const result = await this.rentalService.updateRentalStatus(rentalId, status);
+  updateRentalStatus(req, res) {
+    const rentalId = req.params.id;
+    const { status } = req.body;
+    
+    this.rentalService.updateRentalStatus(rentalId, status, (error, result) => {
+      if (error) {
+        console.error('Update rental status error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Fout bij bijwerken status'
+        });
+      }
       
       if (result.success) {
         res.json({
@@ -227,76 +265,86 @@ class StaffController {
           message: result.message
         });
       }
-    } catch (error) {
-      console.error('Update rental status error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Fout bij bijwerken status'
-      });
-    }
+    });
   }
 
   // API: Zoek klanten
-  async searchCustomers(req, res) {
-    try {
-      const query = req.query.q || req.query.search || '';
-      
-      if (!query || query.length < 2) {
-        return res.json([]);
-      }
-      
-      if (req.query.q) {
-        // Voor autocomplete - gebruik service layer
-        const customers = await this.customerService.searchCustomersForStaff(query);
+  searchCustomers(req, res) {
+    const query = req.query.q || req.query.search || '';
+    
+    if (!query || query.length < 2) {
+      return res.json([]);
+    }
+    
+    if (req.query.q) {
+      // Voor autocomplete - gebruik service layer
+      this.customerService.searchCustomersForStaff(query, (error, customers) => {
+        if (error) {
+          console.error('Search customers error:', error);
+          return res.status(500).json({
+            success: false,
+            message: 'Fout bij zoeken klanten: ' + error.message
+          });
+        }
         res.json(customers || []);
-      } else {
-        // Voor paginatie
-        const result = await this.customerService.getAllCustomers(
-          parseInt(req.query.page) || 1,
-          parseInt(req.query.limit) || 20,
-          query
-        );
-        
-        res.json({
-          success: true,
-          customers: result.customers || [],
-          pagination: result.pagination || {}
-        });
-      }
-    } catch (error) {
-      console.error('Search customers error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Fout bij zoeken klanten: ' + error.message
       });
+    } else {
+      // Voor paginatie
+      this.customerService.getAllCustomers(
+        parseInt(req.query.page) || 1,
+        parseInt(req.query.limit) || 20,
+        query,
+        (error, result) => {
+          if (error) {
+            console.error('Search customers error:', error);
+            return res.status(500).json({
+              success: false,
+              message: 'Fout bij zoeken klanten: ' + error.message
+            });
+          }
+          
+          res.json({
+            success: true,
+            customers: result.customers || [],
+            pagination: result.pagination || {}
+          });
+        }
+      );
     }
   }
 
   // API: Zoek films
-  async searchFilms(req, res) {
-    try {
-      const query = req.query.q || '';
-      
-      if (!query || query.length < 2) {
-        return res.json([]);
-      }
-      
-      const films = await this.filmService.searchFilmsForStaff(query);
-      res.json(films || []);
-    } catch (error) {
-      console.error('Search films error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Fout bij zoeken films: ' + error.message
-      });
+  searchFilms(req, res) {
+    const query = req.query.q || '';
+    
+    if (!query || query.length < 2) {
+      return res.json([]);
     }
+    
+    this.filmService.searchFilmsForStaff(query, (error, films) => {
+      if (error) {
+        console.error('Search films error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Fout bij zoeken films: ' + error.message
+        });
+      }
+      res.json(films || []);
+    });
   }
 
   // API: Verhuur details
-  async getRentalDetails(req, res) {
-    try {
-      const rentalId = req.params.id;
-      const rental = await this.rentalService.getRentalById(rentalId);
+  getRentalDetails(req, res) {
+    const rentalId = req.params.id;
+    
+    this.rentalService.getRentalById(rentalId, (error, rental) => {
+      if (error) {
+        console.error('Get rental details error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Fout bij ophalen verhuur details'
+        });
+      }
       
       if (rental) {
         res.json({
@@ -309,59 +357,59 @@ class StaffController {
           message: 'Verhuur niet gevonden'
         });
       }
-    } catch (error) {
-      console.error('Get rental details error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Fout bij ophalen verhuur details'
-      });
-    }
+    });
   }
 
   // API: Update rental due date
-  async updateRentalDueDateAPI(req, res) {
-    try {
-      const rentalId = req.params.id;
-      const { due_date, reason } = req.body;
-      
-      // Debug logging for authentication
-      console.log('updateRentalDueDateAPI called:', {
-        rentalId,
-        due_date,
-        reason,
-        user: req.user
+  updateRentalDueDateAPI(req, res) {
+    const rentalId = req.params.id;
+    const { due_date, reason } = req.body;
+    
+    // Debug logging for authentication
+    console.log('updateRentalDueDateAPI called:', {
+      rentalId,
+      due_date,
+      reason,
+      user: req.user
+    });
+    
+    const staffId = req.user.staff_id || req.user.user_id;
+    console.log('Using staffId:', staffId);
+    
+    if (!due_date) {
+      return res.status(400).json({
+        success: false,
+        message: 'Inleverdatum is verplicht'
       });
-      
-      const staffId = req.user.staff_id || req.user.user_id;
-      console.log('Using staffId:', staffId);
-      
-      if (!due_date) {
-        return res.status(400).json({
+    }
+    
+    // Validate date format and ensure it's not in the past
+    const newDueDate = new Date(due_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (isNaN(newDueDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ongeldige datum format'
+      });
+    }
+    
+    if (newDueDate < today) {
+      return res.status(400).json({
+        success: false,
+        message: 'Inleverdatum kan niet in het verleden liggen'
+      });
+    }
+    
+    this.rentalService.updateDueDate(rentalId, due_date, staffId, reason, (error, result) => {
+      if (error) {
+        console.error('Update rental due date error:', error);
+        return res.status(500).json({
           success: false,
-          message: 'Inleverdatum is verplicht'
+          message: 'Fout bij bijwerken inleverdatum'
         });
       }
-      
-      // Validate date format and ensure it's not in the past
-      const newDueDate = new Date(due_date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      if (isNaN(newDueDate.getTime())) {
-        return res.status(400).json({
-          success: false,
-          message: 'Ongeldige datum format'
-        });
-      }
-      
-      if (newDueDate < today) {
-        return res.status(400).json({
-          success: false,
-          message: 'Inleverdatum kan niet in het verleden liggen'
-        });
-      }
-      
-      const result = await this.rentalService.updateDueDate(rentalId, due_date, staffId, reason);
       
       if (result.success) {
         res.json({
@@ -375,103 +423,142 @@ class StaffController {
           message: result.message || 'Fout bij bijwerken inleverdatum'
         });
       }
-    } catch (error) {
-      console.error('Update rental due date error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Fout bij bijwerken inleverdatum'
-      });
-    }
+    });
   }
 
   // Helper: Staff statistieken
-  async getStaffStats() {
-    try {
-      const [
-        totalCustomers,
-        totalRentals,
-        activeRentals,
-        overdueCount,
-        todayRentals
-      ] = await Promise.all([
-        this.customerService.getTotalCustomers(),
-        this.rentalService.getTotalRentals(),
-        this.rentalService.getActiveRentals(),
-        this.rentalService.getOverdueCount(),
-        this.rentalService.getTodayRentals()
-      ]);
-
-      return {
-        totalCustomers: totalCustomers.count || 0,
-        totalRentals: totalRentals.count || 0,
-        activeRentals: activeRentals.count || 0,
-        overdueCount: overdueCount.count || 0,
-        todayRentals: todayRentals.count || 0
-      };
-    } catch (error) {
-      console.error('Get staff stats error:', error);
-      return {
-        totalCustomers: 0,
-        totalRentals: 0,
-        activeRentals: 0,
-        overdueCount: 0,
-        todayRentals: 0
-      };
-    }
+  getStaffStats(callback) {
+    // Get total customers first
+    this.customerService.getTotalCustomers((error, totalCustomers) => {
+      if (error) {
+        console.error('Get staff stats error:', error);
+        return callback(null, {
+          totalCustomers: 0,
+          totalRentals: 0,
+          activeRentals: 0,
+          overdueCount: 0,
+          todayRentals: 0
+        });
+      }
+      
+      // Get total rentals
+      this.rentalService.getTotalRentals((error, totalRentals) => {
+        if (error) {
+          console.error('Get staff stats error:', error);
+          return callback(null, {
+            totalCustomers: 0,
+            totalRentals: 0,
+            activeRentals: 0,
+            overdueCount: 0,
+            todayRentals: 0
+          });
+        }
+        
+        // Get active rentals
+        this.rentalService.getActiveRentals((error, activeRentals) => {
+          if (error) {
+            console.error('Get staff stats error:', error);
+            return callback(null, {
+              totalCustomers: 0,
+              totalRentals: 0,
+              activeRentals: 0,
+              overdueCount: 0,
+              todayRentals: 0
+            });
+          }
+          
+          // Get overdue count
+          this.rentalService.getOverdueCount((error, overdueCount) => {
+            if (error) {
+              console.error('Get staff stats error:', error);
+              return callback(null, {
+                totalCustomers: 0,
+                totalRentals: 0,
+                activeRentals: 0,
+                overdueCount: 0,
+                todayRentals: 0
+              });
+            }
+            
+            // Get today rentals
+            this.rentalService.getTodayRentals((error, todayRentals) => {
+              if (error) {
+                console.error('Get staff stats error:', error);
+                return callback(null, {
+                  totalCustomers: 0,
+                  totalRentals: 0,
+                  activeRentals: 0,
+                  overdueCount: 0,
+                  todayRentals: 0
+                });
+              }
+              
+              callback(null, {
+                totalCustomers: totalCustomers.count || 0,
+                totalRentals: totalRentals.count || 0,
+                activeRentals: activeRentals.count || 0,
+                overdueCount: overdueCount.count || 0,
+                todayRentals: todayRentals.count || 0
+              });
+            });
+          });
+        });
+      });
+    });
   }
 
   // API: Huidige verhuur (alleen in behandeling/pending)
-  async getCurrentRentals(req, res) {
-    try {
-      const rentals = await this.rentalService.getPendingRentals();
+  getCurrentRentals(req, res) {
+    this.rentalService.getPendingRentals((error, rentals) => {
+      if (error) {
+        console.error('Get current rentals error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Fout bij ophalen huidige verhuur'
+        });
+      }
       
       res.json({
         success: true,
         rentals: rentals.rentals || []
       });
-    } catch (error) {
-      console.error('Get current rentals error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Fout bij ophalen huidige verhuur'
-      });
-    }
+    });
   }
 
   // API: Te late verhuur
-  async getOverdueRentals(req, res) {
-    try {
-      const rentals = await this.rentalService.getOverdueRentals();
+  getOverdueRentals(req, res) {
+    this.rentalService.getOverdueRentals((error, rentals) => {
+      if (error) {
+        console.error('Get overdue rentals error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Fout bij ophalen te late verhuur'
+        });
+      }
       
       res.json({
         success: true,
         rentals: rentals.rentals || []
       });
-    } catch (error) {
-      console.error('Get overdue rentals error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Fout bij ophalen te late verhuur'
-      });
-    }
+    });
   }
 
   // API: In behandeling verhuur (voor dashboard)
-  async getPendingRentals(req, res) {
-    try {
-      const rentals = await this.rentalService.getPendingRentals();
+  getPendingRentals(req, res) {
+    this.rentalService.getPendingRentals((error, rentals) => {
+      if (error) {
+        console.error('Get pending rentals error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Fout bij ophalen in behandeling verhuur'
+        });
+      }
       
       res.json({
         success: true,
         rentals: rentals.rentals || []
       });
-    } catch (error) {
-      console.error('Get pending rentals error:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Fout bij ophalen in behandeling verhuur'
-      });
-    }
+    });
   }
 
   // API: Alle klanten (voor klantenbeheer)

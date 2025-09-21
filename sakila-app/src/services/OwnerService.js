@@ -11,171 +11,196 @@ class OwnerService {
   /**
    * Get dashboard overview statistics
    */
-  async getDashboardOverview() {
-    try {
-      const stats = await this.ownerDAO.getDashboardStats();
-      const rentalStats = await this.ownerDAO.getRentalStats(30);
-      const topFilms = await this.ownerDAO.getTopFilms(5);
-      const inventorySummary = await this.ownerDAO.getInventorySummary();
+  getDashboardOverview(callback) {
+    this.ownerDAO.getDashboardStats((error, stats) => {
+      if (error) {
+        console.error('Get dashboard overview stats error:', error);
+        return callback(error);
+      }
+      
+      this.ownerDAO.getRentalStats(30, (error, rentalStats) => {
+        if (error) {
+          console.error('Get dashboard overview rental stats error:', error);
+          return callback(error);
+        }
+        
+        this.ownerDAO.getTopFilms(5, (error, topFilms) => {
+          if (error) {
+            console.error('Get dashboard overview top films error:', error);
+            return callback(error);
+          }
+          
+          this.ownerDAO.getInventorySummary((error, inventorySummary) => {
+            if (error) {
+              console.error('Get dashboard overview inventory error:', error);
+              return callback(error);
+            }
 
-      return {
-        stats,
-        rentalStats,
-        topFilms,
-        inventorySummary
-      };
-    } catch (error) {
-      console.error('Get dashboard overview error:', error);
-      throw error;
-    }
+            callback(null, {
+              stats,
+              rentalStats,
+              topFilms,
+              inventorySummary
+            });
+          });
+        });
+      });
+    });
   }
 
   /**
    * Get all staff members with store assignments
    */
-  async getAllStaff() {
-    try {
-      return await this.ownerDAO.getStaffWithStoreAssignments();
-    } catch (error) {
-      console.error('Get all staff error:', error);
-      throw error;
-    }
+  getAllStaff(callback) {
+    this.ownerDAO.getStaffWithStoreAssignments((error, result) => {
+      if (error) {
+        console.error('Get all staff error:', error);
+        return callback(error);
+      }
+      callback(null, result);
+    });
   }
 
   /**
    * Get staff member details with assignments
    */
-  async getStaffDetails(staffId) {
-    try {
-      return await this.ownerDAO.getStaffWithAssignments(staffId);
-    } catch (error) {
-      console.error('Get staff details error:', error);
-      throw error;
-    }
+  getStaffDetails(staffId, callback) {
+    this.ownerDAO.getStaffWithAssignments(staffId, (error, result) => {
+      if (error) {
+        console.error('Get staff details error:', error);
+        return callback(error);
+      }
+      callback(null, result);
+    });
   }
 
   /**
    * Create new staff member
    */
-  async createStaff(staffData) {
-    try {
-      // Validate staff data
-      const validation = this.validateStaffData(staffData);
-      if (!validation.isValid) {
-        return {
-          success: false,
-          message: 'Validation failed',
-          errors: validation.errors
-        };
-      }
+  createStaff(staffData, callback) {
+    // Validate staff data
+    const validation = this.validateStaffData(staffData);
+    if (!validation.isValid) {
+      return callback(null, {
+        success: false,
+        message: 'Validation failed',
+        errors: validation.errors
+      });
+    }
 
-      const result = await this.ownerDAO.createStaff(staffData);
+    this.ownerDAO.createStaff(staffData, (error, result) => {
+      if (error) {
+        console.error('Create staff error:', error);
+        return callback(null, {
+          success: false,
+          message: error.message || 'Failed to create staff member'
+        });
+      }
       
-      return {
+      callback(null, {
         success: true,
         staffId: result.insertId,
         addressId: result.addressId,
         message: 'Staff member created successfully'
-      };
-    } catch (error) {
-      console.error('Create staff error:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to create staff member'
-      };
-    }
+      });
+    });
   }
 
   /**
    * Update staff member information
    */
-  async updateStaff(staffId, staffData) {
-    try {
-      const result = await this.ownerDAO.updateStaff(staffId, staffData);
+  updateStaff(staffId, staffData, callback) {
+    this.ownerDAO.updateStaff(staffId, staffData, (error, result) => {
+      if (error) {
+        console.error('Update staff error:', error);
+        return callback(null, {
+          success: false,
+          message: error.message || 'Failed to update staff member'
+        });
+      }
       
-      return {
+      callback(null, {
         success: result.affectedRows > 0,
         message: result.affectedRows > 0 ? 'Staff member updated successfully' : 'No changes made'
-      };
-    } catch (error) {
-      console.error('Update staff error:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to update staff member'
-      };
-    }
+      });
+    });
   }
 
   /**
    * Assign staff to store
    */
-  async assignStaffToStore(staffId, storeId, assignedBy) {
-    try {
-      const result = await this.ownerDAO.assignStaffToStore(staffId, storeId, assignedBy);
+  assignStaffToStore(staffId, storeId, assignedBy, callback) {
+    this.ownerDAO.assignStaffToStore(staffId, storeId, assignedBy, (error, result) => {
+      if (error) {
+        console.error('Assign staff to store error:', error);
+        return callback(null, {
+          success: false,
+          message: error.message || 'Failed to assign staff to store'
+        });
+      }
       
-      return {
+      callback(null, {
         success: result.affectedRows > 0,
         message: result.affectedRows > 0 ? 'Staff assigned to store successfully' : 'Assignment failed'
-      };
-    } catch (error) {
-      console.error('Assign staff to store error:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to assign staff to store'
-      };
-    }
+      });
+    });
   }
 
   /**
    * Remove staff from store
    */
-  async removeStaffFromStore(staffId, storeId) {
-    try {
-      const result = await this.ownerDAO.removeStaffFromStore(staffId, storeId);
+  removeStaffFromStore(staffId, storeId, callback) {
+    this.ownerDAO.removeStaffFromStore(staffId, storeId, (error, result) => {
+      if (error) {
+        console.error('Remove staff from store error:', error);
+        return callback(null, {
+          success: false,
+          message: error.message || 'Failed to remove staff from store'
+        });
+      }
       
-      return {
+      callback(null, {
         success: result.affectedRows > 0,
         message: result.affectedRows > 0 ? 'Staff removed from store successfully' : 'Removal failed'
-      };
-    } catch (error) {
-      console.error('Remove staff from store error:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to remove staff from store'
-      };
-    }
+      });
+    });
   }
 
   /**
    * Get all stores with details
    */
-  async getAllStores() {
-    try {
-      return await this.ownerDAO.getAllStores();
-    } catch (error) {
-      console.error('Get all stores error:', error);
-      throw error;
-    }
+  getAllStores(callback) {
+    this.ownerDAO.getAllStores((error, result) => {
+      if (error) {
+        console.error('Get all stores error:', error);
+        return callback(error);
+      }
+      callback(null, result);
+    });
   }
 
   /**
    * Get store staff assignments
    */
-  async getStoreStaff(storeId) {
-    try {
-      return await this.ownerDAO.getStoreStaffAssignments(storeId);
-    } catch (error) {
-      console.error('Get store staff error:', error);
-      throw error;
-    }
+  getStoreStaff(storeId, callback) {
+    this.ownerDAO.getStoreStaffAssignments(storeId, (error, result) => {
+      if (error) {
+        console.error('Get store staff error:', error);
+        return callback(error);
+      }
+      callback(null, result);
+    });
   }
 
   /**
    * Get rental analytics
    */
-  async getRentalAnalytics(days = 30) {
-    try {
-      const rentalStats = await this.ownerDAO.getRentalStats(days);
+  getRentalAnalytics(days = 30, callback) {
+    this.ownerDAO.getRentalStats(days, (error, rentalStats) => {
+      if (error) {
+        console.error('Get rental analytics error:', error);
+        return callback(error);
+      }
       
       // Process data for charts
       const chartData = {
@@ -190,7 +215,7 @@ class OwnerService {
       const averageDailyRentals = totalRentals / Math.max(rentalStats.length, 1);
       const averageDailyRevenue = totalRevenue / Math.max(rentalStats.length, 1);
 
-      return {
+      callback(null, {
         chartData,
         summary: {
           totalRentals,
@@ -199,31 +224,32 @@ class OwnerService {
           averageDailyRevenue: Math.round(averageDailyRevenue * 100) / 100,
           days
         }
-      };
-    } catch (error) {
-      console.error('Get rental analytics error:', error);
-      throw error;
-    }
+      });
+    });
   }
 
   /**
    * Get film performance analytics
    */
-  async getFilmAnalytics(limit = 20) {
-    try {
-      return await this.ownerDAO.getTopFilms(limit);
-    } catch (error) {
-      console.error('Get film analytics error:', error);
-      throw error;
-    }
+  getFilmAnalytics(limit = 20, callback) {
+    this.ownerDAO.getTopFilms(limit, (error, result) => {
+      if (error) {
+        console.error('Get film analytics error:', error);
+        return callback(error);
+      }
+      callback(null, result);
+    });
   }
 
   /**
    * Get inventory management data
    */
-  async getInventoryManagement() {
-    try {
-      const inventorySummary = await this.ownerDAO.getInventorySummary();
+  getInventoryManagement(callback) {
+    this.ownerDAO.getInventorySummary((error, inventorySummary) => {
+      if (error) {
+        console.error('Get inventory management error:', error);
+        return callback(error);
+      }
       
       // Calculate totals across all stores
       const totals = inventorySummary.reduce((acc, store) => ({
@@ -233,14 +259,11 @@ class OwnerService {
         availableCopies: acc.availableCopies + parseInt(store.available_copies || 0)
       }), { uniqueFilms: 0, totalCopies: 0, rentedCopies: 0, availableCopies: 0 });
 
-      return {
+      callback(null, {
         storeInventory: inventorySummary,
         totals
-      };
-    } catch (error) {
-      console.error('Get inventory management error:', error);
-      throw error;
-    }
+      });
+    });
   }
 
   /**
@@ -290,94 +313,160 @@ class OwnerService {
   /**
    * Get business insights
    */
-  async getBusinessInsights() {
-    try {
-      const [stats, rentalStats, topFilms, inventory] = await Promise.all([
-        this.ownerDAO.getDashboardStats(),
-        this.ownerDAO.getRentalStats(7), // Last 7 days
-        this.ownerDAO.getTopFilms(10),
-        this.ownerDAO.getInventorySummary()
-      ]);
-
-      // Calculate insights
-      const insights = {
-        // Revenue trends
-        weeklyRevenue: rentalStats.reduce((sum, day) => sum + parseFloat(day.daily_revenue || 0), 0),
-        dailyAverage: rentalStats.length > 0 
-          ? rentalStats.reduce((sum, day) => sum + parseFloat(day.daily_revenue || 0), 0) / rentalStats.length 
-          : 0,
-
-        // Rental trends
-        weeklyRentals: rentalStats.reduce((sum, day) => sum + parseInt(day.daily_rentals || 0), 0),
-        rentalAverage: rentalStats.length > 0 
-          ? rentalStats.reduce((sum, day) => sum + parseInt(day.daily_rentals || 0), 0) / rentalStats.length 
-          : 0,
-
-        // Inventory utilization
-        totalInventory: inventory.reduce((sum, store) => sum + parseInt(store.total_copies || 0), 0),
-        utilizedInventory: inventory.reduce((sum, store) => sum + parseInt(store.rented_copies || 0), 0),
-        utilizationRate: 0,
-
-        // Top performers
-        topFilm: topFilms.length > 0 ? topFilms[0] : null,
-        totalFilms: stats.total_films || 0
-      };
-
-      // Calculate utilization rate
-      if (insights.totalInventory > 0) {
-        insights.utilizationRate = Math.round((insights.utilizedInventory / insights.totalInventory) * 100);
+  getBusinessInsights(callback) {
+    // Get dashboard stats first
+    this.ownerDAO.getDashboardStats((error, stats) => {
+      if (error) {
+        console.error('Get business insights error:', error);
+        return callback(error);
       }
-
-      return {
-        stats,
-        insights,
-        trends: {
-          daily: rentalStats,
-          films: topFilms
+      
+      // Get rental stats (last 7 days)
+      this.ownerDAO.getRentalStats(7, (error, rentalStats) => {
+        if (error) {
+          console.error('Get business insights error:', error);
+          return callback(error);
         }
-      };
-    } catch (error) {
-      console.error('Get business insights error:', error);
-      throw error;
-    }
+        
+        // Get top films
+        this.ownerDAO.getTopFilms(10, (error, topFilms) => {
+          if (error) {
+            console.error('Get business insights error:', error);
+            return callback(error);
+          }
+          
+          // Get inventory summary
+          this.ownerDAO.getInventorySummary((error, inventory) => {
+            if (error) {
+              console.error('Get business insights error:', error);
+              return callback(error);
+            }
+            
+            // Calculate insights
+            const insights = {
+              // Revenue trends
+              weeklyRevenue: rentalStats.reduce((sum, day) => sum + parseFloat(day.daily_revenue || 0), 0),
+              dailyAverage: rentalStats.length > 0 
+                ? rentalStats.reduce((sum, day) => sum + parseFloat(day.daily_revenue || 0), 0) / rentalStats.length 
+                : 0,
+
+              // Rental trends
+              weeklyRentals: rentalStats.reduce((sum, day) => sum + parseInt(day.daily_rentals || 0), 0),
+              rentalAverage: rentalStats.length > 0 
+                ? rentalStats.reduce((sum, day) => sum + parseInt(day.daily_rentals || 0), 0) / rentalStats.length 
+                : 0,
+
+              // Inventory utilization
+              totalInventory: inventory.reduce((sum, store) => sum + parseInt(store.total_copies || 0), 0),
+              utilizedInventory: inventory.reduce((sum, store) => sum + parseInt(store.rented_copies || 0), 0),
+              utilizationRate: 0,
+
+              // Top performers
+              topFilm: topFilms.length > 0 ? topFilms[0] : null,
+              totalFilms: stats.total_films || 0
+            };
+
+            // Calculate utilization rate
+            if (insights.totalInventory > 0) {
+              insights.utilizationRate = Math.round((insights.utilizedInventory / insights.totalInventory) * 100);
+            }
+
+            callback(null, {
+              stats,
+              insights,
+              trends: {
+                daily: rentalStats,
+                films: topFilms
+              }
+            });
+          });
+        });
+      });
+    });
   }
 
   /**
    * Export data for reports
    */
-  async exportData(type, filters = {}) {
-    try {
-      let data = [];
-
-      switch (type) {
-        case 'staff':
-          data = await this.ownerDAO.getStaffWithStoreAssignments();
-          break;
-        case 'rentals':
-          data = await this.ownerDAO.getRentalStats(filters.days || 30);
-          break;
-        case 'films':
-          data = await this.ownerDAO.getTopFilms(filters.limit || 100);
-          break;
-        case 'inventory':
-          data = await this.ownerDAO.getInventorySummary();
-          break;
-        default:
-          throw new Error('Invalid export type');
-      }
-
-      return {
-        success: true,
-        data,
-        type,
-        exportDate: new Date().toISOString()
-      };
-    } catch (error) {
-      console.error('Export data error:', error);
-      return {
-        success: false,
-        message: error.message || 'Export failed'
-      };
+  exportData(type, filters = {}, callback) {
+    switch (type) {
+      case 'staff':
+        this.ownerDAO.getStaffWithStoreAssignments((error, data) => {
+          if (error) {
+            console.error('Export data error:', error);
+            return callback(null, {
+              success: false,
+              message: error.message || 'Export failed'
+            });
+          }
+          callback(null, {
+            success: true,
+            data,
+            type,
+            exportDate: new Date().toISOString()
+          });
+        });
+        break;
+        
+      case 'rentals':
+        this.ownerDAO.getRentalStats(filters.days || 30, (error, data) => {
+          if (error) {
+            console.error('Export data error:', error);
+            return callback(null, {
+              success: false,
+              message: error.message || 'Export failed'
+            });
+          }
+          callback(null, {
+            success: true,
+            data,
+            type,
+            exportDate: new Date().toISOString()
+          });
+        });
+        break;
+        
+      case 'films':
+        this.ownerDAO.getTopFilms(filters.limit || 100, (error, data) => {
+          if (error) {
+            console.error('Export data error:', error);
+            return callback(null, {
+              success: false,
+              message: error.message || 'Export failed'
+            });
+          }
+          callback(null, {
+            success: true,
+            data,
+            type,
+            exportDate: new Date().toISOString()
+          });
+        });
+        break;
+        
+      case 'inventory':
+        this.ownerDAO.getInventorySummary((error, data) => {
+          if (error) {
+            console.error('Export data error:', error);
+            return callback(null, {
+              success: false,
+              message: error.message || 'Export failed'
+            });
+          }
+          callback(null, {
+            success: true,
+            data,
+            type,
+            exportDate: new Date().toISOString()
+          });
+        });
+        break;
+        
+      default:
+        callback(null, {
+          success: false,
+          message: 'Invalid export type'
+        });
     }
   }
 }

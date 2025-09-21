@@ -12,162 +12,173 @@ class RentalDAO extends BaseDAO {
   /**
    * Create a new rental record in database
    */
-  async create(rentalData) {
-    try {
-      const { rental_date, inventory_id, customer_id, staff_id, status, amount } = rentalData;
-      
-      const result = await this.query(`
-        INSERT INTO rental (rental_date, inventory_id, customer_id, staff_id, status, amount)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `, [rental_date, inventory_id, customer_id, staff_id, status, amount]);
+  create(rentalData, callback) {
+    const { rental_date, inventory_id, customer_id, staff_id, status, amount } = rentalData;
+    
+    this.query(`
+      INSERT INTO rental (rental_date, inventory_id, customer_id, staff_id, status, amount)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [rental_date, inventory_id, customer_id, staff_id, status, amount], (error, result) => {
+      if (error) {
+        console.error('RentalDAO create error:', error);
+        return callback(error);
+      }
 
-      return {
+      callback(null, {
         success: true,
         rental_id: result.insertId
-      };
-    } catch (error) {
-      console.error('RentalDAO create error:', error);
-      throw error;
-    }
+      });
+    });
   }
 
   /**
    * Get rental by ID
    */
-  async findById(rentalId) {
-    try {
-      const rentals = await this.query(`
-        SELECT 
-          r.rental_id,
-          r.rental_date,
-          r.return_date,
-          r.due_date,
-          r.status,
-          r.amount,
-          r.customer_id,
-          r.inventory_id,
-          r.staff_id,
-          f.film_id,
-          f.title as film_title,
-          f.rental_rate,
-          f.rental_duration,
-          f.description,
-          c.name as category
-        FROM rental r
-        JOIN inventory i ON r.inventory_id = i.inventory_id
-        JOIN film f ON i.film_id = f.film_id
-        JOIN film_category fc ON f.film_id = fc.film_id
-        JOIN category c ON fc.category_id = c.category_id
-        WHERE r.rental_id = ?
-      `, [rentalId]);
+  findById(rentalId, callback) {
+    this.query(`
+      SELECT 
+        r.rental_id,
+        r.rental_date,
+        r.return_date,
+        r.due_date,
+        r.status,
+        r.amount,
+        r.customer_id,
+        r.inventory_id,
+        r.staff_id,
+        f.film_id,
+        f.title as film_title,
+        f.rental_rate,
+        f.rental_duration,
+        f.description,
+        c.name as category
+      FROM rental r
+      JOIN inventory i ON r.inventory_id = i.inventory_id
+      JOIN film f ON i.film_id = f.film_id
+      JOIN film_category fc ON f.film_id = fc.film_id
+      JOIN category c ON fc.category_id = c.category_id
+      WHERE r.rental_id = ?
+    `, [rentalId], (error, rentals) => {
+      if (error) {
+        console.error('RentalDAO findById error:', error);
+        return callback(error);
+      }
 
-      return rentals.length > 0 ? rentals[0] : null;
-    } catch (error) {
-      console.error('RentalDAO findById error:', error);
-      throw error;
-    }
+      callback(null, rentals.length > 0 ? rentals[0] : null);
+    });
   }
 
   /**
    * Get rentals by customer ID with pagination
    */
-  async findByCustomerId(customerId, limit, offset) {
-    try {
-      const rentals = await this.query(`
-        SELECT 
-          r.rental_id,
-          r.rental_date,
-          r.return_date,
-          r.due_date,
-          COALESCE(r.status, 
-            CASE 
-              WHEN r.return_date IS NOT NULL THEN 'returned'
-              WHEN r.amount IS NOT NULL AND r.amount > 0 THEN 'pending'
-              ELSE 'pending'
-            END
-          ) as status,
-          COALESCE(r.amount, 0) as amount,
-          f.film_id,
-          f.title as film_title,
-          f.rental_rate,
-          f.rental_duration,
-          f.description,
-          c.name as category,
-          CASE 
-            WHEN r.return_date IS NOT NULL THEN NULL
-            WHEN r.due_date IS NOT NULL THEN r.due_date
-            ELSE DATE_ADD(r.rental_date, INTERVAL f.rental_duration DAY)
-          END as expected_return_date,
-          CASE 
-            WHEN r.return_date IS NOT NULL THEN 0
-            WHEN r.due_date IS NOT NULL THEN DATEDIFF(NOW(), r.due_date)
-            ELSE DATEDIFF(NOW(), DATE_ADD(r.rental_date, INTERVAL f.rental_duration DAY))
-          END as days_overdue
-        FROM rental r
-        JOIN inventory i ON r.inventory_id = i.inventory_id
-        JOIN film f ON i.film_id = f.film_id
-        JOIN film_category fc ON f.film_id = fc.film_id
-        JOIN category c ON fc.category_id = c.category_id
-        WHERE r.customer_id = ?
-        ORDER BY r.rental_date DESC
-        LIMIT ? OFFSET ?
-      `, [customerId, limit, offset]);
-
-      return rentals;
-    } catch (error) {
-      console.error('RentalDAO findByCustomerId error:', error);
-      throw error;
+  findByCustomerId(customerId, limit, offset, callback) {
+    // Handle optional parameters
+    if (typeof limit === 'function') {
+      callback = limit;
+      limit = 20;
+      offset = 0;
+    } else if (typeof offset === 'function') {
+      callback = offset;
+      offset = 0;
     }
+    
+    this.query(`
+      SELECT 
+        r.rental_id,
+        r.rental_date,
+        r.return_date,
+        r.due_date,
+        COALESCE(r.status, 
+          CASE 
+            WHEN r.return_date IS NOT NULL THEN 'returned'
+            WHEN r.amount IS NOT NULL AND r.amount > 0 THEN 'pending'
+            ELSE 'pending'
+          END
+        ) as status,
+        COALESCE(r.amount, 0) as amount,
+        f.film_id,
+        f.title as film_title,
+        f.rental_rate,
+        f.rental_duration,
+        f.description,
+        c.name as category,
+        CASE 
+          WHEN r.return_date IS NOT NULL THEN NULL
+          WHEN r.due_date IS NOT NULL THEN r.due_date
+          ELSE DATE_ADD(r.rental_date, INTERVAL f.rental_duration DAY)
+        END as expected_return_date,
+        CASE 
+          WHEN r.return_date IS NOT NULL THEN 0
+          WHEN r.due_date IS NOT NULL THEN DATEDIFF(NOW(), r.due_date)
+          ELSE DATEDIFF(NOW(), DATE_ADD(r.rental_date, INTERVAL f.rental_duration DAY))
+        END as days_overdue
+      FROM rental r
+      JOIN inventory i ON r.inventory_id = i.inventory_id
+      JOIN film f ON i.film_id = f.film_id
+      JOIN film_category fc ON f.film_id = fc.film_id
+      JOIN category c ON fc.category_id = c.category_id
+      WHERE r.customer_id = ?
+      ORDER BY r.rental_date DESC
+      LIMIT ? OFFSET ?
+    `, [customerId, limit, offset], (error, rentals) => {
+      if (error) {
+        console.error('RentalDAO findByCustomerId error:', error);
+        return callback(error);
+      }
+      callback(null, rentals);
+    });
   }
 
   /**
    * Get total count of rentals for a customer
    */
-  async countByCustomerId(customerId) {
-    try {
-      const result = await this.query(`
-        SELECT COUNT(*) as total
-        FROM rental r
-        WHERE r.customer_id = ?
-      `, [customerId]);
-
-      return result[0].total;
-    } catch (error) {
-      console.error('RentalDAO countByCustomerId error:', error);
-      throw error;
-    }
+  countByCustomerId(customerId, callback) {
+    this.query(`
+      SELECT COUNT(*) as total
+      FROM rental r
+      WHERE r.customer_id = ?
+    `, [customerId], (error, result) => {
+      if (error) {
+        console.error('RentalDAO countByCustomerId error:', error);
+        return callback(error);
+      }
+      callback(null, result[0].total);
+    });
   }
 
   /**
    * Get rental statistics by customer ID
    */
-  async getStatsByCustomerId(customerId) {
-    try {
-      // Get status counts
-      const statusStats = await this.query(`
-        SELECT 
-          COALESCE(status, 
-            CASE 
-              WHEN return_date IS NOT NULL THEN 'returned'
-              WHEN amount IS NOT NULL AND amount > 0 THEN 'pending'
-              ELSE 'pending'
-            END
-          ) as status,
-          COUNT(*) as count,
-          SUM(COALESCE(amount, 0)) as total_amount
-        FROM rental
-        WHERE customer_id = ?
-        GROUP BY COALESCE(status, 
+  getStatsByCustomerId(customerId, callback) {
+    // Get status counts first
+    this.query(`
+      SELECT 
+        COALESCE(status, 
           CASE 
             WHEN return_date IS NOT NULL THEN 'returned'
             WHEN amount IS NOT NULL AND amount > 0 THEN 'pending'
             ELSE 'pending'
           END
-        )
-      `, [customerId]);
-
+        ) as status,
+        COUNT(*) as count,
+        SUM(COALESCE(amount, 0)) as total_amount
+      FROM rental
+      WHERE customer_id = ?
+      GROUP BY COALESCE(status, 
+        CASE 
+          WHEN return_date IS NOT NULL THEN 'returned'
+          WHEN amount IS NOT NULL AND amount > 0 THEN 'pending'
+          ELSE 'pending'
+        END
+      )
+    `, [customerId], (error, statusStats) => {
+      if (error) {
+        console.error('RentalDAO getStatsByCustomerId error:', error);
+        return callback(error);
+      }
+      
       // Get overall totals
-      const overallStats = await this.query(`
+      this.query(`
         SELECT 
           COUNT(*) as total_rentals,
           SUM(COALESCE(amount, 0)) as total_spent,
@@ -180,123 +191,132 @@ class RentalDAO extends BaseDAO {
           ) = 'returned' THEN COALESCE(amount, 0) ELSE 0 END) as completed_amount
         FROM rental
         WHERE customer_id = ?
-      `, [customerId]);
-
-      return {
-        statusStats,
-        overallStats: overallStats[0]
-      };
-    } catch (error) {
-      console.error('RentalDAO getStatsByCustomerId error:', error);
-      throw error;
-    }
+      `, [customerId], (error, overallStats) => {
+        if (error) {
+          console.error('RentalDAO getStatsByCustomerId error:', error);
+          return callback(error);
+        }
+        
+        callback(null, {
+          statusStats,
+          overallStats: overallStats[0]
+        });
+      });
+    });
   }
 
   /**
    * Update rental status
    */
-  async updateStatus(rentalId, status, staffId = null) {
-    try {
-      let query = 'UPDATE rental SET status = ? WHERE rental_id = ?';
-      let params = [status, rentalId];
+  updateStatus(rentalId, status, staffId = null, callback) {
+    // Handle optional staffId parameter
+    if (typeof staffId === 'function') {
+      callback = staffId;
+      staffId = null;
+    }
+    
+    let query = 'UPDATE rental SET status = ? WHERE rental_id = ?';
+    let params = [status, rentalId];
 
-      if (staffId) {
-        query = 'UPDATE rental SET status = ?, staff_id = ? WHERE rental_id = ?';
-        params = [status, staffId, rentalId];
+    if (staffId) {
+      query = 'UPDATE rental SET status = ?, staff_id = ? WHERE rental_id = ?';
+      params = [status, staffId, rentalId];
+    }
+
+    if (status === 'returned') {
+      query = 'UPDATE rental SET status = ?, return_date = NOW(), staff_id = ? WHERE rental_id = ?';
+      params = [status, staffId || 1, rentalId];
+    }
+
+    this.query(query, params, (error, result) => {
+      if (error) {
+        console.error('RentalDAO updateStatus error:', error);
+        return callback(error);
       }
-
-      if (status === 'returned') {
-        query = 'UPDATE rental SET status = ?, return_date = NOW(), staff_id = ? WHERE rental_id = ?';
-        params = [status, staffId || 1, rentalId];
-      }
-
-      const result = await this.query(query, params);
       
-      return {
+      callback(null, {
         success: result.affectedRows > 0,
         affectedRows: result.affectedRows
-      };
-    } catch (error) {
-      console.error('RentalDAO updateStatus error:', error);
-      throw error;
-    }
+      });
+    });
   }
 
   /**
    * Update rental due date
    */
-  async updateDueDate(rentalId, newDueDate, staffId) {
-    try {
-      const query = 'UPDATE rental SET due_date = ?, staff_id = ?, last_update = NOW() WHERE rental_id = ?';
-      const params = [newDueDate, staffId || 1, rentalId];
+  updateDueDate(rentalId, newDueDate, staffId, callback) {
+    const query = 'UPDATE rental SET due_date = ?, staff_id = ?, last_update = NOW() WHERE rental_id = ?';
+    const params = [newDueDate, staffId || 1, rentalId];
 
-      const result = await this.query(query, params);
+    this.query(query, params, (error, result) => {
+      if (error) {
+        console.error('RentalDAO updateDueDate error:', error);
+        return callback(error);
+      }
       
-      return {
+      callback(null, {
         success: result.affectedRows > 0,
         affectedRows: result.affectedRows
-      };
-    } catch (error) {
-      console.error('RentalDAO updateDueDate error:', error);
-      throw error;
-    }
+      });
+    });
   }
 
   /**
    * Delete rental (for cancellation)
    */
-  async delete(rentalId) {
-    try {
-      const result = await this.query(
-        'DELETE FROM rental WHERE rental_id = ?',
-        [rentalId]
-      );
+  delete(rentalId, callback) {
+    this.query(
+      'DELETE FROM rental WHERE rental_id = ?',
+      [rentalId],
+      (error, result) => {
+        if (error) {
+          console.error('RentalDAO delete error:', error);
+          return callback(error);
+        }
 
-      return {
-        success: result.affectedRows > 0,
-        affectedRows: result.affectedRows
-      };
-    } catch (error) {
-      console.error('RentalDAO delete error:', error);
-      throw error;
-    }
+        callback(null, {
+          success: result.affectedRows > 0,
+          affectedRows: result.affectedRows
+        });
+      }
+    );
   }
 
   /**
    * Check if inventory item is available for rental
    */
-  async checkInventoryAvailability(inventoryId) {
-    try {
-      const result = await this.query(`
-        SELECT 
-          i.inventory_id, 
-          f.title, 
-          f.rental_rate, 
-          f.rental_duration,
-          COUNT(r.rental_id) as active_rentals
-        FROM inventory i
-        JOIN film f ON i.film_id = f.film_id
-        LEFT JOIN rental r ON i.inventory_id = r.inventory_id 
-          AND r.return_date IS NULL 
-          AND r.status IN ('paid', 'rented')
-        WHERE i.inventory_id = ?
-        GROUP BY i.inventory_id
-      `, [inventoryId]);
+  checkInventoryAvailability(inventoryId, callback) {
+    this.query(`
+      SELECT 
+        i.inventory_id, 
+        f.title, 
+        f.rental_rate, 
+        f.rental_duration,
+        COUNT(r.rental_id) as active_rentals
+      FROM inventory i
+      JOIN film f ON i.film_id = f.film_id
+      LEFT JOIN rental r ON i.inventory_id = r.inventory_id 
+        AND r.return_date IS NULL 
+        AND r.status IN ('paid', 'rented')
+      WHERE i.inventory_id = ?
+      GROUP BY i.inventory_id
+    `, [inventoryId], (error, result) => {
+      if (error) {
+        console.error('RentalDAO checkInventoryAvailability error:', error);
+        return callback(error);
+      }
 
       if (result.length === 0) {
-        return { available: false, reason: 'Inventory not found' };
+        return callback(null, { available: false, reason: 'Inventory not found' });
       }
 
       const item = result[0];
-      return {
+      callback(null, {
         available: item.active_rentals === 0,
         reason: item.active_rentals > 0 ? 'Currently rented out' : null,
         item
-      };
-    } catch (error) {
-      console.error('RentalDAO checkInventoryAvailability error:', error);
-      throw error;
-    }
+      });
+    });
   }
 
   /**
@@ -304,248 +324,250 @@ class RentalDAO extends BaseDAO {
    */
 
   // Haal recente verhuur op
-  async getRecentRentals(limit = 10) {
-    try {
-      const rentals = await this.query(`
-        SELECT 
-          r.rental_id,
-          r.rental_date,
-          r.return_date,
-          r.status,
-          r.amount,
-          CONCAT(c.first_name, ' ', c.last_name) as customer_name,
-          c.email as customer_email,
-          f.title as film_title,
-          f.film_id,
-          CONCAT(s.first_name, ' ', s.last_name) as staff_name
-        FROM rental r
-        JOIN customer c ON r.customer_id = c.customer_id
-        JOIN inventory i ON r.inventory_id = i.inventory_id
-        JOIN film f ON i.film_id = f.film_id
-        LEFT JOIN staff s ON r.staff_id = s.staff_id
-        ORDER BY r.rental_date DESC
-        LIMIT ?
-      `, [limit]);
-      
-      return rentals;
-    } catch (error) {
-      console.error('RentalDAO getRecentRentals error:', error);
-      throw error;
-    }
+  getRecentRentals(limit = 10, callback) {
+    this.query(`
+      SELECT 
+        r.rental_id,
+        r.rental_date,
+        r.return_date,
+        r.status,
+        r.amount,
+        CONCAT(c.first_name, ' ', c.last_name) as customer_name,
+        c.email as customer_email,
+        f.title as film_title,
+        f.film_id,
+        CONCAT(s.first_name, ' ', s.last_name) as staff_name
+      FROM rental r
+      JOIN customer c ON r.customer_id = c.customer_id
+      JOIN inventory i ON r.inventory_id = i.inventory_id
+      JOIN film f ON i.film_id = f.film_id
+      LEFT JOIN staff s ON r.staff_id = s.staff_id
+      ORDER BY r.rental_date DESC
+      LIMIT ?
+    `, [limit], (error, rentals) => {
+      if (error) {
+        console.error('RentalDAO getRecentRentals error:', error);
+        return callback(error);
+      }
+      callback(null, rentals);
+    });
   }
 
   // Haal achterstallige verhuur op
-  async getOverdueRentals() {
-    try {
-      const rentals = await this.query(`
-        SELECT 
-          r.rental_id,
-          r.rental_date,
-          r.due_date,
-          r.status,
-          r.amount,
-          CONCAT(c.first_name, ' ', c.last_name) as customer_name,
-          c.email as customer_email,
-          c.customer_id,
-          f.title as film_title,
-          f.film_id,
-          DATEDIFF(CURDATE(), r.due_date) as days_overdue
-        FROM rental r
-        JOIN customer c ON r.customer_id = c.customer_id
-        JOIN inventory i ON r.inventory_id = i.inventory_id
-        JOIN film f ON i.film_id = f.film_id
-        WHERE r.return_date IS NULL 
-          AND r.due_date < CURDATE()
-          AND r.status IN ('rented', 'paid')
-        ORDER BY r.due_date ASC
-      `);
-      
-      return rentals;
-    } catch (error) {
-      console.error('RentalDAO getOverdueRentals error:', error);
-      throw error;
-    }
+  getOverdueRentals(callback) {
+    this.query(`
+      SELECT 
+        r.rental_id,
+        r.rental_date,
+        r.due_date,
+        r.status,
+        r.amount,
+        CONCAT(c.first_name, ' ', c.last_name) as customer_name,
+        c.email as customer_email,
+        c.customer_id,
+        f.title as film_title,
+        f.film_id,
+        DATEDIFF(CURDATE(), r.due_date) as days_overdue
+      FROM rental r
+      JOIN customer c ON r.customer_id = c.customer_id
+      JOIN inventory i ON r.inventory_id = i.inventory_id
+      JOIN film f ON i.film_id = f.film_id
+      WHERE r.return_date IS NULL 
+        AND r.due_date < CURDATE()
+        AND r.status IN ('rented', 'paid')
+      ORDER BY r.due_date ASC
+    `, [], (error, rentals) => {
+      if (error) {
+        console.error('RentalDAO getOverdueRentals error:', error);
+        return callback(error);
+      }
+      callback(null, rentals);
+    });
   }
 
   // Zoek beschikbare inventory voor film
-  async findAvailableInventory(filmId) {
-    try {
-      const inventory = await this.query(`
-        SELECT i.inventory_id, i.film_id, f.title, f.rental_rate
-        FROM inventory i
-        JOIN film f ON i.film_id = f.film_id
-        LEFT JOIN rental r ON i.inventory_id = r.inventory_id 
-          AND r.return_date IS NULL
-        WHERE i.film_id = ? 
-          AND r.rental_id IS NULL
-        LIMIT 1
-      `, [filmId]);
-      
-      return inventory.length > 0 ? inventory[0] : null;
-    } catch (error) {
-      console.error('RentalDAO findAvailableInventory error:', error);
-      throw error;
-    }
+  findAvailableInventory(filmId, callback) {
+    this.query(`
+      SELECT i.inventory_id, i.film_id, f.title, f.rental_rate
+      FROM inventory i
+      JOIN film f ON i.film_id = f.film_id
+      LEFT JOIN rental r ON i.inventory_id = r.inventory_id 
+        AND r.return_date IS NULL
+      WHERE i.film_id = ? 
+        AND r.rental_id IS NULL
+      LIMIT 1
+    `, [filmId], (error, inventory) => {
+      if (error) {
+        console.error('RentalDAO findAvailableInventory error:', error);
+        return callback(error);
+      }
+      callback(null, inventory.length > 0 ? inventory[0] : null);
+    });
   }
 
   // Film teruggeven
-  async returnRental(rentalId, staffId) {
-    try {
-      const returnDate = new Date();
-      
-      const result = await this.query(`
-        UPDATE rental 
-        SET return_date = ?, 
-            last_update = NOW()
-        WHERE rental_id = ? 
-          AND return_date IS NULL
-      `, [returnDate, rentalId]);
+  returnRental(rentalId, staffId, callback) {
+    const returnDate = new Date();
+    
+    this.query(`
+      UPDATE rental 
+      SET return_date = ?, 
+          last_update = NOW()
+      WHERE rental_id = ? 
+        AND return_date IS NULL
+    `, [returnDate, rentalId], (error, result) => {
+      if (error) {
+        console.error('RentalDAO returnRental error:', error);
+        return callback(error);
+      }
 
       if (result.affectedRows === 0) {
-        return {
+        return callback(null, {
           success: false,
           message: 'Verhuur niet gevonden of al teruggegeven'
-        };
+        });
       }
 
       // Haal bijgewerkte verhuur op
-      const rental = await this.findById(rentalId);
-      
-      return {
-        success: true,
-        rental,
-        message: 'Film succesvol teruggegeven'
-      };
-    } catch (error) {
-      console.error('RentalDAO returnRental error:', error);
-      throw error;
-    }
+      this.findById(rentalId, (error, rental) => {
+        if (error) {
+          console.error('RentalDAO returnRental error:', error);
+          return callback(error);
+        }
+        
+        callback(null, {
+          success: true,
+          rental,
+          message: 'Film succesvol teruggegeven'
+        });
+      });
+    });
   }
 
   // Update verhuur status
-  async updateStatus(rentalId, status, staffId = null) {
-    try {
-      let query, params;
-      
-      if (staffId) {
-        query = `
-          UPDATE rental 
-          SET status = ?, staff_id = ?, last_update = NOW()
-          WHERE rental_id = ?
-        `;
-        params = [status, staffId, rentalId];
-      } else {
-        query = `
-          UPDATE rental 
-          SET status = ?, last_update = NOW()
-          WHERE rental_id = ?
-        `;
-        params = [status, rentalId];
+  updateStatus(rentalId, status, staffId = null, callback) {
+    let query, params;
+    
+    if (staffId) {
+      query = `
+        UPDATE rental 
+        SET status = ?, staff_id = ?, last_update = NOW()
+        WHERE rental_id = ?
+      `;
+      params = [status, staffId, rentalId];
+    } else {
+      query = `
+        UPDATE rental 
+        SET status = ?, last_update = NOW()
+        WHERE rental_id = ?
+      `;
+      params = [status, rentalId];
+    }
+
+    this.query(query, params, (error, result) => {
+      if (error) {
+        console.error('RentalDAO updateStatus error:', error);
+        return callback(error);
       }
 
-      const result = await this.query(query, params);
-      return {
+      callback(null, {
         success: result.affectedRows > 0,
         affectedRows: result.affectedRows
-      };
-    } catch (error) {
-      console.error('RentalDAO updateStatus error:', error);
-      throw error;
-    }
+      });
+    });
   }
 
   // Statistiek methoden
-  async getTotalCount() {
-    try {
-      const result = await this.query('SELECT COUNT(*) as count FROM rental');
-      return result[0].count;
-    } catch (error) {
-      console.error('RentalDAO getTotalCount error:', error);
-      return 0;
-    }
+  getTotalCount(callback) {
+    this.query('SELECT COUNT(*) as count FROM rental', [], (error, result) => {
+      if (error) {
+        console.error('RentalDAO getTotalCount error:', error);
+        return callback(null, { count: 0 });
+      }
+      callback(null, { count: result[0].count });
+    });
   }
 
-  async getActiveCount() {
-    try {
-      const result = await this.query(`
-        SELECT COUNT(*) as count 
-        FROM rental 
-        WHERE return_date IS NULL
-      `);
-      return result[0].count;
-    } catch (error) {
-      console.error('RentalDAO getActiveCount error:', error);
-      return 0;
-    }
+  getActiveCount(callback) {
+    this.query(`
+      SELECT COUNT(*) as count 
+      FROM rental 
+      WHERE return_date IS NULL
+    `, [], (error, result) => {
+      if (error) {
+        console.error('RentalDAO getActiveCount error:', error);
+        return callback(null, { count: 0 });
+      }
+      callback(null, { count: result[0].count });
+    });
   }
 
-  async getOverdueCount() {
-    try {
-      const result = await this.query(`
-        SELECT COUNT(*) as count 
-        FROM rental 
-        WHERE return_date IS NULL 
-          AND due_date < CURDATE()
-          AND status IN ('rented', 'paid')
-      `);
-      return result[0].count;
-    } catch (error) {
-      console.error('RentalDAO getOverdueCount error:', error);
-      return 0;
-    }
+  getOverdueCount(callback) {
+    this.query(`
+      SELECT COUNT(*) as count 
+      FROM rental 
+      WHERE return_date IS NULL 
+        AND due_date < CURDATE()
+        AND status IN ('rented', 'paid')
+    `, [], (error, result) => {
+      if (error) {
+        console.error('RentalDAO getOverdueCount error:', error);
+        return callback(null, { count: 0 });
+      }
+      callback(null, { count: result[0].count });
+    });
   }
 
-  async getTodayCount() {
-    try {
-      const result = await this.query(`
-        SELECT COUNT(*) as count 
-        FROM rental 
-        WHERE DATE(rental_date) = CURDATE()
-      `);
-      return result[0].count;
-    } catch (error) {
-      console.error('RentalDAO getTodayCount error:', error);
-      return 0;
-    }
+  getTodayCount(callback) {
+    this.query(`
+      SELECT COUNT(*) as count 
+      FROM rental 
+      WHERE DATE(rental_date) = CURDATE()
+    `, [], (error, result) => {
+      if (error) {
+        console.error('RentalDAO getTodayCount error:', error);
+        return callback(null, { count: 0 });
+      }
+      callback(null, { count: result[0].count });
+    });
   }
 
   // Get pending rentals (in behandeling/gereserveerd)
-  async getPendingRentals() {
-    try {
-      const rentals = await this.query(`
-        SELECT 
-          r.rental_id,
-          r.rental_date,
-          r.return_date,
-          r.due_date,
-          r.status,
-          r.amount,
-          CONCAT(c.first_name, ' ', c.last_name) as customer_name,
-          c.email as customer_email,
-          f.title as film_title,
-          cat.name as category_name,
-          DATE_ADD(r.rental_date, INTERVAL 3 DAY) as expected_return
-        FROM rental r
-        INNER JOIN customer c ON r.customer_id = c.customer_id
-        INNER JOIN inventory i ON r.inventory_id = i.inventory_id
-        INNER JOIN film f ON i.film_id = f.film_id
-        INNER JOIN film_category fc ON f.film_id = fc.film_id
-        INNER JOIN category cat ON fc.category_id = cat.category_id
-        WHERE r.status IN ('pending', 'reserved', 'in_behandeling')
-        ORDER BY r.rental_date DESC
-        LIMIT 50
-      `);
-      return rentals;
-    } catch (error) {
-      console.error('RentalDAO getPendingRentals error:', error);
-      return [];
-    }
+  getPendingRentals(callback) {
+    this.query(`
+      SELECT 
+        r.rental_id,
+        r.rental_date,
+        r.return_date,
+        r.due_date,
+        r.status,
+        r.amount,
+        CONCAT(c.first_name, ' ', c.last_name) as customer_name,
+        c.email as customer_email,
+        f.title as film_title,
+        cat.name as category_name,
+        DATE_ADD(r.rental_date, INTERVAL 3 DAY) as expected_return
+      FROM rental r
+      INNER JOIN customer c ON r.customer_id = c.customer_id
+      INNER JOIN inventory i ON r.inventory_id = i.inventory_id
+      INNER JOIN film f ON i.film_id = f.film_id
+      INNER JOIN film_category fc ON f.film_id = fc.film_id
+      INNER JOIN category cat ON fc.category_id = cat.category_id
+      WHERE r.status IN ('pending', 'reserved', 'in_behandeling')
+      ORDER BY r.rental_date DESC
+      LIMIT 50
+    `, [], (error, rentals) => {
+      if (error) {
+        console.error('RentalDAO getPendingRentals error:', error);
+        return callback(null, []);
+      }
+      callback(null, rentals);
+    });
   }
 
   // Get all rentals with customer and film details for staff interface
-  async getAllRentalsWithDetails() {
-    try {
-      const rentals = await this.query(`
+  getAllRentalsWithDetails(callback) {
+    this.query(`
         SELECT 
           r.rental_id,
           r.rental_date,
@@ -564,20 +586,20 @@ class RentalDAO extends BaseDAO {
         INNER JOIN customer c ON r.customer_id = c.customer_id
         INNER JOIN inventory i ON r.inventory_id = i.inventory_id
         INNER JOIN film f ON i.film_id = f.film_id
-        ORDER BY r.rental_date DESC
-        LIMIT 200
-      `);
-      return rentals;
-    } catch (error) {
-      console.error('RentalDAO getAllRentalsWithDetails error:', error);
-      return [];
-    }
+      ORDER BY r.rental_date DESC
+      LIMIT 200
+    `, [], (error, rentals) => {
+      if (error) {
+        console.error('RentalDAO getAllRentalsWithDetails error:', error);
+        return callback(null, []);
+      }
+      callback(null, rentals);
+    });
   }
 
   // Get active rentals for a specific customer
-  async getCustomerActiveRentals(customerId) {
-    try {
-      const rentals = await this.query(`
+  getCustomerActiveRentals(customerId, callback) {
+    this.query(`
         SELECT 
           r.rental_id,
           r.rental_date,
@@ -600,22 +622,20 @@ class RentalDAO extends BaseDAO {
         INNER JOIN inventory i ON r.inventory_id = i.inventory_id
         INNER JOIN film f ON i.film_id = f.film_id
         WHERE r.customer_id = ? AND r.return_date IS NULL
-        ORDER BY r.rental_date DESC
-        LIMIT 20
-      `, [customerId]);
-      return rentals;
-    } catch (error) {
-      console.error('RentalDAO getCustomerActiveRentals error:', error);
-      return [];
-    }
-  }
-
-  // Get all rentals for a specific customer (both active and returned)
-  async getCustomerAllRentals(customerId) {
-    try {
-      console.log('RentalDAO: Getting all rentals for customer', customerId);
-      
-      const rentals = await this.query(`
+      ORDER BY r.rental_date DESC
+      LIMIT 20
+    `, [customerId], (error, rentals) => {
+      if (error) {
+        console.error('RentalDAO getCustomerActiveRentals error:', error);
+        return callback(error);
+      }
+      callback(null, rentals);
+    });
+  }  // Get all rentals for a specific customer (both active and returned)
+  getCustomerAllRentals(customerId, callback) {
+    console.log('RentalDAO: Getting all rentals for customer', customerId);
+    
+    this.query(`
         SELECT 
           r.rental_id,
           r.rental_date,
@@ -638,18 +658,17 @@ class RentalDAO extends BaseDAO {
         FROM rental r
         INNER JOIN inventory i ON r.inventory_id = i.inventory_id
         INNER JOIN film f ON i.film_id = f.film_id
-        WHERE r.customer_id = ?
-        ORDER BY r.rental_date DESC
-        LIMIT 50
-      `, [customerId]);
+      WHERE r.customer_id = ?
+      ORDER BY r.rental_date DESC
+      LIMIT 50
+    `, [customerId], (error, rentals) => {
+      if (error) {
+        console.error('RentalDAO getCustomerAllRentals error:', error);
+        return callback(null, []);
+      }
       
       console.log('RentalDAO: Found', rentals ? rentals.length : 0, 'rentals for customer', customerId);
-      return rentals;
-    } catch (error) {
-      console.error('RentalDAO getCustomerAllRentals error:', error);
-      return [];
-    }
+      callback(null, rentals);
+    });
   }
-}
-
-module.exports = RentalDAO;
+}module.exports = RentalDAO;

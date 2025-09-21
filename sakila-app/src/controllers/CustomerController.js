@@ -13,13 +13,20 @@ class CustomerController {
   /**
    * Staff dashboard - customer overview (US2E1)
    */
-  index = async (req, res) => {
-    try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = 20;
-      const search = req.query.search || '';
+  index = (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 20;
+    const search = req.query.search || '';
 
-      const result = await this.customerService.getCustomersForDashboard(search, page, limit);
+    this.customerService.getCustomersForDashboard(search, page, limit, (error, result) => {
+      if (error) {
+        console.error('Customer index error:', error);
+        return res.status(500).render('error', {
+          title: 'Server Fout',
+          status: 500,
+          message: 'Er is een fout opgetreden bij het laden van klanten'
+        });
+      }
 
       if (!result.success) {
         return res.status(500).render('error', {
@@ -36,24 +43,24 @@ class CustomerController {
         pagination: result.data.pagination,
         search
       });
-    } catch (error) {
-      console.error('Customer index error:', error);
-      res.status(500).render('error', {
-        title: 'Server Fout',
-        status: 500,
-        message: 'Er is een fout opgetreden bij het laden van klanten'
-      });
-    }
+    });
   };
 
   /**
    * Show individual customer details (US2E1)
    */
-  show = async (req, res) => {
-    try {
-      const customerId = req.params.id;
+  show = (req, res) => {
+    const customerId = req.params.id;
 
-      const result = await this.customerService.getCustomerDetails(customerId);
+    this.customerService.getCustomerDetails(customerId, (error, result) => {
+      if (error) {
+        console.error('Customer show error:', error);
+        return res.status(500).render('error', {
+          title: 'Server Fout',
+          status: 500,
+          message: 'Er is een fout opgetreden bij het laden van klantgegevens'
+        });
+      }
 
       if (!result.success) {
         return res.status(404).render('error', {
@@ -67,14 +74,7 @@ class CustomerController {
         title: `Klant Details - ${result.data.first_name} ${result.data.last_name}`,
         customer: result.data
       });
-    } catch (error) {
-      console.error('Customer show error:', error);
-      res.status(500).render('error', {
-        title: 'Server Fout',
-        status: 500,
-        message: 'Er is een fout opgetreden bij het laden van klantgegevens'
-      });
-    }
+    });
   };
 
   /**
@@ -100,7 +100,7 @@ class CustomerController {
   /**
    * Create new customer (US1E1)
    */
-  create = async (req, res) => {
+  create = (req, res) => {
     try {
       const { firstName, lastName, email, phone, address, district, city } = req.body;
 
@@ -124,7 +124,7 @@ class CustomerController {
       }
 
       // Use service layer for business logic
-      const result = await this.customerService.createCustomer({
+      this.customerService.createCustomer({
         firstName,
         lastName,
         email,
@@ -132,20 +132,29 @@ class CustomerController {
         address: address || 'Adres niet opgegeven',
         district: district || 'District',
         city: city || 'Stad'
-      });
+      }, (error, result) => {
+        if (error) {
+          console.error('Customer create error:', error);
+          return res.status(500).render('error', {
+            title: 'Server Fout',
+            status: 500,
+            message: 'Er is een fout opgetreden bij het aanmaken van de klant'
+          });
+        }
 
-      if (!result.success) {
-        return res.render('staff/customer-create', {
+        if (!result.success) {
+          return res.render('staff/customer-create', {
+            title: 'Nieuwe Klant Toevoegen',
+            error: result.message,
+            success: null
+          });
+        }
+
+        res.render('staff/customer-create', {
           title: 'Nieuwe Klant Toevoegen',
-          error: result.message,
-          success: null
+          error: null,
+          success: 'Klant succesvol toegevoegd!'
         });
-      }
-
-      res.render('staff/customer-create', {
-        title: 'Nieuwe Klant Toevoegen',
-        error: null,
-        success: 'Klant succesvol toegevoegd!'
       });
     } catch (error) {
       console.error('Customer create error:', error);
@@ -160,25 +169,34 @@ class CustomerController {
   /**
    * Show customer edit form (US3E1)
    */
-  showEdit = async (req, res) => {
+  showEdit = (req, res) => {
     try {
       const customerId = req.params.id;
 
-      const result = await this.customerService.getCustomerDetails(customerId);
+      this.customerService.getCustomerDetails(customerId, (error, result) => {
+        if (error) {
+          console.error('Customer showEdit error:', error);
+          return res.status(500).render('error', {
+            title: 'Server Fout',
+            status: 500,
+            message: 'Er is een fout opgetreden bij het laden van klantgegevens'
+          });
+        }
 
-      if (!result.success) {
-        return res.status(404).render('error', {
-          title: 'Klant Niet Gevonden',
-          status: 404,
-          message: result.message
+        if (!result.success) {
+          return res.status(404).render('error', {
+            title: 'Klant Niet Gevonden',
+            status: 404,
+            message: result.message
+          });
+        }
+
+        res.render('staff/customer-edit', {
+          title: `Klant Bewerken - ${result.data.first_name} ${result.data.last_name}`,
+          customer: result.data,
+          error: null,
+          success: null
         });
-      }
-
-      res.render('staff/customer-edit', {
-        title: `Klant Bewerken - ${result.data.first_name} ${result.data.last_name}`,
-        customer: result.data,
-        error: null,
-        success: null
       });
     } catch (error) {
       console.error('Customer show edit error:', error);
@@ -193,7 +211,7 @@ class CustomerController {
   /**
    * Update customer (US3E1)
    */
-  update = async (req, res) => {
+  update = (req, res) => {
     try {
       const customerId = req.params.id;
       const { firstName, lastName, email, phone } = req.body;
@@ -248,7 +266,7 @@ class CustomerController {
   /**
    * Delete customer (US4E1)
    */
-  delete = async (req, res) => {
+  delete = (req, res) => {
     try {
       const customerId = req.params.id;
 
@@ -277,7 +295,7 @@ class CustomerController {
   /**
    * Search customers (AJAX endpoint)
    */
-  search = async (req, res) => {
+  search = (req, res) => {
     try {
       const { q: searchTerm, page = 1 } = req.query;
 
@@ -306,7 +324,7 @@ class CustomerController {
   /**
    * Show customer profile page
    */
-  showProfile = async (req, res) => {
+  showProfile = (req, res) => {
     try {
       // Get customer ID from user session (try different possible field names)
       const customerId = req.user.user_id || req.user.customer_id || req.user.id;
@@ -361,7 +379,7 @@ class CustomerController {
   /**
    * Update customer profile
    */
-  updateProfile = async (req, res) => {
+  updateProfile = (req, res) => {
     try {
       const customerId = req.user.user_id || req.user.customer_id || req.user.id;
       const { 
@@ -472,7 +490,7 @@ class CustomerController {
   /**
    * Get customer rentals
    */
-  getRentals = async (req, res) => {
+  getRentals = (req, res) => {
     try {
       const customerId = req.user.user_id;
       const page = parseInt(req.query.page) || 1;
@@ -514,7 +532,7 @@ class CustomerController {
   /**
    * Get rental details
    */
-  getRentalDetails = async (req, res) => {
+  getRentalDetails = (req, res) => {
     try {
       const customerId = req.user.user_id;
       const rentalId = req.params.id;
@@ -556,7 +574,7 @@ class CustomerController {
   /**
    * Create new rental (rent a film)
    */
-  createRental = async (req, res) => {
+  createRental = (req, res) => {
     try {
       const customerId = req.user.user_id;
       const { inventory_id } = req.body;
@@ -587,7 +605,7 @@ class CustomerController {
   /**
    * Get customer payments
    */
-  getPayments = async (req, res) => {
+  getPayments = (req, res) => {
     try {
       const customerId = req.user.user_id;
       const page = parseInt(req.query.page) || 1;
@@ -613,7 +631,7 @@ class CustomerController {
   /**
    * Get customer rentals data for AJAX
    */
-  getCustomerRentalsData = async (customerId) => {
+  getCustomerRentalsData = (customerId) => {
     try {
       console.log('=== getCustomerRentalsData called for customer:', customerId);
       console.log('=== this.rentalService:', typeof this.rentalService);
@@ -654,7 +672,7 @@ class CustomerController {
   /**
    * Get customer profile data for AJAX
    */
-  getCustomerProfileData = async (customerId) => {
+  getCustomerProfileData = (customerId) => {
     try {
       const customer = await this.customerService.getCustomerById(customerId);
       
@@ -681,7 +699,7 @@ class CustomerController {
   /**
    * Update customer profile via AJAX
    */
-  updateCustomerProfile = async (customerId, profileData) => {
+  updateCustomerProfile = (customerId, profileData) => {
     try {
       const result = await this.customerService.updateCustomer(customerId, profileData);
       
@@ -708,7 +726,7 @@ class CustomerController {
   /**
    * Change customer password
    */
-  changeCustomerPassword = async (customerId, currentPassword, newPassword) => {
+  changeCustomerPassword = (customerId, currentPassword, newPassword) => {
     try {
       // Get customer password directly from database
       const CustomerDAO = require('../dao/CustomerDAO');

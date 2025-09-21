@@ -82,6 +82,14 @@ app.post('/logout', authController.logout.bind(authController));
 // Dashboard route (redirects based on user type)
 app.get('/dashboard', authMiddleware.requireAuthWeb, homeController.dashboard.bind(homeController));
 
+// About page route
+app.get('/about', (req, res) => {
+  res.render('about', {
+    title: 'Over Ons - Sakila App',
+    user: req.user || null
+  });
+});
+
 // ===== API ROUTES =====
 
 // Cities API endpoint for forms

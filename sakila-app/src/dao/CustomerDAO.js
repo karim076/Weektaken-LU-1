@@ -11,62 +11,87 @@ class CustomerDAO extends BaseDAO {
   /**
    * Create new customer with address
    */
-  async createCustomerWithAddress(customerData, addressData) {
-    const connection = await this.db.getConnection();
-    
-    try {
-      await connection.beginTransaction();
-
-      // Create address first
-      const addressSql = `
-        INSERT INTO address (address, district, city_id, phone, location)
-        VALUES (?, ?, ?, ?, POINT(0, 0))
-      `;
+  createCustomerWithAddress(customerData, addressData, callback) {
+    this.db.getConnection((err, connection) => {
+      if (err) return callback(err);
       
-      const [addressResult] = await connection.execute(addressSql, [
-        addressData.address || 'Customer Address',
-        addressData.district || 'District',
-        addressData.cityId || 1,
-        addressData.phone || '000-000-0000'
-      ]);
+      connection.beginTransaction((err) => {
+        if (err) {
+          connection.release();
+          return callback(err);
+        }
 
-      const addressId = addressResult.insertId;
+        // Create address first
+        const addressSql = `
+          INSERT INTO address (address, district, city_id, phone, location)
+          VALUES (?, ?, ?, ?, POINT(0, 0))
+        `;
+        
+        connection.query(addressSql, [
+          addressData.address || 'Customer Address',
+          addressData.district || 'District',
+          addressData.cityId || 1,
+          addressData.phone || '000-000-0000'
+        ], (err, addressResult) => {
+          if (err) {
+            connection.rollback(() => {
+              connection.release();
+              callback(err);
+            });
+            return;
+          }
 
-      // Create customer
-      const customerSql = `
-        INSERT INTO customer (store_id, first_name, last_name, email, username, password, address_id, create_date)
-        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
-      `;
+          const addressId = addressResult.insertId;
 
-      const [customerResult] = await connection.execute(customerSql, [
-        customerData.storeId || 1,
-        customerData.firstName,
-        customerData.lastName,
-        customerData.email,
-        customerData.username,
-        customerData.password,
-        addressId
-      ]);
+          // Create customer
+          const customerSql = `
+            INSERT INTO customer (store_id, first_name, last_name, email, username, password, address_id, create_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+          `;
+          
+          connection.query(customerSql, [
+            customerData.storeId || 1,
+            customerData.firstName,
+            customerData.lastName,
+            customerData.email,
+            customerData.username,
+            customerData.password,
+            addressId
+          ], (err, customerResult) => {
+            if (err) {
+              connection.rollback(() => {
+                connection.release();
+                callback(err);
+              });
+              return;
+            }
 
-      await connection.commit();
-      
-      return {
-        insertId: customerResult.insertId,
-        addressId: addressId,
-        affectedRows: customerResult.affectedRows
-      };
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    } finally {
-      connection.release();
-    }
+            connection.commit((err) => {
+              if (err) {
+                connection.rollback(() => {
+                  connection.release();
+                  callback(err);
+                });
+                return;
+              }
+              
+              connection.release();
+              callback(null, {
+                insertId: customerResult.insertId,
+                addressId: addressId,
+                affectedRows: customerResult.affectedRows
+              });
+            });
+          });
+        });
+      });
+    });
   }
 
   /**
    * Get customers with detailed information and statistics
    */
-  async getCustomersWithStats(search = '', page = 1, limit = 20) {
+  getCustomersWithStats(search = '', page = 1, limit = 20, callback) {
     const offset = (page - 1) * limit;
     let whereClause = 'WHERE c.active = 1';
     let params = [];
@@ -111,7 +136,7 @@ class CustomerDAO extends BaseDAO {
       LIMIT ? OFFSET ?
     `;
 
-    return await this.query(sql, [...params, limit, offset]);
+    this.query(sql, [...params, limit, offset], callback);
   }
 
   /**
@@ -134,14 +159,16 @@ class CustomerDAO extends BaseDAO {
       ${whereClause}
     `;
 
-    const results = await this.query(sql, params);
-    return results[0].count;
+    this.query(sql, params, (error, results) => {
+      if (error) return callback(error);
+      callback(null, results[0].count);
+    });
   }
 
   /**
    * Get customer statistics
    */
-  async getCustomerStats() {
+  getCustomerStats(callback) {
     const sql = `
       SELECT 
         COUNT(*) as total_customers,
@@ -151,14 +178,16 @@ class CustomerDAO extends BaseDAO {
       FROM customer c
     `;
 
-    const results = await this.query(sql);
-    return results[0];
+    this.query(sql, [], (error, results) => {
+      if (error) return callback(error);
+      callback(null, results[0]);
+    });
   }
 
   /**
    * Get customer details with rental history
    */
-  async getCustomerWithRentalHistory(customerId) {
+  getCustomerWithRentalHistory(customerId, callback) {
     const customerSql = `
       SELECT 
         c.*,
@@ -197,15 +226,22 @@ class CustomerDAO extends BaseDAO {
       LIMIT 20
     `;
 
-    const [customer, rentals] = await Promise.all([
-      this.query(customerSql, [customerId]).then(results => results[0] || null),
-      this.query(rentalsSql, [customerId])
-    ]);
-
-    return {
-      customer,
-      rentals
-    };
+    // Get customer data first
+    this.query(customerSql, [customerId], (error, customerResults) => {
+      if (error) return callback(error);
+      
+      const customer = customerResults[0] || null;
+      
+      // Get rental history
+      this.query(rentalsSql, [customerId], (error, rentals) => {
+        if (error) return callback(error);
+        
+        callback(null, {
+          customer,
+          rentals
+        });
+      });
+    });
   }
 
   /**

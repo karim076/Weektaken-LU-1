@@ -7,119 +7,106 @@ class BaseDAO {
   constructor(tableName, primaryKey = 'id') {
     this.tableName = tableName;
     this.primaryKey = primaryKey;
-    this.initDatabase();
-  }
-
-  /**
-   * Initialize database connection
-   */
-  async initDatabase() {
-    if (!this.db) {
-      this.db = await databaseConfig.createPool();
-    }
+    this.db = databaseConfig;
   }
 
   /**
    * Execute a database query
    */
-  async query(sql, params = []) {
+  query(sql, params, callback) {
+    if (typeof params === 'function') {
+      callback = params;
+      params = [];
+    }
+    
     try {
-      if (!this.db) {
-        await this.initDatabase();
-      }
-      const [results] = await this.db.query(sql, params);
-      return results;
+      this.db.query(sql, params, (error, results) => {
+        if (error) {
+          console.error(`Query error in ${this.constructor.name}:`, error);
+          return callback(error);
+        }
+        callback(null, results);
+      });
     } catch (error) {
       console.error(`Query error in ${this.constructor.name}:`, error);
-      throw error;
+      callback(error);
     }
   }
 
   /**
    * Find record by ID
    */
-  async findById(id) {
+  findById(id, callback) {
     const sql = `SELECT * FROM ${this.tableName} WHERE ${this.primaryKey} = ?`;
-    const results = await this.query(sql, [id]);
-    return results.length > 0 ? results[0] : null;
+    this.query(sql, [id], (error, results) => {
+      if (error) return callback(error);
+      callback(null, results.length > 0 ? results[0] : null);
+    });
   }
 
   /**
    * Find all records
    */
-  async findAll() {
+  findAll(callback) {
     const sql = `SELECT * FROM ${this.tableName}`;
-    return await this.query(sql);
+    this.query(sql, callback);
   }
 
   /**
    * Create new record
    */
-  async create(data) {
+  create(data, callback) {
     const fields = Object.keys(data);
     const values = Object.values(data);
     const placeholders = fields.map(() => '?').join(', ');
     
     const sql = `INSERT INTO ${this.tableName} (${fields.join(', ')}) VALUES (${placeholders})`;
-    return await this.query(sql, values);
+    this.query(sql, values, callback);
   }
 
   /**
    * Update record by ID
    */
-  async update(id, data) {
+  update(id, data, callback) {
     const fields = Object.keys(data);
     const values = Object.values(data);
     const setClause = fields.map(field => `${field} = ?`).join(', ');
     
     const sql = `UPDATE ${this.tableName} SET ${setClause} WHERE ${this.primaryKey} = ?`;
-    return await this.query(sql, [...values, id]);
+    this.query(sql, [...values, id], callback);
   }
 
   /**
    * Delete record by ID
    */
-  async delete(id) {
+  delete(id, callback) {
     const sql = `DELETE FROM ${this.tableName} WHERE ${this.primaryKey} = ?`;
-    return await this.query(sql, [id]);
+    this.query(sql, [id], callback);
   }
 
   /**
    * Count total records
    */
-  async count(whereClause = '', params = []) {
+  count(whereClause, params, callback) {
+    if (typeof whereClause === 'function') {
+      callback = whereClause;
+      whereClause = '';
+      params = [];
+    }
+    if (typeof params === 'function') {
+      callback = params;
+      params = [];
+    }
+    
     let sql = `SELECT COUNT(*) as count FROM ${this.tableName}`;
     if (whereClause) {
       sql += ` WHERE ${whereClause}`;
     }
     
-    const results = await this.query(sql, params);
-    return results[0].count;
-  }
-
-  /**
-   * Execute a transaction
-   */
-  async transaction(operations) {
-    const connection = await this.db.getConnection();
-    
-    try {
-      await connection.beginTransaction();
-      
-      const results = [];
-      for (const operation of operations) {
-        const result = await connection.execute(operation.sql, operation.params || []);
-        results.push(result);
-      }
-      
-      await connection.commit();
-      return results;
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    } finally {
-      connection.release();
-    }
+    this.query(sql, params, (error, results) => {
+      if (error) return callback(error);
+      callback(null, results[0].count);
+    });
   }
 }
 

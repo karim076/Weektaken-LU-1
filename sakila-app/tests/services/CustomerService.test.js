@@ -32,26 +32,32 @@ describe('CustomerService', () => {
 
   // Critical Core Functionality Tests
   describe('Core Customer Operations', () => {
-    test('should get customer by ID successfully', async () => {
+    test('should get customer by ID successfully', (done) => {
       const mockCustomer = { customer_id: 1, first_name: 'John', last_name: 'Doe' };
-      mockCustomerDAO.getCustomerWithDetails.mockResolvedValue(mockCustomer);
+      mockCustomerDAO.getCustomerWithDetails.mockImplementation((id, callback) => {
+        callback(null, mockCustomer);
+      });
 
-      const result = await customerService.getCustomerById(1);
-      expect(result).toEqual(mockCustomer);
+      customerService.getCustomerById(1, (error, result) => {
+        expect(error).toBeNull();
+        expect(result).toEqual(mockCustomer);
+        done();
+      });
     });
 
-    test('should create customer successfully', async () => {
+    test('should create customer successfully', (done) => {
       const customerData = { first_name: 'John', last_name: 'Doe', email: 'john@test.com' };
-      mockCustomerDAO.createCustomerWithAddress.mockResolvedValue({ success: true, customerId: 1 });
+      mockCustomerDAO.createCustomerWithAddress.mockImplementation((data, callback) => {
+        callback(null, { success: true, customerId: 1 });
+      });
 
-      const result = await customerService.createCustomer(customerData);
-      expect(result.success).toBe(true);
+      customerService.createCustomer(customerData, (error, result) => {
+        expect(error).toBeNull();
+        expect(result.success).toBe(true);
+        done();
+      });
     });
-
-
   });
-
-
 
   // Critical Error Handling
   describe('Critical Error Handling', () => {
@@ -60,17 +66,18 @@ describe('CustomerService', () => {
       expect(() => customerService.validateCustomerData(undefined)).toThrow('Customer data cannot be null or undefined');
     });
 
-
-
-    test('should handle failed customer creation gracefully', async () => {
+    test('should handle failed customer creation gracefully', (done) => {
       const customerData = { first_name: 'John', last_name: 'Doe' };
-      mockCustomerDAO.createCustomerWithAddress.mockRejectedValue(new Error('Database constraint violation'));
+      mockCustomerDAO.createCustomerWithAddress.mockImplementation((data, callback) => {
+        callback(new Error('Database constraint violation'));
+      });
 
-      const result = await customerService.createCustomer(customerData);
-      expect(result.success).toBe(false);
-      expect(result.message).toContain('Database constraint violation');
+      customerService.createCustomer(customerData, (error, result) => {
+        expect(error).toBeNull();
+        expect(result.success).toBe(false);
+        expect(result.message).toContain('Database constraint violation');
+        done();
+      });
     });
   });
-
-
 });

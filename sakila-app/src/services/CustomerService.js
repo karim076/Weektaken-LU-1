@@ -11,155 +11,184 @@ class CustomerService {
   /**
    * Get customer by ID with complete information
    */
-  async getCustomerById(customerId) {
-    try {
-      return await this.customerDAO.getCustomerWithDetails(customerId);
-    } catch (error) {
-      console.error('Get customer error:', error);
-      throw error;
-    }
+  getCustomerById(customerId, callback) {
+    this.customerDAO.getCustomerWithDetails(customerId, (error, customer) => {
+      if (error) {
+        console.error('Get customer error:', error);
+        return callback(error);
+      }
+      callback(null, customer);
+    });
   }
 
   /**
    * Get customer details (wrapper for controller compatibility)
    */
-  async getCustomerDetails(customerId) {
-    try {
-      const customer = await this.customerDAO.getCustomerWithDetails(customerId);
-      
-      if (!customer) {
-        return {
+  getCustomerDetails(customerId, callback) {
+    this.customerDAO.getCustomerWithDetails(customerId, (error, customer) => {
+      if (error) {
+        console.error('Get customer details error:', error);
+        return callback(null, {
           success: false,
-          message: 'Klant niet gevonden'
-        };
+          message: 'Er is een fout opgetreden bij het ophalen van klantgegevens'
+        });
       }
       
-      return {
+      if (!customer) {
+        return callback(null, {
+          success: false,
+          message: 'Klant niet gevonden'
+        });
+      }
+      
+      callback(null, {
         success: true,
         data: customer
-      };
-    } catch (error) {
-      console.error('Get customer details error:', error);
-      return {
-        success: false,
-        message: 'Er is een fout opgetreden bij het ophalen van klantgegevens'
-      };
-    }
+      });
+    });
   }
 
   /**
    * Get all customers with pagination and search
    */
-  async getAllCustomers(page = 1, limit = 10, search = '') {
-    try {
-      const customers = await this.customerDAO.getCustomersWithDetails(page, limit, search);
-      const totalCount = await this.customerDAO.getCustomersCount(search);
-      
-      return {
-        customers,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(totalCount / limit),
-          totalCount,
-          limit
+  getAllCustomers(page = 1, limit = 10, search = '', callback) {
+    this.customerDAO.getCustomersWithDetails(page, limit, search, (error, customers) => {
+      if (error) {
+        console.error('Get all customers error:', error);
+        return callback(error);
+      }
+
+      this.customerDAO.getCustomersCount(search, (countError, totalCount) => {
+        if (countError) {
+          console.error('Get customers count error:', countError);
+          return callback(countError);
         }
-      };
-    } catch (error) {
-      console.error('Get all customers error:', error);
-      throw error;
-    }
+        
+        callback(null, {
+          customers,
+          pagination: {
+            currentPage: page,
+            totalPages: Math.ceil(totalCount / limit),
+            totalCount,
+            limit
+          }
+        });
+      });
+    });
   }
 
   /**
    * Create new customer with address
    */
-  async createCustomer(customerData) {
-    try {
-      const result = await this.customerDAO.createCustomerWithAddress(customerData);
+  createCustomer(customerData, callback) {
+    this.customerDAO.createCustomerWithAddress(customerData, (error, result) => {
+      if (error) {
+        console.error('Create customer error:', error);
+        return callback(null, {
+          success: false,
+          message: error.message || 'Failed to create customer'
+        });
+      }
       
       if (result.success) {
-        return {
+        callback(null, {
           success: true,
           customerId: result.customerId,
           addressId: result.addressId,
           message: 'Customer created successfully'
-        };
+        });
       } else {
-        return {
+        callback(null, {
           success: false,
           message: 'Failed to create customer'
-        };
+        });
       }
-    } catch (error) {
-      console.error('Create customer error:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to create customer'
-      };
-    }
+    });
   }
 
   /**
    * Update customer information
    */
-  async updateCustomer(customerId, profileData) {
-    try {
-      // Check if username is being changed and if it's already taken
-      if (profileData.username) {
-        const existingUser = await this.customerDAO.findByUsername(profileData.username, customerId);
+  updateCustomer(customerId, profileData, callback) {
+    // Check if username is being changed and if it's already taken
+    if (profileData.username) {
+      this.customerDAO.findByUsername(profileData.username, customerId, (usernameError, existingUser) => {
+        if (usernameError) {
+          console.error('Check username error:', usernameError);
+          return callback(null, {
+            success: false,
+            message: 'Fout bij het controleren van gebruikersnaam'
+          });
+        }
+        
         if (existingUser) {
-          return {
+          return callback(null, {
             success: false,
             message: 'Deze gebruikersnaam is al in gebruik'
-          };
+          });
         }
+        
+        this.performUpdate(customerId, profileData, callback);
+      });
+    } else {
+      this.performUpdate(customerId, profileData, callback);
+    }
+  }
+
+  performUpdate(customerId, profileData, callback) {
+    // Separate customer data from address data
+    const customerData = {};
+    const addressData = {};
+    
+    // Fields that belong to customer table
+    const customerFields = ['username', 'first_name', 'last_name', 'email', 'password'];
+    // Fields that belong to address table  
+    const addressFields = ['address', 'phone'];
+    
+    for (const [key, value] of Object.entries(profileData)) {
+      if (customerFields.includes(key)) {
+        customerData[key] = value;
+      } else if (addressFields.includes(key)) {
+        addressData[key] = value;
+      } else if (key === 'postal_code') {
+        // Map postal_code to district for Sakila compatibility
+        addressData['district'] = value;
+      }
+      // Ignore city, country, language for now as they need special handling in Sakila
+    }
+    
+    this.customerDAO.updateCustomerAndAddress(customerId, customerData, addressData, (error, result) => {
+      if (error) {
+        console.error('Update customer error:', error);
+        return callback(null, {
+          success: false,
+          message: error.message || 'Fout bij het bijwerken van het profiel'
+        });
       }
       
-      // Separate customer data from address data
-      const customerData = {};
-      const addressData = {};
-      
-      // Fields that belong to customer table
-      const customerFields = ['username', 'first_name', 'last_name', 'email', 'password'];
-      // Fields that belong to address table  
-      const addressFields = ['address', 'phone'];
-      
-      for (const [key, value] of Object.entries(profileData)) {
-        if (customerFields.includes(key)) {
-          customerData[key] = value;
-        } else if (addressFields.includes(key)) {
-          addressData[key] = value;
-        } else if (key === 'postal_code') {
-          // Map postal_code to district for Sakila compatibility
-          addressData['district'] = value;
-        }
-        // Ignore city, country, language for now as they need special handling in Sakila
-      }
-      
-      const result = await this.customerDAO.updateCustomerAndAddress(customerId, customerData, addressData);
-      
-      return {
+      callback(null, {
         success: result.affectedRows > 0,
         message: result.affectedRows > 0 ? 'Profiel succesvol bijgewerkt' : 'Geen wijzigingen aangebracht'
-      };
-    } catch (error) {
-      console.error('Update customer error:', error);
-      return {
-        success: false,
-        message: error.message || 'Fout bij het bijwerken van het profiel'
-      };
-    }
+      });
+    });
   }
 
   /**
    * Delete customer and return all their rented films
    */
-  async deleteCustomer(customerId) {
-    try {
-      console.log('CustomerService: Deleting customer', customerId);
+  deleteCustomer(customerId, callback) {
+    console.log('CustomerService: Deleting customer', customerId);
+    
+    // First check if customer has active rentals
+    this.customerDAO.getActiveRentals(customerId, (error, activeRentals) => {
+      if (error) {
+        console.error('Get active rentals error:', error);
+        return callback(null, {
+          success: false,
+          message: error.message || 'Fout bij het verwijderen van de klant'
+        });
+      }
       
-      // First check if customer has active rentals
-      const activeRentals = await this.customerDAO.getActiveRentals(customerId);
       console.log('CustomerService: Found', activeRentals ? activeRentals.length : 0, 'active rentals');
       
       if (activeRentals && activeRentals.length > 0) {
@@ -167,42 +196,73 @@ class CustomerService {
         const RentalDAO = require('../dao/RentalDAO');
         const rentalDAO = new RentalDAO();
         
+        // Use a simple counter to track when all rentals are returned
+        let rentalsReturned = 0;
+        let hasError = false;
+        
+        const returnCallback = (returnError) => {
+          if (returnError && !hasError) {
+            hasError = true;
+            return callback(null, {
+              success: false,
+              message: 'Fout bij het teruggeven van films'
+            });
+          }
+          
+          rentalsReturned++;
+          if (rentalsReturned === activeRentals.length && !hasError) {
+            // All rentals returned, now delete customer
+            this.performDelete(customerId, activeRentals.length, callback);
+          }
+        };
+        
+        // Return each rental
         for (const rental of activeRentals) {
           console.log('CustomerService: Returning rental', rental.rental_id);
-          await rentalDAO.returnRental(rental.rental_id);
+          rentalDAO.returnRental(rental.rental_id, returnCallback);
         }
+      } else {
+        // No active rentals, delete customer directly
+        this.performDelete(customerId, 0, callback);
+      }
+    });
+  }
+
+  performDelete(customerId, returnedFilmsCount, callback) {
+    this.customerDAO.deleteCustomer(customerId, (error, result) => {
+      if (error) {
+        console.error('Delete customer error:', error);
+        return callback(null, {
+          success: false,
+          message: error.message || 'Fout bij het verwijderen van de klant'
+        });
       }
       
-      // Now delete the customer
-      const result = await this.customerDAO.deleteCustomer(customerId);
       console.log('CustomerService: Delete result', result);
       
-      return {
+      callback(null, {
         success: result && result.affectedRows > 0,
         message: result && result.affectedRows > 0 
-          ? `Klant succesvol verwijderd. ${activeRentals ? activeRentals.length : 0} films zijn teruggegeven.`
+          ? `Klant succesvol verwijderd. ${returnedFilmsCount} films zijn teruggegeven.`
           : 'Klant niet gevonden',
-        returnedFilms: activeRentals ? activeRentals.length : 0
-      };
-    } catch (error) {
-      console.error('Delete customer error:', error);
-      return {
-        success: false,
-        message: error.message || 'Fout bij het verwijderen van de klant'
-      };
-    }
+        returnedFilms: returnedFilmsCount
+      });
+    });
   }
 
   /**
    * Get customer rental history
    */
-  async getCustomerRentals(customerId, page = 1, limit = 100) {
-    try {
-      // Use the existing method that gets customer with rental history
-      const result = await this.customerDAO.getCustomerWithRentalHistory(customerId);
+  getCustomerRentals(customerId, page = 1, limit = 100, callback) {
+    // Use the existing method that gets customer with rental history
+    this.customerDAO.getCustomerWithRentalHistory(customerId, (error, result) => {
+      if (error) {
+        console.error('Get customer rentals error:', error);
+        return callback(error);
+      }
       
       if (!result || !result.rentals) {
-        return {
+        return callback(null, {
           rentals: [],
           pagination: {
             currentPage: page,
@@ -210,14 +270,14 @@ class CustomerService {
             totalCount: 0,
             limit
           }
-        };
+        });
       }
       
       // Return just the rentals array for backward compatibility
       const rentals = result.rentals || [];
       
       // For now, return all rentals without pagination since the DAO method doesn't support it
-      return {
+      callback(null, {
         rentals: rentals,
         pagination: {
           currentPage: 1,
@@ -225,148 +285,137 @@ class CustomerService {
           totalCount: rentals.length,
           limit: rentals.length
         }
-      };
-    } catch (error) {
-      console.error('Get customer rentals error:', error);
-      throw error;
-    }
+      });
+    });
   }
 
   /**
    * Get customer statistics
    */
-  async getCustomerStats(customerId) {
-    try {
-      return await this.customerDAO.getCustomerStats(customerId);
-    } catch (error) {
-      console.error('Get customer stats error:', error);
-      throw error;
-    }
+  getCustomerStats(customerId, callback) {
+    this.customerDAO.getCustomerStats(customerId, callback);
   }
 
   /**
    * Get customers with rental statistics
    */
-  async getCustomersWithStats(limit = 50) {
-    try {
-      return await this.customerDAO.getCustomersWithStats(limit);
-    } catch (error) {
-      console.error('Get customers with stats error:', error);
-      throw error;
-    }
+  getCustomersWithStats(limit = 50, callback) {
+    this.customerDAO.getCustomersWithStats(limit, callback);
   }
 
   /**
    * Search customers by name or email
    */
-  async searchCustomers(searchTerm, page = 1, limit = 10) {
-    try {
-      const customers = await this.customerDAO.searchCustomers(searchTerm, page, limit);
-      const totalCount = await this.customerDAO.getSearchCustomersCount(searchTerm);
-      
-      return {
-        customers,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(totalCount / limit),
-          totalCount,
-          limit
-        },
-        searchTerm
-      };
-    } catch (error) {
-      console.error('Search customers error:', error);
-      throw error;
-    }
+  searchCustomers(searchTerm, page = 1, limit = 10, callback) {
+    this.customerDAO.searchCustomers(searchTerm, page, limit, (error, customers) => {
+      if (error) {
+        console.error('Search customers error:', error);
+        return callback(error);
+      }
+
+      this.customerDAO.getSearchCustomersCount(searchTerm, (countError, totalCount) => {
+        if (countError) {
+          console.error('Get search customers count error:', countError);
+          return callback(countError);
+        }
+        
+        callback(null, {
+          customers,
+          pagination: {
+            currentPage: page,
+            totalPages: Math.ceil(totalCount / limit),
+            totalCount,
+            limit
+          },
+          searchTerm
+        });
+      });
+    });
   }
 
   /**
    * Activate/Deactivate customer
    */
-  async toggleCustomerActive(customerId, active = true) {
-    try {
-      const result = await this.customerDAO.updateCustomerActive(customerId, active);
+  toggleCustomerActive(customerId, active = true, callback) {
+    this.customerDAO.updateCustomerActive(customerId, active, (error, result) => {
+      if (error) {
+        console.error('Toggle customer active error:', error);
+        return callback(null, {
+          success: false,
+          message: error.message || 'Failed to update customer status'
+        });
+      }
       
-      return {
+      callback(null, {
         success: result.affectedRows > 0,
         message: result.affectedRows > 0 
           ? `Customer ${active ? 'activated' : 'deactivated'} successfully`
           : 'No changes made'
-      };
-    } catch (error) {
-      console.error('Toggle customer active error:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to update customer status'
-      };
-    }
+      });
+    });
   }
 
   /**
    * Get active rentals for customer
    */
-  async getActiveRentals(customerId) {
-    try {
-      return await this.customerDAO.getActiveRentals(customerId);
-    } catch (error) {
-      console.error('Get active rentals error:', error);
-      throw error;
-    }
+  getActiveRentals(customerId, callback) {
+    this.customerDAO.getActiveRentals(customerId, callback);
   }
 
   /**
    * Calculate customer late fees
    */
-  async calculateLateFees(customerId) {
-    try {
-      return await this.customerDAO.calculateLateFees(customerId);
-    } catch (error) {
-      console.error('Calculate late fees error:', error);
-      throw error;
-    }
+  calculateLateFees(customerId, callback) {
+    this.customerDAO.calculateLateFees(customerId, callback);
   }
 
   /**
    * Get customer payment history
    */
-  async getPaymentHistory(customerId, page = 1, limit = 10) {
-    try {
-      const payments = await this.customerDAO.getPaymentHistory(customerId, page, limit);
-      const totalCount = await this.customerDAO.getPaymentHistoryCount(customerId);
-      
-      return {
-        payments,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(totalCount / limit),
-          totalCount,
-          limit
+  getPaymentHistory(customerId, page = 1, limit = 10, callback) {
+    this.customerDAO.getPaymentHistory(customerId, page, limit, (error, payments) => {
+      if (error) {
+        console.error('Get payment history error:', error);
+        return callback(error);
+      }
+
+      this.customerDAO.getPaymentHistoryCount(customerId, (countError, totalCount) => {
+        if (countError) {
+          console.error('Get payment history count error:', countError);
+          return callback(countError);
         }
-      };
-    } catch (error) {
-      console.error('Get payment history error:', error);
-      throw error;
-    }
+        
+        callback(null, {
+          payments,
+          pagination: {
+            currentPage: page,
+            totalPages: Math.ceil(totalCount / limit),
+            totalCount,
+            limit
+          }
+        });
+      });
+    });
   }
 
   /**
    * Update customer address
    */
-  async updateCustomerAddress(customerId, addressData) {
-    try {
-      const result = await this.customerDAO.updateCustomerAddress(customerId, addressData);
+  updateCustomerAddress(customerId, addressData, callback) {
+    this.customerDAO.updateCustomerAddress(customerId, addressData, (error, result) => {
+      if (error) {
+        console.error('Update customer address error:', error);
+        return callback(null, {
+          success: false,
+          message: error.message || 'Failed to update address'
+        });
+      }
       
-      return {
+      callback(null, {
         success: result.affectedRows > 0,
         message: result.affectedRows > 0 ? 'Address updated successfully' : 'No changes made'
-      };
-    } catch (error) {
-      console.error('Update customer address error:', error);
-      return {
-        success: false,
-        message: error.message || 'Failed to update address'
-      };
-    }
+      });
+    });
   }
 
   /**
@@ -415,253 +464,91 @@ class CustomerService {
   /**
    * Get top customers by rental count
    */
-  async getTopCustomers(limit = 10) {
-    try {
-      return await this.customerDAO.getTopCustomers(limit);
-    } catch (error) {
-      console.error('Get top customers error:', error);
-      throw error;
-    }
+  getTopCustomers(limit = 10, callback) {
+    this.customerDAO.getTopCustomers(limit, callback);
   }
 
   /**
-   * Staff specific methods voor klantenbeheer
+   * Search customers for staff (werkende versie)
    */
-
-  // Haal alle klanten op met zoek en paginering
-  async getAllCustomers(options = {}) {
-    try {
-      const { page = 1, limit = 20, search = '', includeStats = false } = options;
-      const offset = (page - 1) * limit;
-      
-      let whereClause = '';
-      let params = [];
-      
-      if (search) {
-        whereClause = `WHERE (
-          c.first_name LIKE ? OR 
-          c.last_name LIKE ? OR 
-          c.email LIKE ? OR 
-          c.username LIKE ?
-        )`;
-        const searchParam = `%${search}%`;
-        params = [searchParam, searchParam, searchParam, searchParam];
+  searchCustomersForStaff(query, callback) {
+    this.customerDAO.searchCustomersBasic(query, (error, customers) => {
+      if (error) {
+        console.error('CustomerService searchCustomersForStaff error:', error);
+        return callback(null, []);
       }
-      
-      // Basis query voor klanten
-      let baseQuery = `
-        SELECT 
-          c.customer_id,
-          c.first_name,
-          c.last_name,
-          c.email,
-          c.username,
-          c.active,
-          c.create_date,
-          c.last_update,
-          CONCAT(c.first_name, ' ', c.last_name) as full_name,
-          a.address,
-          a.district,
-          a.postal_code,
-          a.phone,
-          ci.city,
-          co.country
-      `;
-      
-      if (includeStats) {
-        baseQuery += `,
-          COUNT(DISTINCT r.rental_id) as total_rentals,
-          COUNT(DISTINCT CASE WHEN r.return_date IS NULL THEN r.rental_id END) as active_rentals,
-          COALESCE(SUM(CASE WHEN r.return_date IS NOT NULL THEN r.amount END), 0) as total_spent
-        `;
-      }
-      
-      baseQuery += `
-        FROM customer c
-        LEFT JOIN address a ON c.address_id = a.address_id
-        LEFT JOIN city ci ON a.city_id = ci.city_id
-        LEFT JOIN country co ON ci.country_id = co.country_id
-      `;
-      
-      if (includeStats) {
-        baseQuery += `LEFT JOIN rental r ON c.customer_id = r.customer_id`;
-      }
-      
-      baseQuery += ` ${whereClause}`;
-      
-      if (includeStats) {
-        baseQuery += ` GROUP BY c.customer_id`;
-      }
-      
-      baseQuery += ` ORDER BY c.last_name, c.first_name LIMIT ? OFFSET ?`;
-      
-      const customers = await this.customerDAO.query(baseQuery, [...params, limit, offset]);
-      
-      // Tel totaal aantal klanten voor paginering
-      const countQuery = `
-        SELECT COUNT(DISTINCT c.customer_id) as total
-        FROM customer c
-        ${whereClause}
-      `;
-      const countResult = await this.customerDAO.query(countQuery, params);
-      const total = countResult[0].total;
-      
-      return {
-        success: true,
-        customers,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(total / limit),
-          totalItems: total,
-          hasNext: page * limit < total,
-          hasPrev: page > 1
-        }
-      };
-    } catch (error) {
-      console.error('CustomerService getAllCustomers error:', error);
-      return {
-        success: false,
-        customers: [],
-        pagination: {}
-      };
-    }
+      callback(null, customers);
+    });
   }
 
-  // Zoek klanten (voor autocomplete)
-  async searchCustomers(query) {
-    try {
-      const customers = await this.customerDAO.query(`
-        SELECT 
-          customer_id,
-          first_name,
-          last_name,
-          email,
-          username,
-          CONCAT(first_name, ' ', last_name) as full_name
-        FROM customer
-        WHERE active = 1
-          AND (
-            first_name LIKE ? OR 
-            last_name LIKE ? OR 
-            email LIKE ? OR
-            username LIKE ?
-          )
-        ORDER BY last_name, first_name
-        LIMIT 10
-      `, [`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`]);
-      
-      return customers;
-    } catch (error) {
-      console.error('CustomerService searchCustomers error:', error);
-      return [];
-    }
+  /**
+   * Alle klanten voor staff interface
+   */
+  getAllCustomersForStaff(callback) {
+    this.customerDAO.getAllActiveCustomers((error, customers) => {
+      if (error) {
+        console.error('CustomerService getAllCustomersForStaff error:', error);
+        return callback(null, []);
+      }
+      callback(null, customers);
+    });
   }
 
-  // Zoek klanten voor staff (werkende versie)
-  async searchCustomersForStaff(query) {
-    try {
-      return await this.customerDAO.searchCustomersBasic(query);
-    } catch (error) {
-      console.error('CustomerService searchCustomersForStaff error:', error);
-      return [];
-    }
-  }
-
-  // Alle klanten voor staff interface
-  async getAllCustomersForStaff() {
-    try {
-      return await this.customerDAO.getAllActiveCustomers();
-    } catch (error) {
-      console.error('CustomerService getAllCustomersForStaff error:', error);
-      return [];
-    }
-  }
-
-  // Update klant gegevens (staff functie)
-  async updateCustomer(customerId, updates) {
-    try {
-      console.log('CustomerService updateCustomer called with:', { customerId, updates });
-      
-      // Valideer input
-      const validation = this.validateCustomerData(updates);
-      console.log('Validation result:', validation);
-      
-      if (!validation.valid) {
-        return {
+  /**
+   * Change customer password (for staff - no current password required)
+   */
+  changeCustomerPassword(customerId, newPassword, callback) {
+    console.log('CustomerService changeCustomerPassword called with:', { customerId });
+    
+    // Hash the new password
+    const bcrypt = require('bcrypt');
+    bcrypt.hash(newPassword, 10, (hashError, hashedPassword) => {
+      if (hashError) {
+        console.error('Password hash error:', hashError);
+        return callback(null, {
           success: false,
-          message: validation.message
-        };
+          message: 'Er is een fout opgetreden bij het wijzigen van het wachtwoord'
+        });
       }
-      
-      const result = await this.customerDAO.updateCustomer(customerId, updates);
-      console.log('DAO update result:', result);
-      
-      if (result.success) {
-        // Haal bijgewerkte klant op
-        const updatedCustomer = await this.customerDAO.getCustomerWithDetails(customerId);
-        return {
-          success: true,
-          customer: updatedCustomer,
-          message: 'Klantgegevens succesvol bijgewerkt'
-        };
-      } else {
-        return {
-          success: false,
-          message: result.message || 'Fout bij bijwerken klantgegevens'
-        };
-      }
-    } catch (error) {
-      console.error('CustomerService updateCustomer error:', error);
-      return {
-        success: false,
-        message: 'Er is een fout opgetreden bij het bijwerken'
-      };
-    }
-  }
-
-  // Change customer password (for staff - no current password required)
-  async changeCustomerPassword(customerId, newPassword) {
-    try {
-      console.log('CustomerService changeCustomerPassword called with:', { customerId });
-      
-      // Hash the new password
-      const bcrypt = require('bcrypt');
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
       
       // Update password in database
-      const result = await this.customerDAO.updateCustomer(customerId, { 
+      this.customerDAO.updateCustomer(customerId, { 
         password: hashedPassword 
+      }, (updateError, result) => {
+        if (updateError) {
+          console.error('CustomerService changeCustomerPassword error:', updateError);
+          return callback(null, {
+            success: false,
+            message: 'Er is een fout opgetreden bij het wijzigen van het wachtwoord'
+          });
+        }
+        
+        if (result.success) {
+          callback(null, {
+            success: true,
+            message: 'Wachtwoord succesvol gewijzigd'
+          });
+        } else {
+          callback(null, {
+            success: false,
+            message: result.message || 'Fout bij wijzigen wachtwoord'
+          });
+        }
       });
-      
-      if (result.success) {
-        return {
-          success: true,
-          message: 'Wachtwoord succesvol gewijzigd'
-        };
-      } else {
-        return {
-          success: false,
-          message: result.message || 'Fout bij wijzigen wachtwoord'
-        };
-      }
-    } catch (error) {
-      console.error('CustomerService changeCustomerPassword error:', error);
-      return {
-        success: false,
-        message: 'Er is een fout opgetreden bij het wijzigen van het wachtwoord'
-      };
-    }
+    });
   }
 
-  // Statistieken voor staff dashboard
-  async getTotalCustomers() {
-    try {
-      const result = await this.customerDAO.query('SELECT COUNT(*) as count FROM customer WHERE active = 1');
-      return { count: result[0].count };
-    } catch (error) {
-      console.error('CustomerService getTotalCustomers error:', error);
-      return { count: 0 };
-    }
+  /**
+   * Statistieken voor staff dashboard
+   */
+  getTotalCustomers(callback) {
+    this.customerDAO.query('SELECT COUNT(*) as count FROM customer WHERE active = 1', [], (error, result) => {
+      if (error) {
+        console.error('CustomerService getTotalCustomers error:', error);
+        return callback(null, { count: 0 });
+      }
+      callback(null, { count: result[0].count });
+    });
   }
 }
 

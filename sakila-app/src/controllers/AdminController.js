@@ -13,29 +13,64 @@ class AdminController {
   /**
    * Admin Dashboard
    */
-  async dashboard(req, res) {
-    try {
-      // Get statistics for dashboard
-      const stats = {
-        totalCustomers: await this.customerService.getTotalCustomers(),
-        totalFilms: await this.filmService.getTotalFilms(),
-        totalStaff: await this.getStaffCount(),
-        totalStores: await this.getStoreCount()
-      };
+  dashboard(req, res) {
+    // Get statistics for dashboard
+    this.customerService.getTotalCustomers((error, totalCustomers) => {
+      if (error) {
+        console.error('Admin dashboard customers error:', error);
+        return res.status(500).render('error', {
+          title: 'Server Error',
+          status: 500,
+          message: 'An error occurred while loading customer statistics'
+        });
+      }
 
-      res.render('admin/dashboard', {
-        title: 'Admin Dashboard - Sakila',
-        user: req.user,
-        stats
+      this.filmService.getTotalFilms((error, totalFilms) => {
+        if (error) {
+          console.error('Admin dashboard films error:', error);
+          return res.status(500).render('error', {
+            title: 'Server Error',
+            status: 500,
+            message: 'An error occurred while loading film statistics'
+          });
+        }
+
+        this.getStaffCount((error, totalStaff) => {
+          if (error) {
+            console.error('Admin dashboard staff error:', error);
+            return res.status(500).render('error', {
+              title: 'Server Error',
+              status: 500,
+              message: 'An error occurred while loading staff statistics'
+            });
+          }
+
+          this.getStoreCount((error, totalStores) => {
+            if (error) {
+              console.error('Admin dashboard stores error:', error);
+              return res.status(500).render('error', {
+                title: 'Server Error',
+                status: 500,
+                message: 'An error occurred while loading store statistics'
+              });
+            }
+
+            const stats = {
+              totalCustomers,
+              totalFilms,
+              totalStaff,
+              totalStores
+            };
+
+            res.render('admin/dashboard', {
+              title: 'Admin Dashboard - Sakila',
+              user: req.user,
+              stats
+            });
+          });
+        });
       });
-    } catch (error) {
-      console.error('Admin dashboard error:', error);
-      res.status(500).render('error', {
-        title: 'Server Error',
-        status: 500,
-        message: 'An error occurred while loading the dashboard'
-      });
-    }
+    });
   }
 
   /**

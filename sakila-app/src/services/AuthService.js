@@ -8,29 +8,47 @@ class AuthService {
     this.jwtService = new JWTService();
   }
 
-  async authenticateUser(usernameOrEmail, password) {
-    try {
-      console.log('Attempting login with:', usernameOrEmail);
+  authenticateUser(usernameOrEmail, password, callback) {
+    console.log('Attempting login with:', usernameOrEmail);
+    
+    // Try to find user by username first, then by email
+    this.userDAO.findByUsername(usernameOrEmail, (error, user) => {
+      if (error) {
+        return callback(error);
+      }
       
-      // Try to find user by username first, then by email
-      let user = await this.userDAO.findByUsername(usernameOrEmail);
       if (!user) {
         console.log('Username not found, trying email...');
-        user = await this.userDAO.findByEmail(usernameOrEmail);
+        return this.userDAO.findByEmail(usernameOrEmail, (emailError, emailUser) => {
+          if (emailError) {
+            return callback(emailError);
+          }
+          
+          if (!emailUser) {
+            console.log('User not found:', usernameOrEmail);
+            return callback(null, { success: false, error: 'Ongeldige gebruikersnaam/email of wachtwoord' });
+          }
+          
+          this._processUserAuthentication(emailUser, password, callback);
+        });
       }
       
-      if (!user) {
-        console.log('User not found:', usernameOrEmail);
-        return { success: false, error: 'Ongeldige gebruikersnaam/email of wachtwoord' };
+      this._processUserAuthentication(user, password, callback);
+    });
+  }
+
+  _processUserAuthentication(user, password, callback) {
+    console.log('User found:', user.username, 'Type:', user.user_type);
+
+    // Verify password using bcryptjs
+    this.verifyPassword(password, user.password, (error, isValidPassword) => {
+      if (error) {
+        return callback(error);
       }
-
-      console.log('User found:', user.username, 'Type:', user.user_type);
-
-      // Verify password using bcryptjs
-      const isValidPassword = await this.verifyPassword(password, user.password);
+      
       if (!isValidPassword) {
         console.log('Invalid password for:', user.username);
-        return { success: false, error: 'Ongeldige gebruikersnaam/email of wachtwoord' };
+        return callback(null, { success: false, error: 'Ongeldige gebruikersnaam/email of wachtwoord' });
       }
 
       console.log('Password verified for:', user.username);
@@ -46,9 +64,8 @@ class AuthService {
       } else if (userWithoutPassword.user_type === 'staff') {
         userWithoutPassword.role = 'staff';
         console.log('Staff user mapped to staff role');
-      } else if (userWithoutPassword.user_type === 'customer') {
+      } else {
         userWithoutPassword.role = 'customer';
-        console.log('Customer user mapped to customer role');
       }
 
       // Generate JWT token
@@ -63,159 +80,218 @@ class AuthService {
         }
       } catch (tokenError) {
         console.error('Token generation failed:', tokenError);
-        return { success: false, error: 'Er is een fout opgetreden bij het inloggen' };
+        return callback(null, { success: false, error: 'Er is een fout opgetreden bij het inloggen' });
       }
       
       console.log('Final user object:', userWithoutPassword);
       
-      return { 
+      callback(null, { 
         success: true, 
         user: userWithoutPassword, 
         token: token,
         message: 'Login successful' 
-      };
-    } catch (err) {
-      console.error('authenticateUser error:', err);
-      return { success: false, error: 'Authenticatie mislukt' };
-    }
+      });
+    });
   }
 
   /**
    * Verify password using bcryptjs
    */
-  async verifyPassword(plainPassword, hashedPassword) {
-    try {
-      return await bcrypt.compare(plainPassword, hashedPassword);
-    } catch (error) {
-      console.error('Password verification error:', error);
-      return false;
-    }
+  verifyPassword(plainPassword, hashedPassword, callback) {
+    bcrypt.compare(plainPassword, hashedPassword, (error, result) => {
+      if (error) {
+        console.error('Password verification error:', error);
+        return callback(error, false);
+      }
+      callback(null, result);
+    });
   }
 
   /**
    * Hash password using bcryptjs
    */
-  async hashPassword(password) {
-    try {
-      const saltRounds = 12;
-      return await bcrypt.hash(password, saltRounds);
-    } catch (error) {
-      console.error('Password hashing error:', error);
-      throw new Error('Password hashing failed');
-    }
+  hashPassword(password, callback) {
+    const saltRounds = 12;
+    bcrypt.hash(password, saltRounds, (error, hashedPassword) => {
+      if (error) {
+        console.error('Password hashing error:', error);
+        return callback(new Error('Password hashing failed'));
+      }
+      callback(null, hashedPassword);
+    });
   }
 
-  async registerCustomer(userData) {
-    try {
-      const existingUser = await this.userDAO.findByUsername(userData.username);
-      if (existingUser) return { success: false, message: 'Username already exists' };
-
-      const existingEmail = await this.userDAO.findByEmail(userData.email);
-      if (existingEmail) return { success: false, message: 'Email already exists' };
-
-      const hashedPassword = await this.hashPassword(userData.password);
-      const result = await this.userDAO.createCustomer({
-        ...userData,
-        password: hashedPassword,
-        active: true
-      });
-
-      return result.success
-        ? { success: true, customerId: result.customerId, message: 'Registration successful' }
-        : { success: false, message: 'Registration failed' };
-    } catch (err) {
-      console.error('registerCustomer error:', err);
-      return { success: false, message: 'Registration failed' };
-    }
-  }
-
-  async registerUser(userData) {
-    try {
-      // Generate username from email
-      const username = userData.email.split('@')[0];
+  registerCustomer(userData, callback) {
+    this.userDAO.findByUsername(userData.username, (error, existingUser) => {
+      if (error) {
+        return callback(error);
+      }
       
-      // Check if username already exists
-      const existingUser = await this.userDAO.findByUsername(username);
-      if (existingUser) return { success: false, error: 'Gebruikersnaam al in gebruik' };
+      if (existingUser) {
+        return callback(null, { success: false, message: 'Username already exists' });
+      }
+
+      this.userDAO.findByEmail(userData.email, (emailError, existingEmail) => {
+        if (emailError) {
+          return callback(emailError);
+        }
+        
+        if (existingEmail) {
+          return callback(null, { success: false, message: 'Email already exists' });
+        }
+
+        this.hashPassword(userData.password, (hashError, hashedPassword) => {
+          if (hashError) {
+            return callback(hashError);
+          }
+          
+          this.userDAO.createCustomer({
+            ...userData,
+            password: hashedPassword,
+            active: true
+          }, (createError, result) => {
+            if (createError) {
+              console.error('registerCustomer error:', createError);
+              return callback(null, { success: false, message: 'Registration failed' });
+            }
+            
+            const response = result.success
+              ? { success: true, customerId: result.customerId, message: 'Registration successful' }
+              : { success: false, message: 'Registration failed' };
+            callback(null, response);
+          });
+        });
+      });
+    });
+  }
+
+  registerUser(userData, callback) {
+    // Generate username from email
+    const username = userData.email.split('@')[0];
+    
+    // Check if username already exists
+    this.userDAO.findByUsername(username, (error, existingUser) => {
+      if (error) {
+        return callback(error);
+      }
+      
+      if (existingUser) {
+        return callback(null, { success: false, error: 'Gebruikersnaam al in gebruik' });
+      }
 
       // Check if email already exists
-      const existingEmail = await this.userDAO.findByEmail(userData.email);
-      if (existingEmail) return { success: false, error: 'Email al in gebruik' };
+      this.userDAO.findByEmail(userData.email, (emailError, existingEmail) => {
+        if (emailError) {
+          return callback(emailError);
+        }
+        
+        if (existingEmail) {
+          return callback(null, { success: false, error: 'Email al in gebruik' });
+        }
 
-      // Create customer data with provided address fields
-      const customerData = {
-        first_name: userData.first_name,
-        last_name: userData.last_name,
-        email: userData.email,
-        username: username,
-        password: userData.password, // Will be hashed in createCustomer
-        address: userData.address,
-        address2: userData.address2 || null,
-        district: userData.district,
-        city_id: userData.city_id,
-        postal_code: userData.postal_code || null,
-        phone: userData.phone,
-        store_id: userData.store_id || 1
-      };
+        // Create customer data with provided address fields
+        const customerData = {
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          email: userData.email,
+          username: username,
+          password: userData.password, // Will be hashed in createCustomer
+          address: userData.address,
+          address2: userData.address2 || null,
+          district: userData.district,
+          city_id: userData.city_id,
+          postal_code: userData.postal_code || null,
+          phone: userData.phone,
+          store_id: userData.store_id || 1
+        };
 
-      const result = await this.userDAO.createCustomer(customerData);
-
-      return result.success
-        ? { success: true, customerId: result.customerId, message: 'Registration successful' }
-        : { success: false, error: 'Registratie mislukt' };
-    } catch (err) {
-      console.error('registerUser error:', err);
-      return { success: false, error: 'Er is een fout opgetreden bij de registratie' };
-    }
+        this.userDAO.createCustomer(customerData, (createError, result) => {
+          if (createError) {
+            console.error('registerUser error:', createError);
+            return callback(null, { success: false, error: 'Er is een fout opgetreden bij de registratie' });
+          }
+          
+          const response = result.success
+            ? { success: true, customerId: result.customerId, message: 'Registration successful' }
+            : { success: false, error: 'Registratie mislukt' };
+          callback(null, response);
+        });
+      });
+    });
   }
 
-  async getUserById(userId, userType) {
-    try {
-      const user = await this.userDAO.findById(userId, userType);
-      if (!user) return null;
+  getUserById(userId, userType, callback) {
+    this.userDAO.findById(userId, userType, (error, user) => {
+      if (error) {
+        console.error('getUserById error:', error);
+        return callback(null, null);
+      }
+      
+      if (!user) {
+        return callback(null, null);
+      }
+      
       const { password, ...userWithoutPassword } = user;
-      return userWithoutPassword;
-    } catch (err) {
-      console.error('getUserById error:', err);
-      return null;
-    }
+      callback(null, userWithoutPassword);
+    });
   }
 
-  async changePassword(userId, userType, currentPassword, newPassword) {
-    try {
-      const user = await this.userDAO.findById(userId, userType);
-      if (!user) return { success: false, message: 'User not found' };
+  changePassword(userId, userType, currentPassword, newPassword, callback) {
+    this.userDAO.findById(userId, userType, (error, user) => {
+      if (error) {
+        console.error('changePassword error:', error);
+        return callback(null, { success: false, message: 'Failed to change password' });
+      }
+      
+      if (!user) {
+        return callback(null, { success: false, message: 'User not found' });
+      }
 
-      const valid = await bcrypt.compare(currentPassword, user.password);
-      if (!valid) return { success: false, message: 'Current password incorrect' };
+      bcrypt.compare(currentPassword, user.password, (compareError, valid) => {
+        if (compareError) {
+          return callback(compareError);
+        }
+        
+        if (!valid) {
+          return callback(null, { success: false, message: 'Current password incorrect' });
+        }
 
-      const hashed = await bcrypt.hash(newPassword, 10);
-      const result = await this.userDAO.updatePassword(userId, userType, hashed);
-
-      return {
-        success: result.affectedRows > 0,
-        message: result.affectedRows > 0 ? 'Password changed' : 'Failed to change password'
-      };
-    } catch (err) {
-      console.error('changePassword error:', err);
-      return { success: false, message: 'Failed to change password' };
-    }
+        bcrypt.hash(newPassword, 10, (hashError, hashed) => {
+          if (hashError) {
+            return callback(hashError);
+          }
+          
+          this.userDAO.updatePassword(userId, userType, hashed, (updateError, result) => {
+            if (updateError) {
+              console.error('changePassword error:', updateError);
+              return callback(null, { success: false, message: 'Failed to change password' });
+            }
+            
+            callback(null, {
+              success: result.affectedRows > 0,
+              message: result.affectedRows > 0 ? 'Password changed' : 'Failed to change password'
+            });
+          });
+        });
+      });
+    });
   }
 
-  async updateProfile(userId, userType, profileData) {
-    try {
-      const result = await this.userDAO.updateProfile(userId, userType, profileData);
-      return {
+  updateProfile(userId, userType, profileData, callback) {
+    this.userDAO.updateProfile(userId, userType, profileData, (error, result) => {
+      if (error) {
+        console.error('updateProfile error:', error);
+        return callback(null, { success: false, message: 'Failed to update profile' });
+      }
+      
+      callback(null, {
         success: result.affectedRows > 0,
         message: result.affectedRows > 0 ? 'Profile updated' : 'Failed to update profile'
-      };
-    } catch (err) {
-      console.error('updateProfile error:', err);
-      return { success: false, message: 'Failed to update profile' };
-    }
+      });
+    });
   }
 
-  async validatePermissions(userId, userType, requiredPermission) {
+  validatePermissions(userId, userType, requiredPermission) {
     const perms = {
       customer: ['view_films', 'rent_films', 'view_rentals'],
       staff: ['view_films', 'rent_films', 'view_rentals', 'manage_customers', 'manage_inventory'],
@@ -224,8 +300,8 @@ class AuthService {
     return (perms[userType] || []).includes(requiredPermission);
   }
 
-  async logoutUser() {
-    return { success: true, message: 'Logout successful' };
+  logoutUser(callback) {
+    callback(null, { success: true, message: 'Logout successful' });
   }
 
   async isUserActive(userIdOrUsername, userType = null) {
