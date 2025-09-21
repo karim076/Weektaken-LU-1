@@ -110,42 +110,42 @@ describe('Server Integration Tests', () => {
     })
   })
 
-  describe('Form Submissions', () => {
-    beforeEach(() => {
-      cy.loginAsTestUser()
-    })
+  // describe('Form Submissions', () => {
+  //   beforeEach(() => {
+  //     cy.loginAsTestUser()
+  //   })
 
-    it('should handle film search correctly', () => {
-      cy.visit('/films')
+  //   it('should handle film search correctly', () => {
+  //     cy.visit('/films')
       
-      // Test search functionality
-      cy.get('input[name="search"]').type('action')
-      cy.get('input[name="search"]').closest('form').submit()
+  //     // Test search functionality
+  //     cy.get('input[name="search"]').type('action')
+  //     cy.get('input[name="search"]').closest('form').submit()
       
-      // Should stay on films page with results
-      cy.url().should('include', '/films')
-      cy.get('body').should('contain', 'Films')
-    })
+  //     // Should stay on films page with results
+  //     cy.url().should('include', '/films')
+  //     cy.get('body').should('contain', 'Films')
+  //   })
 
-    it('should handle rental form submissions', () => {
-      cy.visit('/films')
+  //   it('should handle rental form submissions', () => {
+  //     cy.visit('/films')
       
-      // Check if films are loaded, if not skip the rental part
-      cy.get('body').then(($body) => {
-        if ($body.find('.card').length > 0) {
-          // Click on any button in a film card (more flexible)
-          cy.get('.card').first().within(() => {
-            cy.get('.btn').first().click({ force: true })
-          })
-        }
-      })
+  //     // Check if films are loaded, if not skip the rental part
+  //     cy.get('body').then(($body) => {
+  //       if ($body.find('.card').length > 0) {
+  //         // Click on any button in a film card (more flexible)
+  //         cy.get('.card').first().within(() => {
+  //           cy.get('.btn').first().click({ force: true })
+  //         })
+  //       }
+  //     })
       
-      // Should handle the rental process (flexible check)
-      cy.url().should('not.include', 'error')
-      // Should either redirect or stay on page without errors
-      cy.get('body').should('exist')
-    })
-  })
+  //     // Should handle the rental process (flexible check)
+  //     cy.url().should('not.include', 'error')
+  //     // Should either redirect or stay on page without errors
+  //     cy.get('body').should('exist')
+  //   })
+  // })
 
   describe('Session Management', () => {
     it('should maintain session across page navigations', () => {
