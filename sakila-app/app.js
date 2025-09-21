@@ -67,7 +67,7 @@ app.get('/favicon.ico', (req, res) => {
 });
 
 // ===== MAIN APPLICATION ROUTES =====
-
+// Redirect /index.html to / azure auto redirects to /index.html
 app.get('/index.html', (req, res) => {
   res.redirect('/');
 });

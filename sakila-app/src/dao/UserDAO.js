@@ -102,8 +102,8 @@ class UserDAO extends BaseDAO {
               
               // Insert customer
               conn.query(
-                `INSERT INTO customer (store_id, first_name, last_name, email, address_id, active, username, password) 
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO customer (store_id, first_name, last_name, email, address_id, active, username, password, create_date) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
                 [
                   customerData.store_id || 1,
                   customerData.first_name,
