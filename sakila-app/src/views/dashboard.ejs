@@ -369,10 +369,10 @@
                                             <i class="bi bi-people fs-1 text-primary mb-3"></i>
                                             <h5 class="card-title">Klanten Beheren</h5>
                                             <p class="text-muted mb-3">Bekijk en bewerk klantgegevens</p>
-                                            <a href="/staff/customers" class="btn btn-primary">
+                                            <button class="btn btn-primary" data-section="staff-customers">
                                                 <i class="bi bi-arrow-right me-2"></i>
                                                 Naar Klanten
-                                            </a>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -383,10 +383,10 @@
                                             <i class="bi bi-film fs-1 text-success mb-3"></i>
                                             <h5 class="card-title">Film Uitgeven</h5>
                                             <p class="text-muted mb-3">Geef films uit aan klanten</p>
-                                            <a href="/staff/rental-management" class="btn btn-success">
+                                            <button class="btn btn-success" data-section="staff-rental">
                                                 <i class="bi bi-plus-circle me-2"></i>
                                                 Film Uitgeven
-                                            </a>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -397,10 +397,10 @@
                                             <i class="bi bi-arrow-return-left fs-1 text-info mb-3"></i>
                                             <h5 class="card-title">Film Innemen</h5>
                                             <p class="text-muted mb-3">Verwerk film retour</p>
-                                            <a href="/staff/rental-management" class="btn btn-info">
+                                            <button class="btn btn-info" data-section="staff-rental">
                                                 <i class="bi bi-check-circle me-2"></i>
                                                 Film Innemen
-                                            </a>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -590,7 +590,6 @@
                                             </div>
                                             <div id="rentals-table-container">
                                                 <div class="text-center py-4 text-muted">
-                                                    <i class="bi bi-film fs-1 mb-3"></i>
                                                     <p>Klik op "Toon Alle Verhuur" of zoek naar specifieke verhuur</p>
                                                 </div>
                                             </div>
@@ -645,7 +644,6 @@
                                     <div class="card">
                                         <div class="card-body text-center">
                                             <button id="quick-rent-btn" class="btn btn-success btn-lg">
-                                                <i class="bi bi-lightning me-2"></i>
                                                 Film Verhuren
                                             </button>
                                             <div id="rental-result" class="mt-3"></div>

@@ -23,7 +23,8 @@ class StaffController {
           message: 'Kon dashboard statistieken niet laden'
         });
       }
-      
+
+      console.log('Staff Dashboard Stats:', stats);
       this.rentalService.getRecentRentals(10, (recentError, recentRentals) => {
         if (recentError) {
           console.error('Staff dashboard recent rentals error:', recentError);
@@ -214,7 +215,7 @@ class StaffController {
     const { rental_id } = req.body;
     const staff_id = req.user.staff_id || req.user.user_id; // Handle both staff_id and user_id
     
-    console.log('CheckinFilm called with:', { rental_id, staff_id, user: req.user });
+    //console.log('CheckinFilm called with:', { rental_id, staff_id, user: req.user });
     
     this.rentalService.returnRental(rental_id, staff_id, (error, result) => {
       if (error) {
@@ -426,14 +427,29 @@ class StaffController {
     });
   }
 
-  // Helper: Staff statistieken
-  getStaffStats(callback) {
-    // Get total customers first
-    this.customerService.getTotalCustomers((error, totalCustomers) => {
+  // Helper: Staff statistieken : Fixed
+getStaffStats(callback) {
+  // Get total customers first
+  this.customerService.getTotalCustomers((error, totalCustomers) => {
+    if (error) {
+      console.error('Get staff stats error:', error);
+      return callback(null, {
+        totalCustomers: 0,
+        totalRentals: 0,
+        activeRentals: 0,
+        overdueCount: 0,
+        todayRentals: 0
+      });
+    }
+    
+    console.log('Total customers result:', totalCustomers); // Debug log
+    
+    // Get total rentals
+    this.rentalService.getTotalRentals((error, totalRentals) => {
       if (error) {
         console.error('Get staff stats error:', error);
         return callback(null, {
-          totalCustomers: 0,
+          totalCustomers: this.extractNumber(totalCustomers),
           totalRentals: 0,
           activeRentals: 0,
           overdueCount: 0,
@@ -441,71 +457,114 @@ class StaffController {
         });
       }
       
-      // Get total rentals
-      this.rentalService.getTotalRentals((error, totalRentals) => {
+      console.log('Total rentals result:', totalRentals); // Debug log
+      
+      // Get active rentals
+      this.rentalService.getActiveRentals((error, activeRentals) => {
         if (error) {
           console.error('Get staff stats error:', error);
           return callback(null, {
-            totalCustomers: 0,
-            totalRentals: 0,
+            totalCustomers: this.extractNumber(totalCustomers),
+            totalRentals: this.extractNumber(totalRentals),
             activeRentals: 0,
             overdueCount: 0,
             todayRentals: 0
           });
         }
         
-        // Get active rentals
-        this.rentalService.getActiveRentals((error, activeRentals) => {
+        console.log('Active rentals result:', activeRentals); // Debug log
+        
+        // Get overdue count
+        this.rentalService.getOverdueCount((error, overdueCount) => {
           if (error) {
             console.error('Get staff stats error:', error);
             return callback(null, {
-              totalCustomers: 0,
-              totalRentals: 0,
-              activeRentals: 0,
+              totalCustomers: this.extractNumber(totalCustomers),
+              totalRentals: this.extractNumber(totalRentals),
+              activeRentals: this.extractNumber(activeRentals),
               overdueCount: 0,
               todayRentals: 0
             });
           }
           
-          // Get overdue count
-          this.rentalService.getOverdueCount((error, overdueCount) => {
+          console.log('Overdue count result:', overdueCount); // Debug log
+          
+          // Get today rentals
+          this.rentalService.getTodayRentals((error, todayRentals) => {
             if (error) {
               console.error('Get staff stats error:', error);
               return callback(null, {
-                totalCustomers: 0,
-                totalRentals: 0,
-                activeRentals: 0,
-                overdueCount: 0,
+                totalCustomers: this.extractNumber(totalCustomers),
+                totalRentals: this.extractNumber(totalRentals),
+                activeRentals: this.extractNumber(activeRentals),
+                overdueCount: this.extractNumber(overdueCount),
                 todayRentals: 0
               });
             }
             
-            // Get today rentals
-            this.rentalService.getTodayRentals((error, todayRentals) => {
-              if (error) {
-                console.error('Get staff stats error:', error);
-                return callback(null, {
-                  totalCustomers: 0,
-                  totalRentals: 0,
-                  activeRentals: 0,
-                  overdueCount: 0,
-                  todayRentals: 0
-                });
-              }
-              
-              callback(null, {
-                totalCustomers: totalCustomers.count || 0,
-                totalRentals: totalRentals.count || 0,
-                activeRentals: activeRentals.count || 0,
-                overdueCount: overdueCount.count || 0,
-                todayRentals: todayRentals.count || 0
-              });
-            });
+            console.log('Today rentals result:', todayRentals); // Debug log
+            
+            const stats = {
+              totalCustomers: this.extractNumber(totalCustomers),
+              totalRentals: this.extractNumber(totalRentals),
+              activeRentals: this.extractNumber(activeRentals),
+              overdueCount: this.extractNumber(overdueCount),
+              todayRentals: this.extractNumber(todayRentals)
+            };
+            
+            console.log('Final stats object:', stats); // Debug log
+            callback(null, stats);
           });
         });
       });
     });
+  });
+}
+
+// Helper method to extract number from various response formats (FIXED)
+extractNumber(result) {
+  if (typeof result === 'number') {
+    return result;
   }
+  if (typeof result === 'object' && result !== null) {
+    // Handle nested count objects: { count: { count: 191 } }
+    if (result.count && typeof result.count === 'object' && typeof result.count.count === 'number') {
+      return result.count.count;
+    }
+    // Handle simple count objects: { count: 191 }
+    if (typeof result.count === 'number') {
+      return result.count;
+    }
+    // Handle other total properties
+    if (typeof result.total === 'number') {
+      return result.total;
+    }
+    // Handle arrays
+    if (Array.isArray(result)) {
+      return result.length;
+    }
+    // Handle direct length property
+    if (typeof result.length === 'number') {
+      return result.length;
+    }
+    
+    // Recursive search for any nested numeric value
+    const keys = Object.keys(result);
+    for (const key of keys) {
+      const value = result[key];
+      if (typeof value === 'number') {
+        return value;
+      }
+      if (typeof value === 'object' && value !== null) {
+        const nestedResult = this.extractNumber(value);
+        if (nestedResult > 0) {
+          return nestedResult;
+        }
+      }
+    }
+  }
+  return 0;
+}
 
   // API: Huidige verhuur (alleen in behandeling/pending)
   getCurrentRentals(req, res) {

@@ -652,6 +652,20 @@ class CustomerDAO extends BaseDAO {
       callback(null, result);
     });
   }
+  /**
+   * Get total count of active customers (for staff dashboard statistics)
+   */
+  getTotalCustomers(callback) {
+    const sql = 'SELECT COUNT(*) as count FROM customer WHERE active = 1';
+    
+    this.query(sql, [], (error, result) => {
+      if (error) {
+        console.error('CustomerDAO getTotalCustomersCount error:', error);
+        return callback(error);
+      }
+      callback(null, { count: result[0].count });
+    });
+  }
 
   /**
    * Delete customer (soft delete by setting active = 0)

@@ -536,7 +536,16 @@ class SimpleCustomerManager {
             const formData = new FormData(form);
             const allData = Object.fromEntries(formData.entries());
             
-            // Basic validation
+            // Create validCustomerData FIRST, before using it
+            const validCustomerData = {
+                first_name: allData.first_name,
+                last_name: allData.last_name,
+                email: allData.email,
+                username: allData.username || null,
+                active: allData.active === '1'
+            };
+            
+            // NOW do the validation using the properly declared variable
             if (!validCustomerData.first_name || !validCustomerData.last_name || !validCustomerData.email) {
                 this.showWarningMessage('Voornaam, achternaam en email zijn verplicht.');
                 return;
@@ -548,15 +557,6 @@ class SimpleCustomerManager {
                 this.showWarningMessage('Email adres is niet geldig.');
                 return;
             }
-            
-            // Only send fields that exist in the Sakila customer table
-            const validCustomerData = {
-                first_name: allData.first_name,
-                last_name: allData.last_name,
-                email: allData.email,
-                username: allData.username || null,
-                active: allData.active === '1'
-            };
             
             console.log('Saving customer profile (valid fields only):', validCustomerData);
             

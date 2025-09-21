@@ -35,7 +35,7 @@ class AuthController {
    */
   login(req, res) {
     const { username, password, redirect = '/dashboard' } = req.body;
-    console.log(`Login attempt: ${username}, ${password ? '******' : 'no password'}`);
+    console.log(`Login attempt: ${username}`);
     
     if (!username || !password) {
       return res.render('login', {
@@ -82,11 +82,11 @@ class AuthController {
       req.session.user = result.user;
       req.session.isAuthenticated = true;
 
-      console.log('User logged in successfully:');
-      console.log('   Username:', result.user.username);
-      console.log('   User Type:', result.user.user_type);
-      console.log('   Role:', result.user.role);
-      console.log('   Token generated:', !!result.token);
+      // console.log('User logged in successfully:');
+      // console.log('   Username:', result.user.username);
+      // console.log('   User Type:', result.user.user_type);
+      // console.log('   Role:', result.user.role);
+      // console.log('   Token generated:', !!result.token);
 
       // Redirect based on role or requested page
       if (redirect !== '/dashboard') {
@@ -105,7 +105,6 @@ class AuthController {
           
           // Update session with correct role
           req.session.user.role = userRole;
-          console.log('Fixed role in session:', userRole);
         }
         
         switch(userRole) {

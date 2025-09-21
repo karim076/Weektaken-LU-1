@@ -140,58 +140,6 @@ class AdminController {
       });
     });
   }
-
-  // Helper methods
-  getAllStaff(callback) {
-    const db = require('../../config/database');
-    const sql = `
-      SELECT s.*, st.store_id, a.address, c.city, co.country 
-      FROM staff s
-      LEFT JOIN store st ON s.store_id = st.store_id
-      LEFT JOIN address a ON st.address_id = a.address_id
-      LEFT JOIN city c ON a.city_id = c.city_id
-      LEFT JOIN country co ON c.country_id = co.country_id
-      ORDER BY s.staff_id
-    `;
-    
-    db.query(sql, [], (error, rows) => {
-      if (error) return callback(error);
-      callback(null, rows);
-    });
-  }
-
-  getAllStores(callback) {
-    const db = require('../../config/database');
-    const sql = `
-      SELECT st.*, a.address, c.city, co.country
-      FROM store st
-      LEFT JOIN address a ON st.address_id = a.address_id
-      LEFT JOIN city c ON a.city_id = c.city_id
-      LEFT JOIN country co ON c.country_id = co.country_id
-      ORDER BY st.store_id
-    `;
-    
-    db.query(sql, [], (error, rows) => {
-      if (error) return callback(error);
-      callback(null, rows);
-    });
-  }
-
-  getStaffCount(callback) {
-    const db = require('../../config/database');
-    db.query('SELECT COUNT(*) as count FROM staff WHERE active = 1', [], (error, rows) => {
-      if (error) return callback(error);
-      callback(null, rows[0].count);
-    });
-  }
-
-  getStoreCount(callback) {
-    const db = require('../../config/database');
-    db.query('SELECT COUNT(*) as count FROM store', [], (error, rows) => {
-      if (error) return callback(error);
-      callback(null, rows[0].count);
-    });
-  }
 }
 
 module.exports = AdminController;

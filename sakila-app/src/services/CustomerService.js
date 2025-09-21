@@ -538,16 +538,19 @@ class CustomerService {
     });
   }
 
+  getTotalCustomers(callback) {
+    this.getTotalCustomersCount(callback);
+  }
   /**
    * Statistieken voor staff dashboard
    */
   getTotalCustomers(callback) {
-    this.customerDAO.query('SELECT COUNT(*) as count FROM customer WHERE active = 1', [], (error, result) => {
+    this.customerDAO.getTotalCustomers((error, result) => {
       if (error) {
         console.error('CustomerService getTotalCustomers error:', error);
         return callback(null, { count: 0 });
       }
-      callback(null, { count: result[0].count });
+      callback(null, result);
     });
   }
 }

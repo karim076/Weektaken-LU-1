@@ -149,7 +149,7 @@ app.use('/customer', customerRoutes);
 app.use('/staff', staffRoutes);
 
 // Admin panel routes (protected)
-app.use('/admin', authMiddleware.requireAdminWeb, adminRoutes);
+//app.use('/admin', authMiddleware.requireAdminWeb, adminRoutes);
 
 // ===== ERROR HANDLING =====
 

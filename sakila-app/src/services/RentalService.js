@@ -1,8 +1,8 @@
 const RentalDAO = require('../dao/RentalDAO');
 
 /**
- * Service layer for Rental business logic
- * Contains no database access - delegates to DAO layer
+ * Service layer for Rental logic
+ * Contains no database access, gets to DAO layer.
  */
 class RentalService {
   constructor() {
@@ -10,10 +10,10 @@ class RentalService {
   }
 
   /**
-   * Create new rental (business logic)
+   * Create new rental
    */
   createRental(customerId, inventoryId, staffId = 1, callback) {
-    // Business rule: Check availability first
+    // Check availability first
     this.rentalDAO.checkInventoryAvailability(inventoryId, (error, availability) => {
       if (error) {
         return callback(error);
@@ -23,10 +23,10 @@ class RentalService {
         return callback(new Error(availability.reason || 'Film not available for rental'));
       }
 
-      // Business rule: Calculate rental amount and status
+      // Calculate rental amount and status
       const rentalDate = new Date();
       const amount = parseFloat(availability.item.rental_rate);
-      const status = 'pending'; // Business rule: new rentals start as pending
+      const status = 'pending'; // new rentals start as pending
 
       // Create rental through DAO
       this.rentalDAO.create({
@@ -79,15 +79,15 @@ class RentalService {
             return callback(statsError);
           }
 
-          // Business logic: Process statistics
+          // Process statistics
           const processedStats = this.processRentalStats(stats);
-          
-          // Business logic: Filter active rentals
-          const activeRentals = rentals.filter(rental => 
+
+          // Filter active rentals
+          const activeRentals = rentals.filter(rental =>
             ['processing', 'pending', 'paid', 'rented'].includes(rental.status)
           );
 
-          // Business logic: Calculate pagination
+          // Calculate pagination
           const totalPages = Math.ceil(totalCount / validatedLimit);
 
           callback(null, {
@@ -130,7 +130,7 @@ class RentalService {
   }
 
   /**
-   * Update rental status (business logic for status transitions)
+   * Update rental status
    */
   updateRentalStatus(rentalId, newStatus, staffId, callback) {
     // Business rule: Validate status transition
@@ -234,7 +234,7 @@ class RentalService {
   }
 
   /**
-   * Cancel rental (business logic)
+   * Cancel rental
    */
   cancelRental(rentalId, customerId, callback) {
     // Get rental to verify ownership and status
@@ -278,7 +278,7 @@ class RentalService {
   }
 
   /**
-   * Process payment for rental (business logic)
+   * Process payment for rental
    */
   processPayment(rentalId, customerId, amount, callback) {
     // Get rental to verify
@@ -327,7 +327,7 @@ class RentalService {
   }
 
   /**
-   * Business logic: Process rental statistics
+   *  logic: Process rental statistics
    */
   processRentalStats(stats) {
     const processedStats = {
@@ -353,7 +353,7 @@ class RentalService {
   }
 
   /**
-   * Business logic: Get valid status transitions
+   *  logic: Get valid status transitions
    */
   getValidStatusTransitions(currentStatus) {
     const transitions = {
@@ -371,21 +371,21 @@ class RentalService {
   }
 
   /**
-   * Business logic: Check if rental can be cancelled
+   * logic: Check if rental can be cancelled
    */
   canBeCancelled(rental) {
     return ['processing', 'pending'].includes(rental.status);
   }
 
   /**
-   * Business logic: Check if rental can be paid
+   *  logic: Check if rental can be paid
    */
   canBePaid(rental) {
     return rental.status === 'pending';
   }
 
   /**
-   * Business logic: Check if rental is overdue
+   *  logic: Check if rental is overdue
    */
   isOverdue(rental) {
     if (!rental.expected_return_date || rental.return_date) {
@@ -398,7 +398,7 @@ class RentalService {
   }
 
   /**
-   * Business logic: Calculate late fees
+   *  logic: Calculate late fees
    */
   calculateLateFees(rental) {
     if (!this.isOverdue(rental)) {
@@ -409,7 +409,7 @@ class RentalService {
     const dueDate = new Date(rental.expected_return_date);
     const daysLate = Math.ceil((now - dueDate) / (1000 * 60 * 60 * 24));
     
-    // Business rule: €1 per day late fee
+    //  rule: €1 per day late fee
     return daysLate * 1.00;
   }
 

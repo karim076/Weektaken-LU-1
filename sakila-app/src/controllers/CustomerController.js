@@ -237,7 +237,6 @@ class CustomerController {
       return;
     }
 
-    
     const updateData = {
       first_name: firstName,
       last_name: lastName,
