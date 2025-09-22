@@ -364,7 +364,7 @@ sakila-app/
 ![Klanten Verhuur Overzicht](https://github.com/karim076/Weektaken-LU-1/blob/main/Images/Snelle-verhuur-dashboard.png?raw=true)
 
 ### Staff
-#### Staff Dashboard
+#### Staff Dashboard Overzicht
 ![Staff Dashboard](https://github.com/karim076/Weektaken-LU-1/blob/main/Images/Staff-dashboard.png?raw=true)
 
 ### Staff Klanten Beheer  
@@ -372,9 +372,6 @@ sakila-app/
 
 #### Staff Snelle verhuur
 ![Snelle verhuur](https://github.com/karim076/Weektaken-LU-1/blob/main/Images/Snelle-verhuur-dashboard.png?raw=true)
-
-#### Staff Dashboard
-![Staff Dashboard](https://github.com/karim076/Weektaken-LU-1/blob/main/Images/Staff-dashboard.png?raw=true)
 ---
 
 ## Randvoorwaarden
