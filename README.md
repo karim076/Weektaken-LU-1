@@ -350,10 +350,31 @@ sakila-app/
 
 ### Homepage
 ![Homepage](https://github.com/karim076/Weektaken-LU-1/blob/main/Images/homepage.png?raw=true)
+### Filmspage
+![Filmspage](https://github.com/karim076/Weektaken-LU-1/blob/main/Images/Films-pagina?raw=true)
 
-### Klanten Overzicht  
+### Klanten
+#### Klanten Dashboard Overzicht
+![Klanten Dashboard](https://github.com/karim076/Weektaken-LU-1/blob/main/Images/Klanten-Dashboard-Overzicht.png?raw=true)
+
+#### Klanten Dashboard Profiel
+![Klanten Dashboard Profiel](https://github.com/karim076/Weektaken-LU-1/blob/main/Images/Klanten-Profile-Dashboard.png?raw=true)
+
+#### Klanten Verhuur Overzicht
+![Klanten Verhuur Overzicht](https://github.com/karim076/Weektaken-LU-1/blob/main/Images/Snelle-verhuur-dashboard.png?raw=true)
+
+### Staff
+#### Staff Dashboard
+![Staff Dashboard](https://github.com/karim076/Weektaken-LU-1/blob/main/Images/Staff-dashboard.png?raw=true)
+
+### Staff Klanten Beheer  
 ![Klanten](https://github.com/karim076/Weektaken-LU-1/blob/main/Images/Klanten.png?raw=true)
 
+#### Staff Snelle verhuur
+![Snelle verhuur](https://github.com/karim076/Weektaken-LU-1/blob/main/Images/Snelle-verhuur-dashboard.png?raw=true)
+
+#### Staff Dashboard
+![Staff Dashboard](https://github.com/karim076/Weektaken-LU-1/blob/main/Images/Staff-dashboard.png?raw=true)
 ---
 
 ## Randvoorwaarden
