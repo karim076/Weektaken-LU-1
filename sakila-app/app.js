@@ -86,28 +86,28 @@ app.post('/logout', authController.logout.bind(authController));
 app.get('/dashboard', authMiddleware.requireAuthWeb, homeController.dashboard.bind(homeController));
 
 // About page route
-app.get('/about', (req, res) => {
+app.get('/about', authMiddleware.optionalAuth, (req, res) => {
   res.render('about', {
     title: 'Over Ons - Sakila App',
     user: req.user || null
   });
 });
 
-// Contact page route
-app.get('/contact', (req, res) => {
-  res.render('contact', {
-    title: 'Contact - Sakila App',
-    user: req.user || null
-  });
-});
+// // Contact page route
+// app.get('/contact', (req, res) => {
+//   res.render('contact', {
+//     title: 'Contact - Sakila App',
+//     user: req.user || null
+//   });
+// });
 
-// Help page route
-app.get('/help', (req, res) => {
-  res.render('help', {
-    title: 'Help & FAQ - Sakila App',
-    user: req.user || null
-  });
-});
+// // Help page route
+// app.get('/help', (req, res) => {
+//   res.render('help', {
+//     title: 'Help & FAQ - Sakila App',
+//     user: req.user || null
+//   });
+// });
 
 // ===== API ROUTES =====
 
