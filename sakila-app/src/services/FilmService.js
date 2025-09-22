@@ -7,7 +7,7 @@ const FilmDAO = require('../dao/FilmDAO');
 class FilmService {
   constructor() {
     this.filmDAO = new FilmDAO();
-    this.rentalService = null; // Lazy load to avoid circular dependency
+    this.rentalService = null; 
   }
 
   /**
@@ -277,7 +277,7 @@ class FilmService {
    * Get popular films for homepage
    */
   getPopularFilms(page = 1, limit = 12, callback) {
-    // Gebruik de nieuwe getPopularFilms DAO methode
+    // Use the new getPopularFilms DAO method
     this.filmDAO.getPopularFilms(limit, (error, films) => {
       if (error) {
         console.error('Get popular films error:', error);

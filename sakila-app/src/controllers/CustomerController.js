@@ -918,5 +918,397 @@ class CustomerController {
     }
   };
 }
+// -----------------------------------------------------------------
+// API methods for customer rental actions
+// Add these methods to your existing CustomerController class
+
+/**
+ * Cancel rental (DELETE /customer/rentals/:id/cancel)
+ */
+cancelRental = (req, res) => {
+  try {
+    const customerId = req.user.user_id;
+    const rentalId = req.params.id;
+    
+    console.log(`Attempting to cancel rental ${rentalId} for customer ${customerId}`);
+    
+    this.rentalService.cancelRental(rentalId, customerId, (error, result) => {
+      if (error) {
+        console.error('Cancel rental controller error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Er is een fout opgetreden bij het annuleren van de verhuur'
+        });
+      }
+      
+      if (result.success) {
+        console.log('Rental cancelled successfully:', result.message);
+        res.json({
+          success: true,
+          message: result.message
+        });
+      } else {
+        console.log('Failed to cancel rental:', result.message);
+        res.status(400).json({
+          success: false,
+          message: result.message
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Cancel rental controller error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Er is een fout opgetreden bij het annuleren van de verhuur'
+    });
+  }
+};
+
+/**
+ * Pay rental (POST /customer/rentals/:id/pay)
+ */
+payRental = (req, res) => {
+  try {
+    const customerId = req.user.user_id;
+    const rentalId = req.params.id;
+    const { amount } = req.body;
+    
+    console.log(`Attempting to pay rental ${rentalId} for customer ${customerId}, amount: €${amount}`);
+    
+    this.rentalService.payRental(rentalId, customerId, amount, (error, result) => {
+      if (error) {
+        console.error('Pay rental controller error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Er is een fout opgetreden bij de betaling'
+        });
+      }
+      
+      if (result.success) {
+        console.log('Rental payment successful:', result.message);
+        res.json({
+          success: true,
+          message: result.message
+        });
+      } else {
+        console.log('Failed to pay rental:', result.message);
+        res.status(400).json({
+          success: false,
+          message: result.message
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Pay rental controller error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Er is een fout opgetreden bij de betaling'
+    });
+  }
+};
+
+/**
+ * Return rental (POST /customer/rentals/:id/return)
+ */
+returnRental = (req, res) => {
+  try {
+    const customerId = req.user.user_id;
+    const rentalId = req.params.id;
+    
+    console.log(`Attempting to return rental ${rentalId} for customer ${customerId}`);
+    
+    this.rentalService.returnRental(rentalId, customerId, (error, result) => {
+      if (error) {
+        console.error('Return rental controller error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Er is een fout opgetreden bij het inleveren'
+        });
+      }
+      
+      if (result.success) {
+        console.log('Rental returned successfully:', result.message);
+        res.json({
+          success: true,
+          message: result.message
+        });
+      } else {
+        console.log('Failed to return rental:', result.message);
+        res.status(400).json({
+          success: false,
+          message: result.message
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Return rental controller error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Er is een fout opgetreden bij het inleveren'
+    });
+  }
+};
+
+/**
+ * Extend rental (POST /customer/rentals/:id/extend)
+ */
+extendRental = (req, res) => {
+  try {
+    const customerId = req.user.user_id;
+    const rentalId = req.params.id;
+    
+    console.log(`Attempting to extend rental ${rentalId} for customer ${customerId}`);
+    
+    this.rentalService.extendRental(rentalId, customerId, (error, result) => {
+      if (error) {
+        console.error('Extend rental controller error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Er is een fout opgetreden bij het verlengen'
+        });
+      }
+      
+      if (result.success) {
+        console.log('Rental extended successfully:', result.message);
+        res.json({
+          success: true,
+          message: result.message
+        });
+      } else {
+        console.log('Failed to extend rental:', result.message);
+        res.status(400).json({
+          success: false,
+          message: result.message
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Extend rental controller error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Er is een fout opgetreden bij het verlengen'
+    });
+  }
+};
+
+/**
+ * Get customer rentals data for AJAX (GET /customer/rentals-data)
+ */
+getCustomerRentalsData = (req, res) => {
+  try {
+    const customerId = req.user.user_id;
+    
+    // Use the existing method from the current controller
+    this.getCustomerRentalsData(customerId, (error, result) => {
+      if (error) {
+        console.error('Error loading rentals data:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Er is een fout opgetreden bij het laden van de verhuurgegevens'
+        });
+      }
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          rentals: result.rentals,
+          stats: result.stats
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: result.message
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Get customer rentals data error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Er is een fout opgetreden bij het laden van de verhuurgegevens'
+    });
+  }
+};
+
+/**
+ * Get customer profile data for AJAX (GET /customer/profile-data)
+ */
+getCustomerProfileData = (req, res) => {
+  try {
+    const customerId = req.user.user_id;
+    
+    // Use the existing method from the current controller
+    this.getCustomerProfileData(customerId, (error, result) => {
+      if (error) {
+        console.error('Error loading profile data:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Er is een fout opgetreden bij het laden van de profielgegevens'
+        });
+      }
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          customer: result.customer
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          message: result.message
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Get customer profile data error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Er is een fout opgetreden bij het laden van de profielgegevens'
+    });
+  }
+};
+
+/**
+ * Update customer profile via AJAX (POST /customer/profile-update)
+ */
+updateCustomerProfile = (req, res) => {
+  try {
+    const customerId = req.user.user_id;
+    
+    const { 
+      username,
+      first_name, 
+      last_name, 
+      email, 
+      phone, 
+      address, 
+      postal_code, 
+      city, 
+      country, 
+      language 
+    } = req.body;
+    
+    // Validation
+    if (!username || !first_name || !last_name || !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Gebruikersnaam, voornaam, achternaam en email zijn verplicht'
+      });
+    }
+
+    // Email validation
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email adres is niet geldig'
+      });
+    }
+    
+    // Prepare data for update
+    const updateData = {
+      username,
+      first_name,
+      last_name,
+      email,
+      phone: phone || null,
+      address: address || null,
+      postal_code: postal_code || null,
+      city: city || null,
+      country: country || 'Nederland',
+      language: language || 'nl'
+    };
+    
+    // Use the existing method from the current controller
+    this.updateCustomerProfile(customerId, updateData, (error, result) => {
+      if (error) {
+        console.error('Profile update error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Er is een fout opgetreden bij het bijwerken van het profiel'
+        });
+      }
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          message: 'Profiel succesvol bijgewerkt'
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: result.message
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Er is een fout opgetreden bij het bijwerken van het profiel'
+    });
+  }
+};
+
+/**
+ * Change customer password (POST /customer/change-password)
+ */
+changeCustomerPassword = (req, res) => {
+  try {
+    const customerId = req.user.user_id;
+    const { current_password, new_password, confirm_password } = req.body;
+    
+    // Validation
+    if (!current_password || !new_password || !confirm_password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Alle wachtwoord velden zijn verplicht'
+      });
+    }
+    
+    if (new_password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Nieuw wachtwoord moet minstens 6 tekens bevatten'
+      });
+    }
+    
+    if (new_password !== confirm_password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Wachtwoorden komen niet overeen'
+      });
+    }
+    
+    // Use the existing method from the current controller
+    this.changeCustomerPassword(customerId, current_password, new_password, (error, result) => {
+      if (error) {
+        console.error('Error changing password:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Er is een fout opgetreden bij het wijzigen van het wachtwoord'
+        });
+      }
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          message: 'Wachtwoord succesvol gewijzigd'
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: result.message
+        });
+      }
+    });
+  } catch (error) {
+    console.error('Error changing password:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Er is een fout opgetreden bij het wijzigen van het wachtwoord'
+    });
+  }
+};
 
 module.exports = CustomerController;

@@ -66,7 +66,7 @@ class JWTService {
             full_name: customer.full_name,
             role: 'customer',
             type: 'customer',
-            user_type: 'customer'  // Add for backward compatibility
+            user_type: 'customer'  
         };
 
         return this.generateToken(payload);
@@ -84,7 +84,7 @@ class JWTService {
             last_name: staff.last_name,
             role: 'staff',
             type: 'staff',
-            user_type: 'staff'  // Add for backward compatibility
+            user_type: 'staff'  
         };
 
         return this.generateToken(payload);

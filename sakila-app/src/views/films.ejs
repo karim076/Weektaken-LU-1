@@ -146,11 +146,11 @@
                                     </a>
                                     <% if (film.available_copies > 0) { %>
                                         <% if (typeof user !== 'undefined' && user) { %>
-                                            <button class="btn btn-primary btn-sm" 
+                                            <!-- <button class="btn btn-primary btn-sm" 
                                                     data-film-id="<%= film.film_id %>"
                                                     onclick="rentFilm('<%= film.film_id %>', '<%= film.title %>')">
                                                 <i class="bi bi-cart-plus"></i> Huren
-                                            </button>
+                                            </button> -->
                                         <% } else { %>
                                             <a href="/login?redirect=/films/<%= film.film_id %>" class="btn btn-primary btn-sm">
                                                 <i class="bi bi-box-arrow-in-right"></i> Login om te huren

@@ -59,7 +59,7 @@ class AuthService {
       
       // Map user_type to role for consistency
       if (userWithoutPassword.user_type === 'staff' && userWithoutPassword.username === 'Mike') {
-        userWithoutPassword.role = 'admin'; // Mike is the admin/owner
+        userWithoutPassword.role = 'admin';
         console.log('Mike mapped to admin role');
       } else if (userWithoutPassword.user_type === 'staff') {
         userWithoutPassword.role = 'staff';
@@ -120,7 +120,9 @@ class AuthService {
       callback(null, hashedPassword);
     });
   }
-
+  /**
+   * Register new customer
+   */
   registerCustomer(userData, callback) {
     this.userDAO.findByUsername(userData.username, (error, existingUser) => {
       if (error) {
@@ -276,7 +278,7 @@ class AuthService {
       });
     });
   }
-
+  // Update user profile
   updateProfile(userId, userType, profileData, callback) {
     this.userDAO.updateProfile(userId, userType, profileData, (error, result) => {
       if (error) {
@@ -290,7 +292,7 @@ class AuthService {
       });
     });
   }
-
+  // Check if user has required permissions
   validatePermissions(userId, userType, requiredPermission) {
     const perms = {
       customer: ['view_films', 'rent_films', 'view_rentals'],
@@ -299,11 +301,11 @@ class AuthService {
     };
     return (perms[userType] || []).includes(requiredPermission);
   }
-
+  // Logout user
   logoutUser(callback) {
     callback(null, { success: true, message: 'Logout successful' });
   }
-
+  // Check if user is active
   isUserActive(userIdOrUsername, userType = null, callback) {
     if (userType) {
       // Called with userId and userType

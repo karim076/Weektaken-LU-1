@@ -309,10 +309,6 @@ class OwnerService {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   }
-
-  /**
-   * Get business insights
-   */
   getBusinessInsights(callback) {
     // Get dashboard stats first
     this.ownerDAO.getDashboardStats((error, stats) => {

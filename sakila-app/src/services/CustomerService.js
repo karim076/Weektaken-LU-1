@@ -542,7 +542,7 @@ class CustomerService {
     this.getTotalCustomersCount(callback);
   }
   /**
-   * Statistieken voor staff dashboard
+   * Statistics for staff dashboard
    */
   getTotalCustomers(callback) {
     this.customerDAO.getTotalCustomers((error, result) => {
